@@ -131,3 +131,21 @@ Use these Japanese terms. The table grows when a new term appears; add the term 
 | organizer | 主催者 |
 | confirmed (reservation) | 確定 |
 | idempotency key | 冪等キー |
+| core context, supporting context | 中核の文脈、補完の文脈 |
+| problem (one error response in the form of RFC 9457) | problem (not translated) |
+| operation (of an API document) | 操作 |
+| health check | ヘルスチェック |
+| access log | アクセスログ |
+| wire (the parts of a context, in `module.go`) | 組み立てる |
+| generator (of code) | 生成器 |
+| owner role, runtime role (of a context) | 所有者のロール、実行時のロール |
+| privilege (in the database) | 権限 |
+| search path (of a database role) | 検索パス |
+| exclusion constraint | 排他制約 |
+| scratch database | 作業用のデータベース |
+| merge base | マージベース |
+| integration test | 結合テスト |
+| optimistic locking | 楽観的ロック |
+| container image | コンテナイメージ |
+| smoke test | スモークテスト |
+| worktree (Git) | ワークツリー |
