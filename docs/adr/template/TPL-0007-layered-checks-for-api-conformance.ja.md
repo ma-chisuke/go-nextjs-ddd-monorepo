@@ -79,8 +79,10 @@ date: 2026-11-17
 | 3. 文書にない入口の禁止 | `lint-arch` のルール `arch/route-registration` | `make check` |
 | 4. テストでの検証 | `test-go` | `make check` |
 | 5. 生成した入力 | `test-api`（予定） | `make check-all` |
-| 6. 互換性 | `lint-openapi-breaking`（予定） | `make check` |
+| 6. 互換性 | `lint-contracts-breaking`。oasdiff で、`origin/main` とのマージベース（`CHECK_BASE` を設定したときはそれとのマージベースで、CI はベースブランチを設定する）にある同じ文書と比べる | `make check` |
 | 7. 文書そのもの | `lint-contracts` | `make check` |
+
+層6は、同じ変更で文書の `info.version` を上げたとき、互換性を壊す変更を受け入れる。1.0 未満ではマイナーバージョンを、1.0 以降はメジャーバージョンを上げる。指摘を受けた人に向けて、[API を変更する](../../guides/api-changes.ja.md)がこの方法を説明している。
 
 ## 選択肢の長所と短所
 
@@ -113,4 +115,4 @@ date: 2026-11-17
 - [oasdiff](https://github.com/oasdiff/oasdiff)
 - [Redocly CLI](https://redocly.com/docs/cli)
 
-<!-- i18n-source: TPL-0007-layered-checks-for-api-conformance.md sha256:b6268ffd6df33899c490575e274a36e9b8365247b77802f4020a269177f2b38f -->
+<!-- i18n-source: TPL-0007-layered-checks-for-api-conformance.md sha256:2325674281e8cc403a82df0a3338ee1f12bab133d636f0854f1ee31f100017e0 -->

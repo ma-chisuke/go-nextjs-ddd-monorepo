@@ -65,7 +65,11 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 | 古くなったモジュールの README | terraform-docs | `lint-terraform-docs` |
 | Terraform のコードの妥当性 | `terraform validate` | `validate-terraform`（check-all） |
 | SQL のファイル | squawk | `lint-sql` |
+| スキーマの変更ごとの DDL（pgschema の plan） | squawk | `lint-sql-plan`（check-all） |
+| 文脈のスキーマに対して prepare したクエリ | `sqlc vet` | `lint-sqlc`（check-all） |
+| テーブルと列のコメント、およびスキーマの文書 | tbls | `lint-db-docs`（check-all） |
 | OpenAPI と AsyncAPI の文書 | Redocly CLI（`@redocly/cli`） | `lint-contracts` |
+| OpenAPI の文書の互換性を壊す変更 | oasdiff | `lint-contracts-breaking` |
 | Markdown の整形と構造 | markdownlint-cli2 | `lint-md` |
 | 英語の文章 | Vale（Google のスタイル） | `lint-prose-en` |
 | 日本語の文章 | textlint | `lint-prose-ja` |
@@ -84,7 +88,7 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 | チェックそのもの（既知の悪い入力で失敗し、既知の良い入力で通るか） | `tools/selftest/selftest.sh` | `selftest`（check-all） |
 | コミットメッセージとプルリクエストの題（Conventional Commits） | `tools/scripts/commit-msg.sh` | lefthook の `commit-msg` フックと、`lint-pr-title`（CI） |
 
-次のチェックは、後のマイルストーンで加わる。`sqlc vet`（TPL-0011）・tbls の lint・pgschema の plan の DDL に対する squawk（TPL-0010）・oasdiff（TPL-0007）は、最初の区切られた文脈とともに加わる。Schemathesis は、それを加えるマイルストーンで加わる（TPL-0007）。
+Schemathesis は、それを加えるマイルストーンで加わる（TPL-0007）。
 
 重なりは、次のように解消した。
 
@@ -102,6 +106,7 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 - OpenAPI と AsyncAPI の文書は、どちらも Redocly CLI で lint する。最初の計画では、AsyncAPI のコマンドラインの道具と、候補として Spectral も挙げていた。どちらも入れていない。1つの道具で両方の契約を扱え、リポジトリが抱える大きな依存のツリーが1つ減るからである。
 - 層の import のルールと、ドメインで時計を読むことを禁じるルールは、golangci-lint が動かす depguard と forbidigo ではなく、`tools/cmd/arch` に置く。このコマンドはすべてのルールをディレクトリの構成から導くので、文脈を足しても設定は要らない。depguard と forbidigo には、すべての Go のファイルに当てはまるルールだけを残す。
 - 別の文脈の `internal/` の下のパッケージを import するとコンパイルが通らないので、`lint-go` と `test-go` がそれを報告し、`lint-arch` も報告する（`arch/context-import`）。この重なりは認めている。記録を挙げ、代わりに文脈どうしをどうつなぐかを示すのは、`lint-arch` の指摘だけだからである（TPL-0005）。
+- squawk は、SQL のファイルと、各 plan の DDL を読む。設定はそれぞれに1つある。plan 用の `.squawk.plan.toml` は、列の型のようにテーブルが何を持つかについてのルールを `lint-sql` に任せる。そのため、そうした問題は `schema.sql` の上で1回だけ報告される。
 
 道具の動かし方の決まりは次のとおりである。
 
@@ -161,4 +166,4 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 - `make help` が主なターゲットを一覧にし、`make/<area>.mk` が領域ごとのターゲットを持つ。
 - これらの道具の固定は TPL-0022 に、Trivy と GitHub の側のスキャナーを選んだ理由は TPL-0024 にある。
 
-<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:79edab17fcf59dec9fd98d9a1529e4d74227b2c51402ced929e48494dff53551 -->
+<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:9986f71eb3c9f2df2e95c5a8cf620976a778643d5fb3135f2e0ef0090fa8ad85 -->

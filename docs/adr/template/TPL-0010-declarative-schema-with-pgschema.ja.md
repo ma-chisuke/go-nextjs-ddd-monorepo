@@ -64,10 +64,10 @@ date: 2026-11-17
 ### 確認の方法
 
 `make check` のターゲット `lint-sql` は、リポジトリのすべての SQL ファイル（各文脈の `schema.sql` や `db/bootstrap.sql` など）を squawk で検査する。これらのファイルはあるべき状態を書いたものであり、マイグレーションとして実行されることはない。そのため、設定ファイル `.squawk.toml` で、稼働中のデータベースに対して実行するマイグレーションにしか意味のないルールを外している。
-M0 にはまだ SQL ファイルがないので、このチェックが検査するものはまだない。
 
-plan を使うチェックは、最初の区切られた文脈と一緒に入る。CI が、変更された `schema.sql` ごとに plan を求め、その DDL を squawk で検査し、plan をプルリクエストに示す。この検査には専用の設定を使い、マイグレーションの実行に関わるルールも有効にしておく。
-それまでは、レビューでこの決定を守る。
+`make check-all` のターゲット `lint-sql-plan` は、変更ごとの DDL を検査する。手元の PostgreSQL に作業用のデータベースを作り、そこに各文脈の `schema.sql` を、ベースのコミットの時点の内容で適用する。ベースのコミットは `origin/main` とのマージベースであり、`CHECK_BASE` を設定したときはそれとのマージベースである（CI はベースブランチを設定する）。次に、変更後の `schema.sql` への plan を pgschema に求め、その plan を squawk で検査する。設定は `.squawk.plan.toml` であり、マイグレーションの実行に関わるルールを有効にしてある。plan は `.cache/sql-plan/` に残り、指摘はそこを指す。
+CI は、plan をまだプルリクエストに示さない。レビュアーは、チェックを実行してから `.cache/sql-plan/` で plan を読む。
+名前を変える手順の最後に古い列を削除する場合のように、ルールが禁じる変更を意図して行っても、このチェックで失敗する。チームがそうした変更をどう受け入れるかは、まだ決めていない。
 
 ## 選択肢の長所と短所
 
@@ -113,4 +113,4 @@ plan を使うチェックは、最初の区切られた文脈と一緒に入る
 - PostgreSQL のマイグレーション用のリンター [squawk](https://squawkhq.com/)
 - [Atlas の機能の一覧](https://atlasgo.io/features)（Pro プランに含まれる機能も載っている）
 
-<!-- i18n-source: TPL-0010-declarative-schema-with-pgschema.md sha256:af8da63eeb154e480d6f2f97a0e8ac47331a25a825d0d9823d292c06a36b8aaa -->
+<!-- i18n-source: TPL-0010-declarative-schema-with-pgschema.md sha256:26763badc562a18f67c26879aa2ab2005a4f5cba1a492a7ce70fd002c9bca4b7 -->

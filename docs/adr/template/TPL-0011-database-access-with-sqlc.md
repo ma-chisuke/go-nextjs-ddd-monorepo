@@ -55,14 +55,11 @@ The rules are as follows.
 
 ### Confirmation
 
-M0 has no query and no generated code, so nothing enforces this decision yet.
-The following checks arrive with the first bounded context.
+The following checks enforce this decision.
 
 - `make check` fails when the generated code differs from what `make gen` writes.
-- `sqlc vet` checks every query against the rules in the configuration.
+- The target `lint-sqlc` of `make check-all` runs `sqlc vet` for each context in a scratch database of the local PostgreSQL that holds the `schema.sql` of the context. The rule `sqlc/db-prepare` prepares every query in PostgreSQL, and the rule `no-unfiltered-write` fails an `UPDATE` or `DELETE` without `WHERE`. These settings are the same in the `sqlc.yaml` of every context, and the check fails when one lacks `sqlc/db-prepare`.
 - A query on a table of another context fails at generation, because that table is not in the schema that sqlc reads.
-
-Until then, review enforces the decision.
 
 ## Pros and Cons of the Options
 
