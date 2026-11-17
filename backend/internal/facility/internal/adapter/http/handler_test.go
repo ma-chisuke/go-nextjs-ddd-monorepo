@@ -137,6 +137,12 @@ func TestRegisterRoomRejections(t *testing.T) {
 	}
 }
 
+func TestRegisterRoomWithAnotherMediaType(t *testing.T) {
+	t.Parallel()
+	res := newClient(t).Do(http.MethodPost, "/rooms", []byte("name=Aoba"), apitest.Header("Content-Type", "text/plain"))
+	wantProblem(t, res, "unsupported-media-type", http.StatusUnsupportedMediaType)
+}
+
 func TestRegisterRoomWithATakenName(t *testing.T) {
 	t.Parallel()
 	client := newClient(t)
