@@ -63,5 +63,25 @@
 | pin（版を） | 固定する |
 | harness（コーディングエージェントの） | ハーネス |
 | generated code | 生成コード |
+| monorepo | モノレポ |
+| contract（API やイベントの） | 契約 |
+| source（ほかのファイルを生成したり訳したりする元） | 正 |
+| user（製品の） | ユーザー |
+| heuristic | 経験則 |
+| tactical design pattern | 戦術的なパターン |
+| active record | アクティブレコード |
+| event-sourced domain model | イベントソーシングを使うドメインモデル |
+| layered architecture | レイヤードアーキテクチャ |
+| app layer（パッケージ `app`） | アプリケーション層 |
+| mapping（層の間の） | 詰め替え |
+| business error | 業務エラー |
+| modular monolith | モジュラーモノリス |
+| shared kernel | 共有カーネル |
+| eventual consistency | 結果整合性 |
+| idempotent | 冪等 |
+| provider、consumer（API の） | 提供側、利用側 |
+| consumer-driven contract test | コンシューマ駆動の契約テスト |
+| breaking change | 互換性を壊す変更 |
+| problem details（RFC 9457） | problem details（訳さない） |
 
-<!-- i18n-source: translation.md sha256:deb3b3780ebe1722a81aaaa68bf3ea0208d57b29505303e9c65e40c30c280082 -->
+<!-- i18n-source: translation.md sha256:d532c6930fcb7487560ee9866cad9f0efd6e5a4e4fd2b714a60c967f9f203ba3 -->

@@ -63,3 +63,23 @@ Use these Japanese terms. The table grows when a new term appears; add the term 
 | pin (a version) | 固定する |
 | harness (for coding agents) | ハーネス |
 | generated code | 生成コード |
+| monorepo | モノレポ |
+| contract (of an API or an event) | 契約 |
+| source (the file that other files are generated or translated from) | 正 |
+| user (of the product) | ユーザー |
+| heuristic | 経験則 |
+| tactical design pattern | 戦術的なパターン |
+| active record | アクティブレコード |
+| event-sourced domain model | イベントソーシングを使うドメインモデル |
+| layered architecture | レイヤードアーキテクチャ |
+| app layer (package `app`) | アプリケーション層 |
+| mapping (between layers) | 詰め替え |
+| business error | 業務エラー |
+| modular monolith | モジュラーモノリス |
+| shared kernel | 共有カーネル |
+| eventual consistency | 結果整合性 |
+| idempotent | 冪等 |
+| provider, consumer (of an API) | 提供側、利用側 |
+| consumer-driven contract test | コンシューマ駆動の契約テスト |
+| breaking change | 互換性を壊す変更 |
+| problem details (RFC 9457) | problem details (not translated) |
