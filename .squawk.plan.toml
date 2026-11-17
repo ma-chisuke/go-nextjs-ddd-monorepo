@@ -1,0 +1,37 @@
+# squawk on the DDL of each pgschema plan: the statements that bring a
+# database from the schema.sql of the base commit to the schema.sql of the
+# change (make lint-sql-plan, TPL-0010). These statements run against a live
+# database, so the rules about a running migration that .squawk.toml turns off
+# for schema files are on here, except the ones below.
+# https://squawkhq.com/docs/cli#squawktoml-configuration-file
+pg_version = "18.0"
+
+# pgschema runs the statements of a plan in a transaction, except CREATE INDEX
+# CONCURRENTLY. Read so, an index on a table that the same plan creates is not
+# a finding, while a plain CREATE INDEX on an existing table still is.
+assume_in_transaction = true
+
+excluded_rules = [
+  # pgschema runs CREATE INDEX CONCURRENTLY outside the transaction, in a
+  # step of its own.
+  "ban-concurrent-index-creation-in-transaction",
+  # A plan holds DDL only: pgschema writes no SET statement, and schema.sql
+  # cannot add one. The step that runs the plan sets the timeouts
+  # (`pgschema apply --lock-timeout`).
+  "require-lock-timeout",
+  "require-statement-timeout",
+  # pgschema computes the plan from the database right before it runs it, so
+  # a statement never runs twice, and the form of a statement is pgschema's.
+  "prefer-robust-stmts",
+  # Rules about what a table holds, not about how it changes. lint-sql applies
+  # them to schema.sql, so a plan that creates the same object would report
+  # the same problem twice (TPL-0023). The two rules on whole numbers are off
+  # in .squawk.toml as well; the reason is there.
+  "ban-char-field",
+  "ban-create-domain-with-constraint",
+  "prefer-bigint-over-int",
+  "prefer-bigint-over-smallint",
+  "prefer-identity",
+  "prefer-text-field",
+  "prefer-timestamp-tz",
+]

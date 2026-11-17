@@ -55,14 +55,11 @@ date: 2026-11-17
 
 ### 確認の方法
 
-M0 にはクエリも生成コードもないので、この決定を守らせるものはまだない。
-次のチェックは、最初の区切られた文脈と一緒に入る。
+次のチェックが、この決定を守らせる。
 
 - 生成コードが `make gen` の書く内容と違うとき、`make check` が失敗する。
-- `sqlc vet` が、すべてのクエリを設定の規則で検査する。
+- `make check-all` のターゲット `lint-sqlc` は、手元の PostgreSQL に、文脈の `schema.sql` を適用した作業用のデータベースを作り、文脈ごとに `sqlc vet` を実行する。ルール `sqlc/db-prepare` はすべてのクエリを PostgreSQL で prepare し、ルール `no-unfiltered-write` は `WHERE` のない `UPDATE` と `DELETE` で失敗する。これらの設定はどの文脈の `sqlc.yaml` でも同じであり、`sqlc/db-prepare` のない `sqlc.yaml` があればチェックが失敗する。
 - ほかの文脈のテーブルへのクエリは、生成の時点で失敗する。そのテーブルは、sqlc が読むスキーマにないからである。
-
-それまでは、レビューでこの決定を守る。
 
 ## 選択肢の長所と短所
 
@@ -97,4 +94,4 @@ M0 にはクエリも生成コードもないので、この決定を守らせ�
 - [sqlc のドキュメント](https://docs.sqlc.dev/)
 - Go 向けの PostgreSQL のドライバ [pgx](https://github.com/jackc/pgx)
 
-<!-- i18n-source: TPL-0011-database-access-with-sqlc.md sha256:35165e44147ecd218e495590c6546d3ce894fc41920dc61f6c36613b69f00106 -->
+<!-- i18n-source: TPL-0011-database-access-with-sqlc.md sha256:52fcb4fcdf8c03ebfba552a41ea4b6412e5b154570f9f7d1242faed0d2d7530e -->

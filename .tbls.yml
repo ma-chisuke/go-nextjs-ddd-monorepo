@@ -1,0 +1,33 @@
+# tbls documents the schema of one bounded context and lints its comments.
+# tools/scripts/db-check.sh runs it once per context against a scratch
+# database, and sets the variables below, so this one file serves every
+# context. https://github.com/k1LoW/tbls
+name: ${TBLS_NAME}
+docPath: ${TBLS_DOC_PATH}
+
+# Only the schema of the context: not the other contexts in the same
+# database, and not the functions of the extensions schema.
+include:
+  - ${TBLS_NAME}.*
+
+# Markdown only, and the same bytes on every machine: schema.json would hold
+# the build of the server (its CPU architecture), and Mermaid keeps the
+# diagrams as text.
+disableOutputSchema: true
+er:
+  format: mermaid
+
+# Indexes and constraints need no comment: their names and definitions say
+# what they do, and the documents show both.
+lint:
+  # Every table and column says what it holds, in schema.sql (TPL-0010).
+  requireTableComment:
+    enabled: true
+  requireColumnComment:
+    enabled: true
+  # Without an index on its columns, a foreign key makes each delete of a
+  # parent row, and each change of its key, scan the child table.
+  requireForeignKeyIndex:
+    enabled: true
+  duplicateRelations:
+    enabled: true

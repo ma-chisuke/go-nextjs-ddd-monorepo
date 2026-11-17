@@ -64,10 +64,10 @@ The rules are as follows.
 ### Confirmation
 
 The target `lint-sql` of `make check` runs squawk on every SQL file in the repository, such as the `schema.sql` of each context and `db/bootstrap.sql`. These files describe a desired state and never run as a migration, so its configuration, `.squawk.toml`, turns off the rules that only make sense for a migration that runs against a live database.
-M0 has no SQL file yet, so the check has nothing to lint yet.
 
-The checks that rely on a plan arrive with the first bounded context: CI computes the plan of each changed `schema.sql`, lints its DDL with squawk under a configuration of its own, which keeps the rules for a running migration, and shows the plan in the pull request.
-Until then, review enforces the decision.
+The target `lint-sql-plan` of `make check-all` lints the DDL of each change. In a scratch database of the local PostgreSQL, it applies the `schema.sql` of each context as it is at the base commit (the merge base with `origin/main`, or with `CHECK_BASE`, which CI sets to the base branch), asks pgschema for the plan to the `schema.sql` of the change, and lints that plan with squawk under `.squawk.plan.toml`, which keeps the rules for a running migration. The plan stays in `.cache/sql-plan/`, where the findings point.
+CI does not show the plan in the pull request yet; the reviewer reads it in `.cache/sql-plan/` after running the check.
+A deliberate change that a rule forbids, such as dropping the old column at the end of a rename, fails the check, and how a team accepts such a change is not decided yet.
 
 ## Pros and Cons of the Options
 

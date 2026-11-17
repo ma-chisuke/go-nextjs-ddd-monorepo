@@ -65,7 +65,11 @@ Inside `make`, each concern has one tool. Targets marked "check-all" run only in
 | Module READMEs that are out of date | terraform-docs | `lint-terraform-docs` |
 | Validity of Terraform code | `terraform validate` | `validate-terraform` (check-all) |
 | SQL files | squawk | `lint-sql` |
+| The DDL of each schema change, from a pgschema plan | squawk | `lint-sql-plan` (check-all) |
+| Queries, prepared against the schema of their context | `sqlc vet` | `lint-sqlc` (check-all) |
+| Comments on tables and columns, and the schema documents | tbls | `lint-db-docs` (check-all) |
 | OpenAPI and AsyncAPI documents | Redocly CLI (`@redocly/cli`) | `lint-contracts` |
+| Breaking changes to OpenAPI documents | oasdiff | `lint-contracts-breaking` |
 | Formatting and structure of Markdown | markdownlint-cli2 | `lint-md` |
 | English prose | Vale, with the Google style | `lint-prose-en` |
 | Japanese prose | textlint | `lint-prose-ja` |
@@ -84,7 +88,7 @@ Inside `make`, each concern has one tool. Targets marked "check-all" run only in
 | The checks themselves: each fails on a known-bad input and passes on a known-good one | `tools/selftest/selftest.sh` | `selftest` (check-all) |
 | Commit messages and pull request titles (Conventional Commits) | `tools/scripts/commit-msg.sh` | the `commit-msg` hook of lefthook, and `lint-pr-title` (CI) |
 
-These checks arrive with later milestones: with the first bounded context, `sqlc vet` (TPL-0011), tbls lint, squawk on the DDL of each pgschema plan (TPL-0010), and oasdiff (TPL-0007); and Schemathesis with the milestone that adds it (TPL-0007).
+Schemathesis arrives with the milestone that adds it (TPL-0007).
 
 These overlaps were resolved as follows.
 
@@ -102,6 +106,7 @@ These overlaps were resolved as follows.
 - OpenAPI and AsyncAPI documents are both linted with Redocly CLI. The first plan also named the AsyncAPI command-line tool, and Spectral as another choice. Neither is installed: one tool covers both kinds of contract, and the repository carries one large dependency tree fewer.
 - The import rules of the layers and the rule against reading the clock in the domain live in `tools/cmd/arch`, not in depguard and forbidigo, which golangci-lint runs. The command derives every rule from the directory layout, so a new context needs no configuration. depguard and forbidigo keep only the rules that apply to every Go file.
 - An import of a package under `internal/` of another context does not compile, so `lint-go` and `test-go` report it, and `lint-arch` reports it as well (`arch/context-import`). This overlap is accepted: only the finding of `lint-arch` names the record and says how contexts integrate instead (TPL-0005).
+- squawk reads the SQL files and the DDL of each plan, with a configuration for each. The one for plans, `.squawk.plan.toml`, leaves the rules about what a table holds, such as the type of a column, to `lint-sql`, so such a problem is reported once, on `schema.sql`.
 
 The rules for running the tools are as follows.
 

@@ -2,10 +2,18 @@
 # The local database: PostgreSQL in Docker Compose, with the schema of every
 # bounded context applied by pgschema (TPL-0010, TPL-0017).
 #
-# Usage: db.sh up       start PostgreSQL, run db/bootstrap.sql, apply every schema
+# Usage: db.sh up       start PostgreSQL, then do what `init` does
+#        db.sh server   start PostgreSQL unless it already accepts connections
+#        db.sh init     run db/bootstrap.sql and db/local.sql, apply every schema
 #        db.sh apply    apply the schema.sql of every context
 #        db.sh plan     print the DDL that `apply` would run, per context
 #        db.sh down     stop PostgreSQL and delete its data
+#
+# `up` lets Compose recreate the container when compose.yaml changed, and
+# Compose also recreates it when another checkout (a Git worktree) started
+# it, which cuts every open connection. `server` leaves a running server
+# alone and changes no database, so the targets of `make check-all` and the
+# copies of the self-test use it; `init` then needs no Compose but `exec`.
 #
 # A context is a directory backend/internal/<context>/ with
 # internal/adapter/postgres/schema.sql. Its schema is named <context>, and
@@ -50,9 +58,46 @@ pgschema_for() {
     --no-color "$@"
 }
 
+# The image runs db/bootstrap.sql on a server that listens on a socket only,
+# and restarts it afterwards, so the healthcheck of compose.yaml can pass
+# before that restart. Only the server that stays listens on TCP.
+ready() {
+  docker compose exec -T postgres pg_isready --quiet --host 127.0.0.1 --username postgres --dbname "$database" > /dev/null 2>&1
+}
+
+start() {
+  docker compose up --detach --wait postgres > /dev/null 2>&1 || {
+    docker compose up --detach --wait postgres
+    exit 1
+  }
+  local tries=0
+  until ready; do
+    tries=$((tries + 1))
+    if [ "$tries" -ge 60 ]; then
+      echo "db: PostgreSQL did not accept connections within 60 seconds" >&2
+      docker compose logs --tail 20 postgres >&2
+      exit 1
+    fi
+    sleep 1
+  done
+}
+
+# Roles belong to the whole server, so two runs of db/bootstrap.sql, even in
+# two databases, can change the same role at once, and PostgreSQL fails one
+# of them ("tuple concurrently updated"). The files can run again, so a
+# failed run is tried twice more.
 psql_file() {
-  docker compose exec -T postgres psql --username postgres --dbname "$database" \
-    --set ON_ERROR_STOP=1 --quiet --file - < "$1" 2>&1 | { grep -v 'NOTICE:' || true; }
+  local tries=0 out
+  until out=$(docker compose exec -T postgres psql --username postgres --dbname "$database" \
+    --set ON_ERROR_STOP=1 --quiet --file - < "$1" 2>&1); do
+    tries=$((tries + 1))
+    if [ "$tries" -ge 3 ]; then
+      printf '%s\n' "$out" >&2
+      return 1
+    fi
+    sleep 1
+  done
+  printf '%s' "$out" | { grep -v 'NOTICE:' || true; }
 }
 
 apply() {
@@ -63,17 +108,24 @@ apply() {
   done
 }
 
+init() {
+  # The image runs these files only when it creates the data directory;
+  # running them again brings an older local database up to date.
+  psql_file db/bootstrap.sql
+  psql_file db/local.sql
+  apply
+}
+
 case "${1:-}" in
   up)
-    docker compose up --detach --wait postgres > /dev/null 2>&1 || {
-      docker compose up --detach --wait postgres
-      exit 1
-    }
-    # The image runs these files only when it creates the data directory;
-    # running them again brings an older local database up to date.
-    psql_file db/bootstrap.sql
-    psql_file db/local.sql
-    apply
+    start
+    init
+    ;;
+  server)
+    ready || start
+    ;;
+  init)
+    init
     ;;
   apply)
     apply
@@ -88,7 +140,7 @@ case "${1:-}" in
     docker compose down --volumes
     ;;
   *)
-    echo "usage: db.sh up|apply|plan|down" >&2
+    echo "usage: db.sh up|server|init|apply|plan|down" >&2
     exit 2
     ;;
 esac

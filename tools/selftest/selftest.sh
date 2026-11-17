@@ -935,6 +935,81 @@ EOF
   passes
 }
 
+# The checks below are in check-all. They use the PostgreSQL of `make db-up`
+# (or start it), and work in scratch databases of their own.
+facility_postgres=backend/internal/facility/internal/adapter/postgres
+
+# A table of rooms with an id and the given columns.
+rooms_schema() {
+  local columns='' column
+  for column in "$@"; do
+    columns="$columns    $column,"$'\n'
+  done
+  put "$facility_postgres/schema.sql" << EOF
+CREATE TABLE rooms (
+    id uuid NOT NULL,
+${columns}    CONSTRAINT rooms_pkey PRIMARY KEY (id)
+);
+EOF
+}
+
+case_lint_sql_plan() {
+  rooms_schema 'capacity integer NOT NULL'
+  run git add "$facility_postgres/schema.sql"
+  commit 'make the schema of the base small'
+  passes CHECK_BASE=HEAD
+  rooms_schema 'capacity integer NOT NULL' 'floor integer'
+  passes CHECK_BASE=HEAD
+  rooms_schema 'capacity integer NOT NULL' 'floor integer NOT NULL'
+  fails '.cache/sql-plan/facility.sql:1: [adding-required-field]' CHECK_BASE=HEAD
+  prints "$facility_postgres/schema.sql"
+  rooms_schema 'capacity bigint NOT NULL'
+  fails '[changing-column-type]' CHECK_BASE=HEAD
+  # A dangerous statement that a person reviewed is let through by a line in
+  # the allowance file of the context, and only while the plan holds it.
+  rooms_schema 'capacity integer NOT NULL' 'floor integer NOT NULL'
+  put "$facility_postgres/schema-changes.allow" 'adding-required-field | ALTER TABLE rooms ADD COLUMN floor integer NOT NULL | the table is empty in every environment'
+  passes CHECK_BASE=HEAD
+  put "$facility_postgres/schema-changes.allow" 'adding-required-field | ALTER TABLE rooms ADD COLUMN floor integer NOT NULL'
+  fails '[sql-plan/allowance-format]' CHECK_BASE=HEAD
+  rooms_schema 'capacity integer NOT NULL' 'floor integer'
+  put "$facility_postgres/schema-changes.allow" 'adding-required-field | ALTER TABLE rooms ADD COLUMN floor integer NOT NULL | the table is empty in every environment'
+  fails '[sql-plan/unused-allowance]' CHECK_BASE=HEAD
+  drop "$facility_postgres/schema-changes.allow"
+  # Without a base (no origin/main in the copy), nothing is compared.
+  passes
+}
+
+case_lint_sqlc() {
+  local queries="$facility_postgres/queries/selftest.sql"
+  put "$queries" << 'EOF'
+-- name: CountLargeRooms :one
+SELECT count(*) FROM rooms WHERE capacity > 'many';
+EOF
+  fails "$queries:1: [sqlc/db-prepare] CountLargeRooms:"
+  put "$queries" << 'EOF'
+-- name: ClearRooms :exec
+DELETE FROM rooms;
+EOF
+  fails "$queries:1: [no-unfiltered-write] ClearRooms:"
+  put "$queries" << 'EOF'
+-- name: CountLargeRooms :one
+SELECT count(*) FROM rooms WHERE capacity > sqlc.arg(capacity);
+EOF
+  passes
+}
+
+case_lint_db_docs() {
+  printf '\nCREATE TABLE seats (id uuid PRIMARY KEY);\n' >> "$COPY/$facility_postgres/schema.sql"
+  fails '[tbls/requireTableComment] facility.seats: table comment required.'
+  prints '[tbls/requireColumnComment] facility.seats.id: column comment required.'
+  printf "COMMENT ON TABLE seats IS 'Seats.';\nCOMMENT ON COLUMN seats.id IS 'The id.';\n" \
+    >> "$COPY/$facility_postgres/schema.sql"
+  fails 'docs/generated/db/facility/README.md:1: [gen/stale]'
+  run "$make_cmd" --no-print-directory gen-db-docs
+  passes
+}
+
 good_openapi() {
   put contracts/http/facility.openapi.yaml << 'EOF'
 openapi: 3.1.0
@@ -996,6 +1071,83 @@ case_lint_contracts__openapi() {
   fails 'operation-operationId'
   drop contracts/http/facility.openapi.yaml.orig
   good_openapi
+  passes
+}
+
+# A small API document. $1: info.version. $2: the request property floor, as
+# "optional", "required", or nothing. $3: "no-name" leaves the response
+# property name out.
+sample_openapi() {
+  local floor='' required='[name]' returned='[id, name]' name="
+                  name:
+                    type: string"
+  case "${2:-}" in
+    optional | required)
+      floor="
+                floor:
+                  type: integer"
+      ;;
+  esac
+  if [ "${2:-}" = required ]; then
+    required='[name, floor]'
+  fi
+  if [ "${3:-}" = no-name ]; then
+    returned='[id]'
+    name=''
+  fi
+  put contracts/http/sample.openapi.yaml << EOF
+openapi: 3.1.0
+info:
+  title: Sample API
+  version: $1
+paths:
+  /rooms:
+    post:
+      operationId: registerRoom
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: $required
+              properties:
+                name:
+                  type: string$floor
+      responses:
+        "201":
+          description: The room.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: $returned
+                properties:
+                  id:
+                    type: string$name
+EOF
+}
+
+case_lint_contracts_breaking() {
+  sample_openapi 0.1.0
+  # A document that is new since the base has nothing to compare with.
+  passes CHECK_BASE=HEAD
+  run git add contracts/http/sample.openapi.yaml
+  commit 'add the sample API'
+  sample_openapi 0.1.0 '' no-name
+  fails 'contracts/http/sample.openapi.yaml:1: [response-required-property-removed] POST /rooms:' CHECK_BASE=HEAD
+  sample_openapi 0.1.0 required
+  fails 'contracts/http/sample.openapi.yaml:19: [new-required-request-property] POST /rooms:' CHECK_BASE=HEAD
+  prints 'docs/guides/api-changes.md'
+  # A patch version does not allow a breaking change; below 1.0, a minor one does.
+  sample_openapi 0.1.1 required
+  fails 'new-required-request-property' CHECK_BASE=HEAD
+  sample_openapi 0.2.0 required
+  passes CHECK_BASE=HEAD
+  sample_openapi 0.1.0 optional
+  passes CHECK_BASE=HEAD
+  # Without a base (no origin/main in the copy), nothing is compared.
+  sample_openapi 0.1.0 required
   passes
 }
 

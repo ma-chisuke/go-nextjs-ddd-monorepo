@@ -79,8 +79,10 @@ The table names the target that runs each layer. A target marked "planned" does 
 | 3. No entry point outside the document | `lint-arch`, with the rule `arch/route-registration` | `make check` |
 | 4. Validation in tests | `test-go` | `make check` |
 | 5. Generated inputs | `test-api` (planned) | `make check-all` |
-| 6. Compatibility | `lint-openapi-breaking` (planned) | `make check` |
+| 6. Compatibility | `lint-contracts-breaking`: oasdiff, against the same document at the merge base with `origin/main`, or with `CHECK_BASE`, which CI sets to the base branch | `make check` |
 | 7. The document itself | `lint-contracts` | `make check` |
+
+Layer 6 accepts a breaking change when the same change raises `info.version` of the document: below 1.0 the minor version, from 1.0 on the major version. [Change an API](../../guides/api-changes.md) describes this for the people who meet the finding.
 
 ## Pros and Cons of the Options
 
