@@ -11,7 +11,7 @@ Go の API と Next.js の画面を1つのリポジトリに置く製品のた�
 | マイルストーン | 中身 | 状態 |
 |---|---|---|
 | M0 | 品質の基盤：道具のバージョンの固定、`make check`、整形と lint、セキュリティの検査、CI、Git フック、エージェントのフック、決定の記録 | 完了 |
-| M1 | 中核と補完の文脈を1つずつ。OpenAPI からユースケースとドメインを通って PostgreSQL まで | 作業中 |
+| M1 | 中核と補完の文脈を1つずつ。OpenAPI からユースケースとドメインを通って PostgreSQL まで | 完了 |
 | M2 | イベント：送信箱、EventBridge、SQS、手元の AWS エミュレーター | 予定 |
 | M3 | Next.js の画面と、端から端までのテスト | 予定 |
 | M4 | stg と prd の Terraform・Terragrunt と、デプロイ | 予定 |
@@ -101,4 +101,4 @@ make check   # 速いチェック。数秒で終わる
 
 [MIT No Attribution](LICENSE)。表示を残さずに、テンプレートをコピーして自分のものにできる。
 
-<!-- i18n-source: README.md sha256:16d2b2b1d7cc826a5b6e048da938b62f6a09b0c7dbc3be0eaa1d49b3412a97fd -->
+<!-- i18n-source: README.md sha256:a9b3affb52767408cea86ab13726fe70692c0004f2a7401df1782b633ebd66d6 -->

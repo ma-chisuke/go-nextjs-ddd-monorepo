@@ -11,7 +11,7 @@ The template is built in milestones. The quality foundation comes first, so that
 | Milestone | Content | State |
 |---|---|---|
 | M0 | Quality foundation: pinned tools, `make check`, formatters and linters, security scans, CI, Git hooks, agent hooks, decision records | Done |
-| M1 | One core and one supporting bounded context, from OpenAPI through the use case and the domain to PostgreSQL | In progress |
+| M1 | One core and one supporting bounded context, from OpenAPI through the use case and the domain to PostgreSQL | Done |
 | M2 | Events: outbox, EventBridge, SQS, and the local AWS emulator | Planned |
 | M3 | Next.js front end and end-to-end tests | Planned |
 | M4 | Terraform and Terragrunt for stg and prd, and deployment | Planned |

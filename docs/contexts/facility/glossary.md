@@ -1,4 +1,4 @@
-# Facility glossary
+# Glossary of Facility
 
 The words of the Facility context, and the identifiers that stand for them in the code.
 Facility has no domain layer (TPL-0003), so the identifiers belong to its `app` package, `backend/internal/facility/internal/app`.

@@ -104,7 +104,7 @@ Schemathesis は、それを加えるマイルストーンで加わる（TPL-000
 - シェルの書式は `.editorconfig` に書き、shfmt はそれを読む。そのため、エディターと shfmt は同じ設定を使う。
 - editorconfig-checker はインデントの幅を検査しない。インデントの幅は整形の道具が受け持つ。
 - `terraform fmt` は Terraform の言語のファイルを、`terragrunt hcl fmt` はそれ以外の HCL のファイルを整形する。そのため、1つのファイルを2つの整形の道具が扱うことはない。
-- Trivy を選んだ理由は TPL-0024 にある。重なりは1つだけ認めている。Trivy はすべてのロックファイルにある脆弱なモジュールをすべて報告し、govulncheck は Go についての指摘を、実際に呼ばれているコードに絞る。そのため、呼ばれている Go のコードにある脆弱性は、両方から報告されることがある。
+- Trivy を選んだ理由は TPL-0024 にある。重なりは1つだけ認めている。Trivy はすべてのロックファイルにある脆弱なモジュールをすべて報告し、govulncheck は Go についての指摘を、実際に呼ばれているコードに絞る。そのため、呼ばれている Go のコードにある脆弱性は、両方から報告されることがある。Trivy は、同じモジュールを `scan-images` でもう一度報告することがある。`scan-images` は、各バイナリに組み込まれたモジュールを読むからである。
 - GitHub の側のスキャナー（CodeQL とシークレットスキャン。TPL-0024）は、`make` の外で動く。golangci-lint（gosec）や gitleaks と重なるが、これは意図したものである。手元で何が起きても GitHub の上で動く、もう1つの層だからである。
 - コミットメッセージとプルリクエストの題は、このリポジトリの短いスクリプト `tools/scripts/commit-msg.sh` が検査する。commitlint のような Node.js のパッケージも、別のバイナリも使わない。固定するバイナリには、`mise.lock` の4つのプラットフォームのそれぞれでビルドが要る（TPL-0022）。最初に選んだ committed は Linux の arm64 向けのビルドを出していない。スクリプトなら依存が要らない。
 - OpenAPI と AsyncAPI の文書は、どちらも Redocly CLI で lint する。最初の計画では、AsyncAPI のコマンドラインの道具と、候補として Spectral も挙げていた。どちらも入れていない。1つの道具で両方の契約を扱え、リポジトリが抱える大きな依存のツリーが1つ減るからである。
@@ -170,4 +170,4 @@ Schemathesis は、それを加えるマイルストーンで加わる（TPL-000
 - `make help` が主なターゲットを一覧にし、`make/<area>.mk` が領域ごとのターゲットを持つ。
 - これらの道具の固定は TPL-0022 に、Trivy と GitHub の側のスキャナーを選んだ理由は TPL-0024 にある。
 
-<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:dff6fb9c45774c402cc7f8e8015ef50016aa4441410f2e49fb9668eb3e5b3704 -->
+<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:4bc27230ee5b502be8acedd440d3c85966c08ddb2caacc8b5e075a2e488c8c9e -->

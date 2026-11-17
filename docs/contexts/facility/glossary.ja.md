@@ -19,4 +19,4 @@ Facility にはドメイン層がない（TPL-0003）ので、識別子はその
 | `Error` | 業務エラー | Facility が理解したが、Facility の規則が拒んだリクエストのエラー。 |
 | `Kind` | 業務エラーの種類 | リクエストを拒んだ規則。API は種類ごとに別の problem を返す。 |
 
-<!-- i18n-source: glossary.md sha256:aa3082d2efd38112d4839130904f8a034144f2b0eb7232232817469e58fb8874 -->
+<!-- i18n-source: glossary.md sha256:6a9c78f5869884b060a0c6f0292ea66c40fb93a58c409f328220d626a5f57ee4 -->
