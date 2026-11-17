@@ -10,12 +10,13 @@ lint-actions:
 	@$(TASK) $@ '$(FILES) $(WORKFLOW_GLOBS) | xargs -r actionlint -oneline'
 
 lint-actions-security:
-	@$(TASK) $@ '$(call if-workflows,zizmor --offline --no-progress --format plain .github/)'
+	@$(TASK) $@ '$(call if-workflows,zizmor --offline --no-progress --quiet --format plain .github/)'
 
 # Least privilege and a timeout on every job.
 lint-actions-policy:
-	@$(TASK) $@ '$(call if-workflows,ghalint run)'
+	@$(TASK) $@ '$(call if-workflows,ghalint --log-color never run)'
 
-# Every action is pinned to a full commit SHA.
+# Every action is pinned to a full commit SHA. Without the GitHub API, so the
+# check stays offline; `pinact run` finds the SHA of an unpinned action.
 lint-actions-pins:
-	@$(TASK) $@ '$(call if-workflows,pinact run --check)'
+	@$(TASK) $@ '$(call if-workflows,pinact run --fix=false --no-api)'
