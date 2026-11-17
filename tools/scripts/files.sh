@@ -100,6 +100,7 @@ else
 fi | sort -u | while IFS= read -r path; do
   # A tracked file can be deleted in the working tree; skip it.
   if [ -f "$path" ]; then
-    printf '%s\n' "$path"
+    # A reader that has seen enough (`| head -n 1`) closes the pipe; stop quietly.
+    printf '%s\n' "$path" 2> /dev/null || exit 0
   fi
 done
