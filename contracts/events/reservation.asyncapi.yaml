@@ -1,0 +1,122 @@
+# yaml-language-server: $schema=https://asyncapi.com/definitions/3.0.0/asyncapi.json
+asyncapi: 3.0.0
+info:
+  title: Reservation events
+  version: 0.1.0
+  description: |
+    The integration events that the Reservation context publishes. Another
+    context reads them to act on a booking without asking Reservation, as
+    Notification does to send mail to the organizer.
+
+    Every event is a CloudEvents 1.0 envelope in JSON. Its `type` names the
+    event and its version, such as `reservation.ReservationConfirmed.v1`, and
+    its `data` matches the JSON Schema of that version in
+    `contracts/events/reservation/`.
+
+    Reservation writes an event to its outbox in the transaction that changes
+    the reservation, and a relay publishes it afterwards. So an event arrives
+    at least once, and events of one reservation can arrive out of order: a
+    consumer records the `id` of each event that it handled, and looks at
+    `time` when the order matters.
+  license:
+    name: MIT No Attribution
+    url: https://spdx.org/licenses/MIT-0.html
+defaultContentType: application/cloudevents+json
+channels:
+  reservationEvents:
+    address: /contexts/reservation
+    title: Events of Reservation
+    description: |
+      The events whose `source` is `/contexts/reservation`. In AWS they travel
+      over one EventBridge event bus, and a rule of each consuming context
+      selects them by `source` and `detail-type` (the `type` of the event)
+      into the SQS queue of that context.
+    messages:
+      reservationConfirmed:
+        $ref: "#/components/messages/reservationConfirmed"
+      reservationCancelled:
+        $ref: "#/components/messages/reservationCancelled"
+operations:
+  publishReservationConfirmed:
+    action: send
+    title: Publish ReservationConfirmed
+    summary: A room was booked, or a reservation was rescheduled.
+    channel:
+      $ref: "#/channels/reservationEvents"
+    messages:
+      - $ref: "#/channels/reservationEvents/messages/reservationConfirmed"
+  publishReservationCancelled:
+    action: send
+    title: Publish ReservationCancelled
+    summary: A reservation was cancelled.
+    channel:
+      $ref: "#/channels/reservationEvents"
+    messages:
+      - $ref: "#/channels/reservationEvents/messages/reservationCancelled"
+components:
+  messages:
+    reservationConfirmed:
+      name: reservation.ReservationConfirmed.v1
+      title: ReservationConfirmed, version 1
+      summary: A reservation holds its room for its period.
+      contentType: application/cloudevents+json
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/cloudEvent"
+          - type: object
+            properties:
+              type:
+                const: reservation.ReservationConfirmed.v1
+              data:
+                $ref: ./reservation/ReservationConfirmed.v1.json
+    reservationCancelled:
+      name: reservation.ReservationCancelled.v1
+      title: ReservationCancelled, version 1
+      summary: A reservation was cancelled, and its room is free for its period.
+      contentType: application/cloudevents+json
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/cloudEvent"
+          - type: object
+            properties:
+              type:
+                const: reservation.ReservationCancelled.v1
+              data:
+                $ref: ./reservation/ReservationCancelled.v1.json
+  schemas:
+    cloudEvent:
+      type: object
+      description: The CloudEvents 1.0 envelope of every event of Reservation.
+      required: [specversion, id, source, type, time, subject, datacontenttype, data]
+      properties:
+        specversion:
+          type: string
+          description: The version of CloudEvents.
+          const: "1.0"
+        id:
+          type: string
+          format: uuid
+          description: The id of the event, a UUID version 7. An event that is delivered twice keeps its id.
+        source:
+          type: string
+          format: uri-reference
+          description: The context that published the event.
+          const: /contexts/reservation
+        type:
+          type: string
+          description: The name of the event and the version of its data.
+        time:
+          type: string
+          format: date-time
+          description: When the change that the event reports happened.
+        subject:
+          type: string
+          format: uuid
+          description: The id of the reservation that the event is about.
+        datacontenttype:
+          type: string
+          description: The media type of `data`.
+          const: application/json
+        data:
+          type: object
+          description: What happened, in the shape that the JSON Schema of the event defines.
