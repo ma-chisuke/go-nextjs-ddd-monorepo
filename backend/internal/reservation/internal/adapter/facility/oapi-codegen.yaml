@@ -1,0 +1,9 @@
+# oapi-codegen generates a client of the Facility API from
+# contracts/http/facility.openapi.yaml (TPL-0005, TPL-0006). The generated
+# types stay in this package: directory.go translates them into the words of
+# Reservation. Run `make gen`.
+package: facility
+output: client.gen.go
+generate:
+  client: true
+  models: true

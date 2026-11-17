@@ -508,6 +508,20 @@ func (response RegisterRoom409ApplicationProblemPlusJSONResponse) VisitRegisterR
 	return err
 }
 
+type RegisterRoom415ApplicationProblemPlusJSONResponse Problem
+
+func (response RegisterRoom415ApplicationProblemPlusJSONResponse) VisitRegisterRoomResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(415)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RegisterRoom422ApplicationProblemPlusJSONResponse Problem
 
 func (response RegisterRoom422ApplicationProblemPlusJSONResponse) VisitRegisterRoomResponse(w http.ResponseWriter) error {
@@ -781,10 +795,10 @@ var swaggerSpec = []string{
 	"hDEdnY7STnNEpfiEv/GffNpyXw9jvxH9WkJEw6+Vo+B4MO0N31gJHbuV9dLpKdMWrU8AUWwUlMH6bjmV",
 	"rbFbv12y9UxyHy/LzZRxeI9okqMT25poZjt38bM0feYe/rr7d69ckQt4RLuahJ+n6SGjPcrNtT7h52dn",
 	"r5p/8Sr7W3yjnASkPOEolr66w/+Zv2S7CCtu+1IU20cRdrd1e6ZvVHG1Vp/rCCE6O154g9CBw78Yuf7V",
-	"ktVduJum2X3bafY4cvqrcuTgA038OJSDkO2r4bUJm8aV8cPt9aa5rPrjyUsero4cU5tfwtX08mvl9u32",
-	"I0mE4E3SCuD4KTwANgeV8Bawttp5oetCvs3mHwFbIr9O3NqXy99cs57j4y+TqfT8a039j4DPZJ2mgn3s",
-	"8rMfEmrrvs6kWizAOjZfM9CPyhpdgsaEOcNAZDnLCgUamQN0TCFxorYFn/CxT2e78e4OWz1+tP0G7Xgz",
-	"a/43AA==",
+	"ktVduJum2X3bafY4cvqrcuTgA038OJSDkO2r4bUJm8aV8cPt9aa5rPrjyUsero4cU5tfwtX08nXzTy++",
+	"1lq43X5UiRREk7SCOX4KD4bNQeW8Baytdl4YuxRts/9HwJb4rxPD9qXzN9e45/j7y2QtPf9aU/8j4DNZ",
+	"p6lgH7v87IeEjgG+LqVaLMA6Nl8z0I/KGl2CxoQ5w0BkOcsKBRqZA3RMIXGitgWf8LFPZ7vx7g5bZ4LR",
+	"9pu1482s+d8A",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

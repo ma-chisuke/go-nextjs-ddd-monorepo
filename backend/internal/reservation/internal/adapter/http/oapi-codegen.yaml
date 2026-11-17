@@ -1,0 +1,10 @@
+# oapi-codegen generates the server side of the Reservation API from
+# contracts/http/reservation.openapi.yaml: the types, the routes, and the
+# strict interface that handler.go implements (TPL-0006). Run `make gen`.
+package: http
+output: api.gen.go
+generate:
+  std-http-server: true
+  strict-server: true
+  models: true
+  embedded-spec: true
