@@ -83,5 +83,17 @@
 | consumer-driven contract test | コンシューマ駆動の契約テスト |
 | breaking change | 互換性を壊す変更 |
 | problem details（RFC 9457） | problem details（訳さない） |
+| source（対訳の） | 原文 |
+| deterministic check | 決定的なチェック |
+| finding（チェックの） | 指摘 |
+| concern（ツールが受け持つ） | 関心事 |
+| time budget（`make check` の） | 時間の上限 |
+| evaluation（ハーネスの） | 評価 |
+| lockfile | ロックファイル |
+| misconfiguration | 設定ミス |
+| secret（ファイルに書かれた認証情報） | 秘密情報 |
+| secret（GitHub に保存したもの） | シークレット |
+| required status check | 必須チェック |
+| trust policy（IAM ロールの） | 信頼ポリシー |
 
-<!-- i18n-source: translation.md sha256:d532c6930fcb7487560ee9866cad9f0efd6e5a4e4fd2b714a60c967f9f203ba3 -->
+<!-- i18n-source: translation.md sha256:b701e1dd218a943400bf6c371c462e9525802cec5304027ba3b7bd51df4a4ee0 -->

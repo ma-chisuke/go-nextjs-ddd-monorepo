@@ -83,3 +83,15 @@ Use these Japanese terms. The table grows when a new term appears; add the term 
 | consumer-driven contract test | コンシューマ駆動の契約テスト |
 | breaking change | 互換性を壊す変更 |
 | problem details (RFC 9457) | problem details (not translated) |
+| source (of a translation) | 原文 |
+| deterministic check | 決定的なチェック |
+| finding (of a check) | 指摘 |
+| concern (that a tool covers) | 関心事 |
+| time budget (of `make check`) | 時間の上限 |
+| evaluation (of the harness) | 評価 |
+| lockfile | ロックファイル |
+| misconfiguration | 設定ミス |
+| secret (a credential in a file) | 秘密情報 |
+| secret (stored on GitHub) | シークレット |
+| required status check | 必須チェック |
+| trust policy (of an IAM role) | 信頼ポリシー |
