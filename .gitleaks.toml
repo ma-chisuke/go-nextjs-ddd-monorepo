@@ -1,0 +1,18 @@
+# gitleaks looks for secrets with its default rules. Directories that git
+# ignores hold dependencies and caches, and are skipped.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Dependencies and caches that git ignores"
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)\.venv/''',
+  '''(^|/)\.cache/''',
+  '''(^|/)\.git/''',
+  '''(^|/)\.terraform/''',
+  '''(^|/)\.terragrunt-cache/''',
+  '''(^|/)\.next/''',
+  '''(^|/)\.claude/worktrees/''',
+  '''(^|/)tmp/''',
+]
