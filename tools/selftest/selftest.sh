@@ -310,6 +310,75 @@ EOF
   passes
 }
 
+case_lint_adr() {
+  put docs/adr/ADR-0001-try-something.md << 'EOF'
+---
+status: done
+date: 2026-11-17
+---
+
+# ADR-0001: Try something
+EOF
+  fails 'adr/status'
+  drop docs/adr/ADR-0001-try-something.md
+  passes
+}
+
+case_lint_adr__template() {
+  local record=docs/adr/template/TPL-0001-record-decisions-as-adrs.md
+  printf '\nA team edited this template record.\n' >> "$COPY/$record"
+  fails 'adr/template-changed'
+  run git checkout -q -- "$record"
+  passes
+}
+
+case_lint_i18n() {
+  put docs/guides/extra.md << 'EOF'
+# Extra
+
+A guide that has no translation yet.
+EOF
+  fails 'i18n/missing-translation'
+  # A translation whose marker holds the hash of an older English file.
+  local stale
+  stale=$(printf '%064d' 0)
+  put docs/guides/extra.ja.md << EOF
+# 追加
+
+まだ対訳のなかったガイドである。
+
+<!-- i18n-source: extra.md sha256:$stale -->
+EOF
+  fails 'i18n/stale-translation'
+  run "$make_cmd" --no-print-directory i18n-stamp
+  passes
+}
+
+case_lint_agents_md() {
+  local n=0
+  {
+    printf '# AGENTS.md\n\n'
+    while [ "$n" -lt 80 ]; do
+      n=$((n + 1))
+      printf -- '- Rule %s.\n' "$n"
+    done
+  } > "$COPY/AGENTS.md"
+  fails 'agents-md/too-long'
+  run git checkout -q -- AGENTS.md
+  passes
+}
+
+case_test_hooks() {
+  # A guard that allows everything must fail the tests of the hooks.
+  put .claude/hooks/guard-read.sh << 'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+  fails 'guard-read.sh'
+  run git checkout -q -- .claude/hooks/guard-read.sh
+  passes
+}
+
 case_lint_links() {
   put notes.md << 'EOF'
 # Notes
@@ -875,6 +944,16 @@ case_scope__staged() {
   omits 'untracked.sh'
   run git reset --quiet staged.sh
   passes CHECK_SCOPE=staged
+}
+
+# A staged change to a tool pin or to the checks puts every file in scope.
+case_scope__pins() {
+  TARGET=lint-shell
+  bad_shell untracked.sh
+  passes CHECK_SCOPE=staged
+  printf '\n# A comment.\n' >> "$COPY/mise.toml"
+  run git add mise.toml
+  fails 'untracked.sh' CHECK_SCOPE=staged
 }
 
 case_scope__changed() {
