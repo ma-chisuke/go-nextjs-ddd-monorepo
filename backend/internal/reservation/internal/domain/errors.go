@@ -9,9 +9,9 @@ type Kind int
 const (
 	// KindPeriodOutOfOrder: the period does not end after it starts.
 	KindPeriodOutOfOrder Kind = iota + 1
-	// KindPeriodNotOnStep: the period does not start and end on the grid of
+	// KindPeriodMisaligned: the period does not start and end on the grid of
 	// PeriodStep.
-	KindPeriodNotOnStep
+	KindPeriodMisaligned
 	// KindPeriodTooLong: the period is longer than LongestPeriod.
 	KindPeriodTooLong
 	// KindPeriodInPast: the period starts before now.
@@ -33,7 +33,7 @@ const (
 // Kinds lists every Kind, for the tests that must cover all of them.
 func Kinds() []Kind {
 	return []Kind{
-		KindPeriodOutOfOrder, KindPeriodNotOnStep, KindPeriodTooLong, KindPeriodInPast,
+		KindPeriodOutOfOrder, KindPeriodMisaligned, KindPeriodTooLong, KindPeriodInPast,
 		KindNoAttendees, KindOverCapacity, KindOutsideOpeningHours,
 		KindCancellationTooLate, KindReservationCancelled,
 	}

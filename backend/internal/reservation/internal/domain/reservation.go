@@ -158,7 +158,7 @@ func checkTerms(room Room, period Period, attendees int, now time.Time) error {
 	case !period.Start.Before(period.End):
 		return newError(KindPeriodOutOfOrder, "The period must end after it starts.")
 	case !onStep(period.Start) || !onStep(period.End):
-		return newError(KindPeriodNotOnStep, fmt.Sprintf(
+		return newError(KindPeriodMisaligned, fmt.Sprintf(
 			"The period must start and end on a multiple of %s, such as 10:00, 10:15, or 10:30.", describe(PeriodStep)))
 	case period.Length() > LongestPeriod:
 		return newError(KindPeriodTooLong, fmt.Sprintf(
