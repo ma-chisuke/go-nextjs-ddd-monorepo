@@ -84,6 +84,12 @@
       "groupName": "Go"
     },
     {
+      "description": "The Go image of backend/Dockerfile moves with the Go version: the build fails when the two differ.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["docker.io/library/golang", "golang"],
+      "groupName": "Go"
+    },
+    {
       "description": "pnpm in mise.toml, packageManager in package.json, and pnpm-lock.yaml name the same version.",
       "matchDepNames": ["pnpm"],
       "groupName": "pnpm"
