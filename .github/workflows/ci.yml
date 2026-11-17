@@ -35,6 +35,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # The commit and its first parent, which CHECK_BASE names: the
+          # checks that compare a file with its earlier version need it.
+          fetch-depth: 2
       - name: Install mise and the tools in mise.lock
         uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
         with:
@@ -59,6 +62,9 @@ jobs:
       - name: make check
         run: make check
         env:
+          # Every file is in scope; the base is what lint-contracts-breaking
+          # compares the API documents with (tools/scripts/merge-base.sh).
+          CHECK_BASE: HEAD^1
           # pinact asks the GitHub API for the commit of an action that a
           # change leaves unpinned; anonymous requests are rate-limited.
           GITHUB_TOKEN: ${{ github.token }}
@@ -70,7 +76,8 @@ jobs:
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
 
-  # `make check-all`: the fast checks and the slow ones that use the network.
+  # `make check-all`: the fast checks and the slow ones that use the network
+  # or PostgreSQL, which make starts with the Docker Compose of the runner.
   # On a pull request it checks the files that the pull request changes; on
   # main it checks every file.
   full:
