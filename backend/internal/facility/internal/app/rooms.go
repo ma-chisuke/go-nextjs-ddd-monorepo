@@ -149,7 +149,7 @@ func roomFrom(row postgres.Room) Room {
 		OpenFrom:  timeOfDayFrom(row.OpenFrom),
 		OpenUntil: timeOfDayFrom(row.OpenUntil),
 		TimeZone:  row.TimeZone,
-		CreatedAt: row.CreatedAt,
+		CreatedAt: row.CreatedAt.UTC(),
 	}
 }
 
