@@ -16,3 +16,10 @@ paths = [
   '''(^|/)\.claude/worktrees/''',
   '''(^|/)tmp/''',
 ]
+
+[[allowlists]]
+description = "The marker that records which version of the English file a translation matches (TPL-0021)"
+regexTarget = "line"
+regexes = [
+  '''<!-- i18n-source: \S+ sha256:[0-9a-f]{64} -->''',
+]
