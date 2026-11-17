@@ -1,0 +1,51 @@
+# Releases from Conventional Commits. release-please keeps a release pull
+# request open with the next version and CHANGELOG.md; merging it tags the
+# release and publishes the release notes. See docs/guides/github-settings.md.
+#
+# It writes with the token of a GitHub App, not with GITHUB_TOKEN: the settings
+# forbid GitHub Actions to create pull requests, and a pull request opened with
+# GITHUB_TOKEN would not start the required checks. The App's client ID is the
+# repository variable RELEASE_APP_CLIENT_ID; its private key is the secret
+# RELEASE_APP_PRIVATE_KEY of the environment `release`, which only main may use.
+# Until the variable is set, the job is skipped.
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions: {}
+
+# Never cancel a release half-way; let the next run wait.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: release-please
+    if: vars.RELEASE_APP_CLIENT_ID != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: release
+    # GITHUB_TOKEN is not used; the App token below does the writing.
+    permissions: {}
+    steps:
+      - name: Create a token for the release App
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          repositories: ${{ github.event.repository.name }}
+          # Tags and releases, the release pull request, and its labels.
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+      - name: Run release-please
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          config-file: .github/release-please-config.json
+          manifest-file: .github/release-please-manifest.json
