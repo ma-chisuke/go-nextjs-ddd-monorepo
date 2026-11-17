@@ -420,6 +420,17 @@ func TestListReservationsInPages(t *testing.T) {
 	wantPointer(t, p, "to")
 }
 
+func TestBodiesOfAnotherMediaType(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t)
+	r, etag := e.book(t, "k1", "10:00", "11:00")
+	plain := apitest.Header("Content-Type", "text/plain")
+	wantProblem(t, e.client.Do(http.MethodPost, "/reservations", []byte("10:00"), key("k2"), plain),
+		"unsupported-media-type", http.StatusUnsupportedMediaType)
+	wantProblem(t, e.client.Do(http.MethodPatch, "/reservations/"+r.Id.String(), []byte("10:00"), ifMatch(etag), plain),
+		"unsupported-media-type", http.StatusUnsupportedMediaType)
+}
+
 func TestRequestsOutsideTheDocument(t *testing.T) {
 	t.Parallel()
 	e := newEnv(t)
