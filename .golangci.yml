@@ -8,6 +8,9 @@ version: "2"
 run:
   timeout: 3m
   modules-download-mode: readonly
+  # Also lint the tests that need a database (`make check-all` runs them).
+  build-tags:
+    - integration
 
 formatters:
   enable:
