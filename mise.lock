@@ -60,6 +60,56 @@ checksum_source = "mise-versions"
 url = "https://github.com/k1LoW/octocov/releases/download/v0.83.5/octocov_v0.83.5_darwin_amd64.zip"
 url_api = "https://api.github.com/repos/k1LoW/octocov/releases/assets/711698409"
 
+[[tools."aqua:k1LoW/tbls"]]
+version = "1.96.1"
+backend = "aqua:k1LoW/tbls"
+specifiers = ["1.96.1"]
+
+[tools."aqua:k1LoW/tbls"."platforms.linux-arm64"]
+checksum = "sha256:f5da6e28b787ca934326870f7b69812c76e097d35a8ae612533108060f76850a"
+checksum_source = "mise-versions"
+url = "https://github.com/k1LoW/tbls/releases/download/v1.96.1/tbls_v1.96.1_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/k1LoW/tbls/releases/assets/596628147"
+
+[tools."aqua:k1LoW/tbls"."platforms.linux-x64"]
+checksum = "sha256:18285eef0ba7d917214e8bd7dd6a22afe5fea021eed52e7149100a3d10a2af95"
+checksum_source = "mise-versions"
+url = "https://github.com/k1LoW/tbls/releases/download/v1.96.1/tbls_v1.96.1_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/k1LoW/tbls/releases/assets/596628145"
+
+[tools."aqua:k1LoW/tbls"."platforms.macos-arm64"]
+checksum = "sha256:99d1d53b02e06635d4d94e2823fecc78b3249e996b1785a199ba1868f9f28a8f"
+checksum_source = "mise-versions"
+url = "https://github.com/k1LoW/tbls/releases/download/v1.96.1/tbls_v1.96.1_darwin_arm64.zip"
+url_api = "https://api.github.com/repos/k1LoW/tbls/releases/assets/596610331"
+
+[tools."aqua:k1LoW/tbls"."platforms.macos-x64"]
+checksum = "sha256:c744731de4f96517acac234d65175eb9084968abd1a77268d75007b0443a4241"
+checksum_source = "mise-versions"
+url = "https://github.com/k1LoW/tbls/releases/download/v1.96.1/tbls_v1.96.1_darwin_amd64.zip"
+url_api = "https://api.github.com/repos/k1LoW/tbls/releases/assets/596610330"
+
+[[tools."aqua:sqlc-dev/sqlc"]]
+version = "1.31.1"
+backend = "aqua:sqlc-dev/sqlc"
+specifiers = ["1.31.1"]
+
+[tools."aqua:sqlc-dev/sqlc"."platforms.linux-arm64"]
+checksum = "sha256:b7cae247740d0c51a1e657479e5b2d21e6fef428f596682a01bc55bf4ab8a23d"
+url = "https://downloads.sqlc.dev/sqlc_1.31.1_linux_arm64.tar.gz"
+
+[tools."aqua:sqlc-dev/sqlc"."platforms.linux-x64"]
+checksum = "sha256:497ae4fcdfa64c5b0c311ffe4c2bd991e43991e82e5367792ed78bc2dca27354"
+url = "https://downloads.sqlc.dev/sqlc_1.31.1_linux_amd64.tar.gz"
+
+[tools."aqua:sqlc-dev/sqlc"."platforms.macos-arm64"]
+checksum = "sha256:21602158c99eb1f2bae197a66abfb1941d1e9e50b23125bb193349c6b1acc71e"
+url = "https://downloads.sqlc.dev/sqlc_1.31.1_darwin_arm64.tar.gz"
+
+[tools."aqua:sqlc-dev/sqlc"."platforms.macos-x64"]
+checksum = "sha256:c5af76772e3785d21663a62697056b383f07629979b1bd25b93872e73dbd519b"
+url = "https://downloads.sqlc.dev/sqlc_1.31.1_darwin_amd64.tar.gz"
+
 [[tools.editorconfig-checker]]
 version = "4.0.2"
 backend = "github:editorconfig-checker/editorconfig-checker"
@@ -146,6 +196,64 @@ checksum = "sha256:0b5ceda34753d74b6fd024ba6306fa332cd03c855801430bd7cbd44a94692
 url = "https://github.com/suzuki-shunsuke/ghalint/releases/download/v1.6.0/ghalint_1.6.0_darwin_amd64.tar.gz"
 url_api = "https://api.github.com/repos/suzuki-shunsuke/ghalint/releases/assets/694554125"
 provenance = "cosign"
+
+[[tools."github:oasdiff/oasdiff"]]
+version = "1.38.0"
+backend = "github:oasdiff/oasdiff"
+specifiers = ["1.38.0"]
+
+[tools."github:oasdiff/oasdiff"."platforms.linux-arm64"]
+checksum = "sha256:a5ebb16d90f729f6b436a92d3054c11ba5633ddfb639dfdfb64b0023cd03680c"
+checksum_source = "mise-versions"
+url = "https://github.com/oasdiff/oasdiff/releases/download/v1.38.0/oasdiff_1.38.0_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/oasdiff/oasdiff/releases/assets/747750953"
+
+[tools."github:oasdiff/oasdiff"."platforms.linux-x64"]
+checksum = "sha256:613037fd6a1d3362a1b742d6d86c338c0eb5ab3511f4942ce3948e78720ea2da"
+checksum_source = "mise-versions"
+url = "https://github.com/oasdiff/oasdiff/releases/download/v1.38.0/oasdiff_1.38.0_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/oasdiff/oasdiff/releases/assets/747750952"
+
+[tools."github:oasdiff/oasdiff"."platforms.macos-arm64"]
+checksum = "sha256:8a85428df3b00e76e7d41c49d222533c9beec813e9cbdc8162f3a6e776604c18"
+checksum_source = "mise-versions"
+url = "https://github.com/oasdiff/oasdiff/releases/download/v1.38.0/oasdiff_1.38.0_darwin_all.tar.gz"
+url_api = "https://api.github.com/repos/oasdiff/oasdiff/releases/assets/747751019"
+
+[tools."github:oasdiff/oasdiff"."platforms.macos-x64"]
+checksum = "sha256:8a85428df3b00e76e7d41c49d222533c9beec813e9cbdc8162f3a6e776604c18"
+checksum_source = "mise-versions"
+url = "https://github.com/oasdiff/oasdiff/releases/download/v1.38.0/oasdiff_1.38.0_darwin_all.tar.gz"
+url_api = "https://api.github.com/repos/oasdiff/oasdiff/releases/assets/747751019"
+
+[[tools."github:pgplex/pgschema"]]
+version = "1.14.1"
+backend = "github:pgplex/pgschema"
+specifiers = ["1.14.1"]
+
+[tools."github:pgplex/pgschema"."platforms.linux-arm64"]
+checksum = "sha256:6a1617a21ba786a60c763e764437498e58d22f779e5e1e88684c1af2ad066688"
+checksum_source = "mise-versions"
+url = "https://github.com/pgplex/pgschema/releases/download/v1.14.1/pgschema-1.14.1-linux-arm64"
+url_api = "https://api.github.com/repos/pgplex/pgschema/releases/assets/723133180"
+
+[tools."github:pgplex/pgschema"."platforms.linux-x64"]
+checksum = "sha256:0f3915acdd15fcbe28e4aa14ad08a7e558a21669e8d1d5afa95ad590e59647f7"
+checksum_source = "mise-versions"
+url = "https://github.com/pgplex/pgschema/releases/download/v1.14.1/pgschema-1.14.1-linux-amd64"
+url_api = "https://api.github.com/repos/pgplex/pgschema/releases/assets/723133174"
+
+[tools."github:pgplex/pgschema"."platforms.macos-arm64"]
+checksum = "sha256:cf06ef72af0a318882b7418acc2f8862bddbb22bb0bf90a3aff2eb3f106b3e54"
+checksum_source = "mise-versions"
+url = "https://github.com/pgplex/pgschema/releases/download/v1.14.1/pgschema-1.14.1-darwin-arm64"
+url_api = "https://api.github.com/repos/pgplex/pgschema/releases/assets/723133178"
+
+[tools."github:pgplex/pgschema"."platforms.macos-x64"]
+checksum = "sha256:671ef5a88e6fc6d73d8a5cd25ac7700a614b330970c542e79ea35ca8e62c5b7e"
+checksum_source = "mise-versions"
+url = "https://github.com/pgplex/pgschema/releases/download/v1.14.1/pgschema-1.14.1-darwin-amd64"
+url_api = "https://api.github.com/repos/pgplex/pgschema/releases/assets/723133175"
 
 [[tools."github:sbdchd/squawk"]]
 version = "2.73.0"
