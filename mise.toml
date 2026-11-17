@@ -41,8 +41,14 @@ terragrunt = "1.2.2"
 tflint = "0.66.0"
 terraform-docs = "0.25.1"
 
-# SQL
+# SQL: lint, typed queries, declarative schema, and schema documents
 "github:sbdchd/squawk" = "2.73.0"
+"aqua:sqlc-dev/sqlc" = "1.31.1"
+"github:pgplex/pgschema" = "1.14.1"
+"aqua:k1LoW/tbls" = "1.96.1"
+
+# API contracts: breaking changes between two OpenAPI documents
+"github:oasdiff/oasdiff" = "1.38.0"
 
 # Security
 trivy = "0.76.2"
