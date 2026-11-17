@@ -1,0 +1,31 @@
+# Redocly CLI lints the API contracts: the OpenAPI 3.1 documents in
+# contracts/http and the AsyncAPI 3.0 documents in contracts/events.
+# https://redocly.com/docs/cli/configuration
+extends:
+  - recommended-strict
+
+# No usage data leaves the machine.
+telemetry: "off"
+
+oas3_1Rules:
+  operation-operationId: error
+  no-unused-components: error
+  # Errors are RFC 9457 problem details (docs/adr/template/TPL-0008).
+  rule/problem-details-only:
+    subject:
+      type: MediaTypesMap
+    where:
+      - subject:
+          type: Response
+          matchParentKeys: /^[45]/
+        assertions:
+          defined: true
+    assertions:
+      enum:
+        - application/problem+json
+    message: A 4xx or 5xx response has application/problem+json as its only media type (RFC 9457).
+
+async3Rules:
+  # Events travel over EventBridge and SQS, where IAM controls access, and an
+  # AsyncAPI security scheme cannot describe IAM.
+  security-defined: "off"
