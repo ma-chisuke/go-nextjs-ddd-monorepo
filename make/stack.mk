@@ -19,7 +19,9 @@ down: ## Stop the local system; the data of PostgreSQL stays (db-down deletes it
 	@$(STACK) down
 
 # One scenario across Facility and Reservation over real HTTP, with every
-# response checked against the API documents (backend/test/smoke). It stops
-# the services that it started and leaves PostgreSQL running.
+# response checked against the API documents (backend/test/smoke). It starts
+# the services on the PostgreSQL that db-server started (make/db.mk), stops
+# the services that it started, and leaves PostgreSQL running.
+smoke: | db-server
 smoke: ## Start the local system and run the smoke test against it
 	@$(TASK) $@ 'if [ -n "$$($(FILES) $(STACK_SOURCES))" ]; then $(STACK) smoke; fi'
