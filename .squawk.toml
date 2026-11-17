@@ -1,0 +1,16 @@
+# squawk checks every SQL file in the repository. These files describe the
+# desired state (the schema.sql of each bounded context, db/bootstrap.sql) and
+# never run as a migration, so the rules about a running migration are off
+# here. They will check the DDL of each pgschema plan instead.
+# https://squawkhq.com/docs/cli#squawktoml-configuration-file
+pg_version = "18.0"
+
+excluded_rules = [
+  # A migration runner sets the timeouts, not a schema file.
+  "require-lock-timeout",
+  "require-statement-timeout",
+  # An index in a schema file belongs to the table it describes.
+  "require-concurrent-index-creation",
+  # A schema file is not a script that is run again after a failure.
+  "prefer-robust-stmts",
+]
