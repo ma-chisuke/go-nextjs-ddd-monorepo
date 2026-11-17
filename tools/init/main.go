@@ -35,10 +35,11 @@ const (
 // Paths that keep the words of the template:
 //   - docs/adr/template/ holds the decisions of the template, checked against
 //     docs/adr/template/checksums.txt; a project never edits them (TPL-0001).
+//   - tools/init/ is this command, which must keep the names it replaces.
 //
 // Files marked linguist-vendored in .gitattributes are third-party and are
 // skipped as well.
-var keptPrefixes = []string{"docs/adr/template/"}
+var keptPrefixes = []string{"docs/adr/template/", "tools/init/"}
 
 // sampleContexts lists the paths of the sample bounded contexts, which a
 // project removes. The template has none yet. When the samples arrive, list
