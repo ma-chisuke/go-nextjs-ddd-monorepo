@@ -379,6 +379,29 @@ EOF
   passes
 }
 
+case_gen_check_api() {
+  # A generated file that somebody edited by hand, or forgot to regenerate.
+  local generated=backend/internal/facility/internal/adapter/http/api.gen.go
+  printf '\n// Edited by hand.\n' >> "$COPY/$generated"
+  fails 'gen/stale'
+  run git checkout -q -- "$generated"
+  passes
+}
+
+case_gen_check_sqlc() {
+  # A query that changed without `make gen`.
+  local queries=backend/internal/facility/internal/adapter/postgres/queries/rooms.sql
+  put "$queries" << 'EOF'
+-- name: GetRoomByName :one
+SELECT id, name, capacity, open_from, open_until, time_zone, created_at
+FROM rooms
+WHERE name = sqlc.arg(name);
+EOF
+  fails 'gen/stale'
+  run git checkout -q -- "$queries"
+  passes
+}
+
 case_test_commit_msg() {
   # A script that accepts every subject must fail its tests.
   put tools/scripts/commit-msg.sh << 'EOF'
