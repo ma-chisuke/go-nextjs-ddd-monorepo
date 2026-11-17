@@ -20,8 +20,10 @@ fmt-check-prettier:
 fmt-toml:
 	@$(FILES) "*.toml" | RUST_LOG=warn xargs -r taplo format
 
+# taplo names the file only in a log line, which not every build prints, so
+# the finding is written here.
 fmt-check-toml:
-	@$(TASK) $@ '$(FILES) "*.toml" | RUST_LOG=warn xargs -r taplo format --check'
+	@$(TASK) $@ 'code=0; for f in $$($(FILES) "*.toml"); do taplo format --check "$$f" > /dev/null 2>&1 || { echo "$$f:1: [taplo/format] the file is not formatted. Fix: run make fmt"; code=1; }; done; exit $$code'
 
 fmt-shell:
 	@$(FILES) $(SHELL_GLOBS) | xargs -r shfmt --write

@@ -52,6 +52,10 @@ jobs:
           restore-keys: deps-${{ runner.os }}-
       - name: make setup
         run: make setup
+        env:
+          # tflint asks the GitHub API for its ruleset plugin; anonymous
+          # requests from a shared runner are rate-limited.
+          GITHUB_TOKEN: ${{ github.token }}
       - name: make check
         run: make check
         env:
@@ -100,6 +104,10 @@ jobs:
           restore-keys: deps-${{ runner.os }}-
       - name: make setup
         run: make setup
+        env:
+          # tflint asks the GitHub API for its ruleset plugin; anonymous
+          # requests from a shared runner are rate-limited.
+          GITHUB_TOKEN: ${{ github.token }}
       - name: make check-all
         run: make check-all
         env:
