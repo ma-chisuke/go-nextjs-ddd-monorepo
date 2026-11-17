@@ -935,6 +935,40 @@ EOF
   passes
 }
 
+# The checks below are in check-all. They use the PostgreSQL of `make db-up`
+# (or start it), and work in scratch databases of their own.
+facility_postgres=backend/internal/facility/internal/adapter/postgres
+
+# A table of rooms with an id and the given columns.
+rooms_schema() {
+  local columns='' column
+  for column in "$@"; do
+    columns="$columns    $column,"$'\n'
+  done
+  put "$facility_postgres/schema.sql" << EOF
+CREATE TABLE rooms (
+    id uuid NOT NULL,
+${columns}    CONSTRAINT rooms_pkey PRIMARY KEY (id)
+);
+EOF
+}
+
+case_lint_sql_plan() {
+  rooms_schema 'capacity integer NOT NULL'
+  run git add "$facility_postgres/schema.sql"
+  commit 'make the schema of the base small'
+  passes CHECK_BASE=HEAD
+  rooms_schema 'capacity integer NOT NULL' 'floor integer'
+  passes CHECK_BASE=HEAD
+  rooms_schema 'capacity integer NOT NULL' 'floor integer NOT NULL'
+  fails '.cache/sql-plan/facility.sql:1: [adding-required-field]' CHECK_BASE=HEAD
+  prints "$facility_postgres/schema.sql"
+  rooms_schema 'capacity bigint NOT NULL'
+  fails '[changing-column-type]' CHECK_BASE=HEAD
+  # Without a base (no origin/main in the copy), nothing is compared.
+  passes
+}
+
 good_openapi() {
   put contracts/http/facility.openapi.yaml << 'EOF'
 openapi: 3.1.0
