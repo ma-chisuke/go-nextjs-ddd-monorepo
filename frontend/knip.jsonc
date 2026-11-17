@@ -1,0 +1,10 @@
+// knip finds the files, exports, and dependencies of the frontend that nothing
+// uses. Its Next.js plugin knows the entry points (pages, layouts, routes, the
+// proxy), so only what Next.js cannot know is configured here.
+// https://knip.dev/reference/configuration
+{
+  "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+  // The types generated from the OpenAPI contracts cover the whole contract,
+  // and a page uses only part of it.
+  "ignore": ["src/lib/api/**/*.gen.ts"],
+}
