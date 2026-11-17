@@ -14,3 +14,4 @@ docs/adr/README.ja.md linguist-generated
 
 # Third-party files kept in the repository.
 .vale/styles/Google/** linguist-vendored
+.claude/skills/japanese-tech-writing/** linguist-vendored

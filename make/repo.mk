@@ -47,7 +47,8 @@ lint-schema-remote:
 	@$(TASK) $@ '\
 		$(FILES) "lefthook.yml" | xargs -r check-jsonschema --schemafile https://raw.githubusercontent.com/evilmartians/lefthook/v2.2.2/schema.json; \
 		$(FILES) "mise.toml" | xargs -r check-jsonschema --schemafile https://mise.jdx.dev/schema/mise.json; \
-		$(FILES) ".devcontainer/devcontainer.json" | xargs -r check-jsonschema --schemafile https://raw.githubusercontent.com/devcontainers/spec/c95ffeed1d059abfe9ffbe79762dc2fa4e7c2421/schemas/devContainer.schema.json'
+		$(FILES) ".devcontainer/devcontainer.json" | xargs -r check-jsonschema --schemafile https://raw.githubusercontent.com/devcontainers/spec/c95ffeed1d059abfe9ffbe79762dc2fa4e7c2421/schemas/devContainer.schema.json; \
+		$(FILES) ".claude/settings.json" | xargs -r check-jsonschema --schemafile https://json.schemastore.org/claude-code-settings.json'
 
 lint-shell:
 	@$(TASK) $@ '$(FILES) $(SHELL_GLOBS) | xargs -r shellcheck --format=gcc --external-sources'
