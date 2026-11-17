@@ -946,6 +946,37 @@ case_scope__staged() {
   passes CHECK_SCOPE=staged
 }
 
+# The license rule: a dependency that ships under a forbidden license fails,
+# and one under a weak copyleft license passes. Trivy reads the license of an
+# npm package from node_modules.
+npm_project_with_license() {
+  put sample/package.json '{"name":"sample","version":"1.0.0","dependencies":{"somepkg":"1.0.0"}}'
+  put sample/package-lock.json << 'EOF'
+{
+  "name": "sample",
+  "version": "1.0.0",
+  "lockfileVersion": 3,
+  "requires": true,
+  "packages": {
+    "": { "name": "sample", "version": "1.0.0", "dependencies": { "somepkg": "1.0.0" } },
+    "node_modules/somepkg": {
+      "version": "1.0.0",
+      "resolved": "https://registry.npmjs.org/somepkg/-/somepkg-1.0.0.tgz",
+      "integrity": "sha512-aaaa"
+    }
+  }
+}
+EOF
+  put sample/node_modules/somepkg/package.json "{\"name\":\"somepkg\",\"version\":\"1.0.0\",\"license\":\"$1\"}"
+}
+
+case_scan_deps__license() {
+  npm_project_with_license GPL-3.0-only
+  fails 'somepkg is under GPL-3.0-only'
+  npm_project_with_license LGPL-3.0-or-later
+  passes
+}
+
 # A staged change to a tool pin or to the checks puts every file in scope.
 case_scope__pins() {
   TARGET=lint-shell
