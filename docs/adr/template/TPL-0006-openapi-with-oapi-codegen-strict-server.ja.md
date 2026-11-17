@@ -82,12 +82,12 @@ OpenAPI 3.1 の文書を、使う道具のすべてが読めるかどうかは�
 
 - 良い点：正とするものが1つで済み、サーバーの生成コードもない。
 - 悪い点：文書がコードの後を追う。API の変更はコードを書いたあとでしか見えず、画面の作業はサーバーを待つことになる。
-- 悪い点：Go の構造体を変えると、誰も意図しないまま API が変わりうる。それに気付く手段は、レビューしかない。
+- 悪い点：Go の構造体を変えると、誰も意図しないまま API が変わりうる。それに気づく手段は、レビューしかない。
 
 ### 先に OpenAPI 3.1 を書き、ogen で生成する
 
 - 良い点：ogen は、文書にある制約（長さやパターンなど）を検査するコードも生成する。
-- 悪い点：生成したサーバーは、`net/http` ではなく自前のルーターでリクエストを振り分ける。省略できるフィールドも、独自の型で包む。
+- 悪い点：生成したサーバーは、`http.ServeMux` ではなく自前のルーターでリクエストを振り分け、JSON も独自のライブラリで読み書きする。省略できるフィールドも、独自の型で包む。
 - 悪い点：oapi-codegen より使っているプロジェクトが少ない。人もエージェントも、手本にできる例を見つけにくい。
 
 ### gRPC か Connect と Protocol Buffers
@@ -109,4 +109,4 @@ OpenAPI 3.1 の文書を、使う道具のすべてが読めるかどうかは�
 - [oapi-codegen](https://github.com/oapi-codegen/oapi-codegen)
 - [openapi-typescript](https://openapi-ts.dev/)
 
-<!-- i18n-source: TPL-0006-openapi-with-oapi-codegen-strict-server.md sha256:02864d4485d10e9cf0132bff480845c2b7dcf6b04617b6e5a0e621b2896cfade -->
+<!-- i18n-source: TPL-0006-openapi-with-oapi-codegen-strict-server.md sha256:ffb95f740b68c60244c17bcaa1b41a2e20829cee97c5a6ef4caecc7a2ca98069 -->

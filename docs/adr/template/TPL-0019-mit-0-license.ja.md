@@ -39,7 +39,7 @@ AWS も、サンプルコードを同じ理由で MIT-0 にしている。利用
 決まりは次のとおりである。
 
 - `LICENSE` には MIT-0 の本文を置き、`package.json` には `"license": "MIT-0"` と書く。
-- 利用者がコピーするものには、2種類のライセンスの依存を含めない。強いコピーレフトのライセンス（GPL・AGPL）と、ソースは公開していても利用を制限するライセンス（SSPL・BUSL・Commons Clause・NonCommercial の付いた Creative Commons）である。`trivy.yaml` は、これらのライセンスを禁止として並べている。
+- テンプレートから作る製品には、2種類のライセンスの依存を含めない。強いコピーレフトのライセンス（GPL・AGPL）と、ソースは公開していても利用を制限するライセンス（SSPL・BUSL・Commons Clause・NonCommercial の付いた Creative Commons）である。`trivy.yaml` はこれらのライセンスを禁止として並べており、ライセンスのスキャンはこれらでだけ失敗する。LGPL や MPL のような弱いコピーレフトは認める。そのライセンスが及ぶのはライブラリそのものであり、それを使うコードには及ばないからである。たとえば `next` は、sharp を通して LGPL-3.0 の libvips を持ち込む。
 - リポジトリに置いた第三者のファイルは、それぞれのライセンスのままにし、ライセンスをファイルの中か隣に書く。`.vale/styles/Google/` にある Vale 用の Google のスタイルは MIT License である。`.claude/skills/japanese-tech-writing/` にある日本語の文章規範は Unlicense である。
 
 ### 結果
@@ -49,11 +49,12 @@ AWS も、サンプルコードを同じ理由で MIT-0 にしている。利用
 - 悪い点：MIT-0 には、MIT と同じく特許の許諾がない。Apache-2.0 にはある。
 - 悪い点：禁止したライセンスの依存がどうしても要るチームは、自分の記録でこの決定を置き換え、`trivy.yaml` を変える必要がある。
 - 悪い点：別のライセンスのファイルは例外であり、チームはそれに気づく必要がある。それらのファイルを残すなら、その表示も残すことになる。
+- 悪い点：弱いコピーレフトのライブラリ（LGPL-3.0 の libvips など）を含めて配る製品は、そのライブラリについては、そのライセンスの条件を守る必要がある。
 
 ### 確認の方法
 
 - `LICENSE` と `package.json` が MIT-0 を指していることは、レビューで確かめる。
-- `make check-all` はターゲット `scan-deps` を実行する。`scan-deps` は、`trivy.yaml` が禁止するライセンスの依存を Trivy が見つけると失敗する。指摘にはこの記録が書かれる（`tools/trivy/findings.tpl`）。
+- `make check-all` はターゲット `scan-deps` を実行する。`scan-deps` は、`trivy.yaml` が禁止するライセンスの依存を Trivy が見つけると失敗する。指摘にはこの記録が書かれる（`tools/trivy/findings.tpl`）。スキャンの対象は製品とともに配るものであり、開発のための依存と `tools/` のモジュールは外す。
 - `trivy.yaml` は `license.full: false` を設定している。そのため、Trivy が読むのは各パッケージが宣言したライセンスであり、各ファイルのライセンスの本文は読まない。手でリポジトリにコピーしたファイルは Trivy の対象外なので、そのライセンスがファイルの中か隣に書かれていることをレビューで確かめる。
 
 ## 選択肢の長所と短所
@@ -92,4 +93,4 @@ AWS も、サンプルコードを同じ理由で MIT-0 にしている。利用
 - [AWS が公開している MIT-0](https://github.com/aws/mit-0)
 - ライセンスのスキャンと、そのほかのサプライチェーンの守りは TPL-0024 にある。
 
-<!-- i18n-source: TPL-0019-mit-0-license.md sha256:fce348f41260f9d865b4d115c60e184dd74909ddb6e3bb1e2ecee0ecc7bd3f4f -->
+<!-- i18n-source: TPL-0019-mit-0-license.md sha256:7cee9b099324afb799ee4d591811d8056c6d931bff401cdb94e79d8dfd131677 -->

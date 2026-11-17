@@ -69,7 +69,7 @@ For Go modules, the Go toolchain and the Makefile enforce these rules.
 - `GOFLAGS=-mod=readonly` makes a command fail instead of changing `go.mod` or `go.sum`, and `GOTOOLCHAIN=local` stops Go from downloading another toolchain.
 - govulncheck reports known vulnerabilities in the code that is actually called (`vuln-go` in `make check-all`).
 
-Across the lockfiles, Trivy looks for known vulnerabilities and for dependencies under forbidden licenses (`scan-deps` in `make check-all`, and TPL-0019).
+Across the lockfiles, Trivy looks for known vulnerabilities and for dependencies under forbidden licenses (`scan-deps` in `make check-all`, and TPL-0019). The license scan covers only what ships with the product, so it leaves out development dependencies and the `tools/` module. Trivy is the one scanner for misconfiguration, vulnerabilities, licenses, and SBOMs: one pinned binary covers all four, so there is no second scanner to pin and to watch. For Go, govulncheck narrows the vulnerabilities to the code that is actually called (TPL-0023).
 
 For secrets, two tools look for a credential in the code.
 
@@ -78,8 +78,8 @@ For secrets, two tools look for a credential in the code.
 
 For the repository, the template uses these services on GitHub.
 
-- CodeQL analyzes the Go and TypeScript code.
-- OpenSSF Scorecard rates the security practices of the repository.
+- CodeQL analyzes the Go and TypeScript code (`.github/workflows/codeql.yml`).
+- OpenSSF Scorecard rates the security practices of the repository (`.github/workflows/scorecard.yml`).
 - Private vulnerability reporting lets people report a vulnerability without making it public.
 - Dependabot raises alerts for vulnerable dependencies. It opens no pull requests: updates come from Renovate (TPL-0025).
 
@@ -103,8 +103,8 @@ Two parts of this decision differ from the first plan, on purpose.
 - Bad, because updates, security fixes included, arrive three days late unless someone overrides the wait.
 - Bad, because adding a tool has friction: an entry in `mise.toml`, a lock for four platforms, and sometimes an entry in `allowBuilds`.
 - Bad, because some tools publish no provenance. For them, `mise.lock` records only a checksum (gitleaks, shellcheck, and Vale among them). A checksum shows that every machine gets the file that was locked, not that the file is what its author built.
-- Bad, because the repository sets no wait for Go modules. A module that a person adds with `go get` arrives at once, and only the updates that Renovate proposes wait (TPL-0025).
-- Bad, because most defenses on GitHub are settings, not files, so no check in this repository can see them.
+- Bad, because the repository sets no wait for Go modules or for the tools in `mise.toml`. A version that a person adds by hand, with `go get` or in `mise.toml`, arrives at once, and only the updates that Renovate proposes wait (TPL-0025).
+- Bad, because several defenses on GitHub are settings, not files. `make github-settings` compares them with `docs/guides/github-settings.md`, but `make check` cannot see them.
 
 ### Confirmation
 
@@ -112,14 +112,14 @@ Two parts of this decision differ from the first plan, on purpose.
 - `make setup` runs `mise install` under `locked = true`, `pnpm install --frozen-lockfile` with the settings in `pnpm-workspace.yaml`, and `uv sync --locked`. CI runs the same target.
 - `make check-all` runs `scan-deps` and `vuln-go`.
 - Review confirms that no workflow uses `trivy-action` or `setup-trivy`. No check enforces it.
-- Secret scanning, push protection, CodeQL, Scorecard, private vulnerability reporting, and Dependabot alerts are turned on when the repository is set up on GitHub, and review confirms them there.
+- CodeQL and Scorecard run as workflows. Secret scanning, push protection, private vulnerability reporting, and Dependabot alerts are settings of the repository: `make github-settings` turns them on, and reports any that differ from `docs/guides/github-settings.md`.
 - The defenses for containers arrive with the first image.
 
 ## Pros and Cons of the Options
 
 ### Layered defenses with the tools that are already pinned
 
-- Good, because a check or a package manager enforces each layer, not care alone.
+- Good, because a check, a package manager, or mise enforces most layers, and the rest are settings on GitHub that `make github-settings` and review confirm.
 - Good, because it needs no paid service.
 - Bad, because the settings are spread over many files, and each must be understood before it is changed.
 
@@ -143,4 +143,4 @@ Two parts of this decision differ from the first plan, on purpose.
 
 - [pnpm settings](https://pnpm.io/settings), [uv settings](https://docs.astral.sh/uv/reference/settings/), and [mise.lock](https://mise.jdx.dev/dev-tools/mise-lock.html)
 - [OpenSSF Scorecard](https://github.com/ossf/scorecard)
-- The pins of tools are in TPL-0022, the choice of Trivy as the only scanner in TPL-0023, and the updates in TPL-0025.
+- The pins of tools are in TPL-0022, the rule of one tool per concern in TPL-0023, and the updates in TPL-0025.

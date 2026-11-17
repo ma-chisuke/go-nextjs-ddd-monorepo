@@ -41,9 +41,10 @@ The rules are as follows.
 - It waits three days after a release before it proposes the release.
 - It groups related updates into one pull request.
 - It opens pull requests on a weekly schedule. Security fixes do not wait for the schedule.
-- It merges a patch-level update on its own when the checks pass. Minor and major updates wait for a person.
+- It merges patch, digest, and pin updates on its own when the required check passes. Minor and major updates wait for a person.
+- An update changes a pin or a lockfile, so the checks of its pull request cover every file, not only the changed ones (TPL-0023). A new version of a tool runs on the whole repository before the update merges.
 - Dependabot stays on for alerts only, and opens no pull requests.
-- The configuration is `renovate.json5`.
+- The configuration is `renovate.json`.
 
 ### Consequences
 
@@ -57,9 +58,9 @@ The rules are as follows.
 
 ### Confirmation
 
-- `make check` validates `renovate.json5` against the Renovate schema that check-jsonschema bundles (target `lint-schema`), without the network.
+- `make check` validates `renovate.json` against the Renovate schema that check-jsonschema bundles (target `lint-schema`), without the network.
 - The schema catches a malformed configuration, not a wrong one. Review of the pull requests that Renovate opens confirms that it covers every kind of pin.
-- The Renovate app and Dependabot alerts are settings on GitHub. They are turned on when the repository is set up on GitHub, and review confirms them there.
+- Dependabot alerts and automatic merges are settings of the repository, which `make github-settings` turns on (`docs/guides/github-settings.md`). The Renovate app is installed by hand, as the guide describes.
 
 ## Pros and Cons of the Options
 

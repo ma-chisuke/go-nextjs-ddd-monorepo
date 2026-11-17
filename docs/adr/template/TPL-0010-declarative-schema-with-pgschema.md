@@ -63,10 +63,10 @@ The rules are as follows.
 
 ### Confirmation
 
-squawk is pinned in `mise.toml`, and the target `lint-sql` of `make check` runs it on the SQL files in the repository.
-M0 has no `schema.sql` yet, so that check has nothing to lint yet.
+The target `lint-sql` of `make check` runs squawk on every SQL file in the repository, such as the `schema.sql` of each context and `db/bootstrap.sql`. These files describe a desired state and never run as a migration, so its configuration, `.squawk.toml`, turns off the rules that only make sense for a migration that runs against a live database.
+M0 has no SQL file yet, so the check has nothing to lint yet.
 
-The checks that rely on a plan arrive with the first bounded context: CI computes the plan of each changed `schema.sql`, lints its DDL with squawk, and shows the plan in the pull request.
+The checks that rely on a plan arrive with the first bounded context: CI computes the plan of each changed `schema.sql`, lints its DDL with squawk under a configuration of its own, which keeps the rules for a running migration, and shows the plan in the pull request.
 Until then, review enforces the decision.
 
 ## Pros and Cons of the Options

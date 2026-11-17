@@ -44,7 +44,7 @@ Chosen option: "An ECS service on Fargate for each context, behind ECS Gateway",
 
 The rules are as follows.
 
-- Each context runs as its own ECS service on Fargate, for its API and its worker.
+- Each context runs its API as an ECS service on Fargate. A context that has a worker runs it as a second ECS service, from the same image with a different command. The two services scale and deploy separately, and the worker attaches to no gateway, so it has no entry for requests.
 - Each context has its own container image, built from `backend/cmd/<context>/`. The Go module stays one.
 - Next.js runs on ECS on Fargate as well.
 - Requests enter through Amazon ECS Gateway. The APIs of the contexts attach to a private gateway, and the Terraform code writes the access type `PRIVATE` explicitly instead of relying on a default. Only Next.js is public.
@@ -56,7 +56,7 @@ The rules are as follows.
 - Good, because the boundaries hold at run time too: the contexts are separate processes, so one reaches another only through its API or its events.
 - Good, because ECS Gateway removes the work of a load balancer for each service. A gateway is defined once, services opt in, and services share load balancers with host-based routing and generated hostnames. There is no charge for ECS Gateway beyond the load balancers that it provisions.
 - Bad, because there are more services than with one deployable: more images, task definitions, logs, and alarms, and a minimum cost for each service, since a Fargate task is charged while it runs, even when idle.
-- Bad, because ECS Gateway is new. It has been available for less than a month, and its limits in production are not yet known. One gap is already visible: see More Information on custom domain names.
+- Bad, because ECS Gateway is new. It was released on October 20, 2026, and its limits in production are not yet known. One gap is already visible: see More Information on custom domain names.
 - Bad, because a call between contexts crosses the network, with latency and failures that a call inside one process does not have.
 
 ### Confirmation
@@ -103,7 +103,7 @@ Until then, review enforces the decision.
 
 ## More Information
 
-Facts about Amazon ECS Gateway, as of November 2026:
+Facts about Amazon ECS Gateway, as of November 2026, from [its documentation](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/gateway-connect-service.html):
 
 - It was launched on October 20, 2026.
 - It is a managed ingress: a gateway is defined once, and services opt in.

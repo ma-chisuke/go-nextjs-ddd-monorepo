@@ -49,9 +49,9 @@ The top-level directories are as follows.
 | `docs/` | Decision records, guides, and the documents of each bounded context |
 | `tools/` | Pinned Go tools, and the scripts and checks that this repository writes itself |
 
-- The Makefile is the single entry point: `make setup`, `make fmt`, `make gen`, `make check`, and `make check-all`. Hooks, agents, and CI call these targets and nothing else.
-- `tools/go.mod` is a separate Go module, but it only pins Go tools. The code of the product has one Go module, in `backend/`.
-- Each bounded context still builds its own binaries and its own container image from `backend/cmd/<context>/`, and deploys on its own (TPL-0014).
+- The Makefile is the single entry point. Its main targets are `make setup`, `make fmt`, `make gen`, `make check`, and `make check-all`. Hooks, agents, and CI run tools through `make` targets, not directly. The one exception is the `commit-msg` hook, which runs the script `tools/scripts/commit-msg.sh` on the message (TPL-0023).
+- `tools/go.mod` is a separate Go module for the tooling of the repository: it pins Go tools with `tool` directives, and it holds the checks that this repository writes, such as `tools/cmd/docs`. The code of the product has one Go module, in `backend/`.
+- Each bounded context still builds its own container image from `backend/cmd/<context>/`, and deploys on its own. Its API, and its worker if it has one, run from that image as separate services (TPL-0014).
 - No monorepo build system is added until the checks are too slow even when they look only at the changed files. The time budget of `make check` (TPL-0023) is the sign. A team that reaches it records the change in a project record.
 
 ### Consequences
@@ -60,7 +60,7 @@ The top-level directories are as follows.
 - Good, because an agent works in one checkout: it reads the contract that it implements, and it runs every check that its change can break.
 - Good, because the harness exists once: one `AGENTS.md`, one set of hooks, one CI, and one place where tool versions are pinned.
 - Good, because a change to shared code, such as a lint rule or the technical platform under `backend/internal/platform/`, reaches every bounded context in the same commit.
-- Bad, because CI must narrow its work to the changed paths, or every pull request runs every check. `CHECK_SCOPE=changed` exists for that, and the CI workflows must use it.
+- Bad, because the slow checks must be narrowed to the changed paths, or every pull request runs all of them over every file. `CHECK_SCOPE=changed` does that, and it widens to every file when a change touches a tool pin or the definition of a check (TPL-0023).
 - Bad, because GitHub grants access per repository: everyone who can read one part can read all of it. `CODEOWNERS` can require a reviewer for each path, but it cannot hide a path.
 - Bad, because the repository has one history and one sequence of release tags; its parts do not have versions of their own.
 - Bad, because every bounded context uses the same version of each Go dependency, so an upgrade must work for all of them at once.
@@ -71,19 +71,19 @@ Review enforces the layout: no check fails yet when a top-level directory is add
 
 These parts exist now:
 
-- `make check` and `make check-all` run every check of the repository, and `lefthook.yml` calls the same targets, so a hook and a manual run give the same result.
-- `pnpm-workspace.yaml` lists `frontend` as the only package of the workspace.
+- `make check` and `make check-all` run every check of the repository. `lefthook.yml` calls the same targets, narrowed to the staged files before a commit (`CHECK_SCOPE=staged`), so a hook and a manual run with the same scope give the same result.
+- `pnpm-workspace.yaml` lists `frontend` as the only package of the workspace. So far, `frontend/` holds the configuration of its checks only.
+- The CI workflows (TPL-0018) call the same targets. The job that runs `make check` checks every file; the job that adds the slow checks of `make check-all` narrows them to the changed files on a pull request (`CHECK_SCOPE=changed`).
 
 These parts arrive later:
 
-- `backend/` and `contracts/` arrive with the first bounded context, `frontend/` with the Next.js app, and `infra/` with the deployment.
-- The CI workflows (TPL-0018) call the same targets, and narrow the run with `CHECK_SCOPE=changed`.
+- `backend/` and `contracts/` arrive with the first bounded context, the Next.js app in `frontend/` with its milestone, and `infra/` with the deployment.
 
 ## Pros and Cons of the Options
 
 ### One repository, driven by Make, a pnpm workspace, and one Go module
 
-- Good, because the only tools in front are the ones that the code needs anyway: `make`, `go`, and `pnpm`.
+- Good, because the only tools in front are the ones that the code needs anyway, `make`, `go`, and `pnpm`, and mise, which installs them.
 - Good, because one pull request holds every side of a change.
 - Bad, because nothing computes which checks a change affects. The checks narrow themselves by path, which is coarser than a build graph.
 - Bad, because the only build cache is the one that `go` and `pnpm` keep on each machine.

@@ -42,7 +42,7 @@ Chosen option: "mise at the root, with each ecosystem's own lockfile for its pac
 The rules are as follows.
 
 - `mise.toml` pins the exact version of each runtime (Go, Node.js, Python), each package manager (pnpm, uv), and each standalone binary.
-- `mise.lock` records the URL and the checksum of every tool for four platforms: Linux and macOS, each on x64 and arm64. `locked = true` makes an install fail unless the lockfile describes it.
+- `mise.lock` records the URL and the checksum of every tool for four platforms: Linux and macOS, each on x64 and arm64. Every tool that the template pins publishes a build for all four. `locked = true` makes an install fail unless the lockfile describes it.
 - Where a publisher provides provenance (GitHub artifact attestations, cosign, or SLSA), mise verifies it when it writes the lock, and records which kind it verified.
 - A tool that is a package of an ecosystem is pinned by the lockfile of that ecosystem: npm tools in `package.json` and `pnpm-lock.yaml`, Python tools in `pyproject.toml` and `uv.lock` (with hashes), and Go tools as `tool` directives in `tools/go.mod`.
 - The Makefile puts all of these tools on `PATH`. Nobody installs a tool globally.
@@ -51,7 +51,7 @@ The rules are as follows.
 
 Two parts of this decision differ from the first plan, on purpose.
 
-- Go tools live in a separate module, `tools/`, not in the `go.mod` of the backend. The first plan put them in the backend's module. A separate module keeps the dependencies of the tools out of the backend's module graph, out of its SBOM, and out of its license scan, so the product declares only what it runs.
+- Go tools live in a separate module, `tools/`, not in the `go.mod` of the backend. The first plan put them in the backend's module. A separate module keeps the dependencies of the tools out of the backend's module graph and out of its SBOM, and the license scan skips `tools/` (`scan-deps`, TPL-0024), so the product declares only what it runs.
 - npm and Python tools are not installed through the `npm:` and `pipx:` backends of mise. Those backends pin the tool itself but do not lock its transitive dependencies, while pnpm and uv lock every transitive dependency with a hash.
 
 ### Consequences
@@ -67,7 +67,7 @@ Two parts of this decision differ from the first plan, on purpose.
 
 ### Confirmation
 
-- `make setup` runs `mise install` under `locked = true`, `pnpm install --frozen-lockfile`, and `uv sync --locked`. Each fails when its lockfile does not match its manifest.
+- `make setup` runs `mise install` under `locked = true`, `pnpm install --frozen-lockfile`, and `uv sync --locked`. Each fails when its lockfile does not match its manifest. `make setup` also downloads the Go modules and fills the Go build cache, so `make check` needs no network afterward (TPL-0023).
 - The Makefile sets `GOFLAGS=-mod=readonly`, so a Go command fails instead of changing `go.mod` or `go.sum`, and `GOTOOLCHAIN=local`.
 - CI runs the same `make setup` with the same files.
 - `make check-all` validates `mise.toml` against the schema that mise publishes (target `lint-schema-remote`).
@@ -102,7 +102,7 @@ Two parts of this decision differ from the first plan, on purpose.
 - Bad, because editors and agents that run on the host would not see the tools, and every command would pay the cost of a container.
 - Bad, because the image is one more artifact to build, pin, scan, and update.
 
-### A list of tools in the README
+### A list of tools and versions in the README
 
 - Good, because there is nothing to install or maintain beyond the list.
 - Bad, because versions drift from machine to machine, nothing verifies a download, and an agent installs whatever version it finds.

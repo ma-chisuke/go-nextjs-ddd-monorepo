@@ -87,7 +87,7 @@ TPL-0007 describes these checks, and the ones that catch what types cannot expre
 ### OpenAPI 3.1 written first, with ogen
 
 - Good, because ogen also generates code that checks constraints from the document, such as lengths and patterns.
-- Bad, because the generated server routes requests with its own router instead of `net/http`, and wraps optional fields in types of its own.
+- Bad, because the generated server routes requests with a router of its own instead of `http.ServeMux`, reads and writes JSON with a library of its own, and wraps optional fields in types of its own.
 - Bad, because fewer projects use it than oapi-codegen, so people and agents find fewer examples to follow.
 
 ### gRPC or Connect, with Protocol Buffers

@@ -39,12 +39,12 @@ Chosen option: "GitHub Actions, with access to AWS through GitHub's OIDC provide
 
 The rules for workflows are as follows.
 
-- A step in a workflow calls a `make` target, such as `make setup` or `make check-all`, and holds no logic of its own. CI, people, and agents therefore run the same commands.
+- Apart from the steps that check out the code, install mise, and restore the caches, each step in a workflow calls a `make` target, such as `make setup` or `make check-all`, and holds no logic of its own. CI, people, and agents therefore run the same commands.
 - The required status check has one fixed name, `check`. It is the last job of the workflow and depends on every other job, so the ruleset does not change when a job is added.
 - The job `check` runs even when a job it depends on fails or is skipped, and it fails if any of those jobs neither succeeded nor was skipped. Otherwise a single failed job would make GitHub skip `check`, and GitHub counts a skipped job as a passing check.
 - A new run for a branch cancels the runs still in progress for the same branch.
 - Workflows cache tools and dependencies, so that a run does not download them again.
-- A slow job runs only when the files it covers change.
+- The job that runs `make check` checks every file. The job that adds the slow checks of `make check-all` narrows them to the changed files on a pull request (`CHECK_SCOPE=changed`), and checks every file on `main` and whenever a change touches a tool pin or the definition of a check (TPL-0023).
 - Every action is pinned to a full commit SHA.
 - `permissions` are read-only by default, and each job asks for the permissions it needs.
 - Every job sets `timeout-minutes`.
@@ -52,27 +52,28 @@ The rules for workflows are as follows.
 The rules for deployments, which arrive with the infrastructure milestone, are as follows.
 
 - A deployment job assumes an IAM role through GitHub's OIDC provider and receives short-lived credentials. No AWS access key is stored on GitHub.
-- The trust policy of each role names this repository and the GitHub Environment of the deployment, so no other repository or environment can assume the role.
-- The stg and prd environments each have their own role, in their own AWS account.
+- The trust policy of each role that applies changes names this repository and the GitHub Environment of the deployment, so no other repository or environment can assume the role.
+- Each account also has a read-only role for `terragrunt plan` on pull requests (TPL-0015). Its trust policy names this repository and its pull requests, not an Environment, and the role can read the infrastructure but not change it.
+- The stg and prd environments each have their own roles, in their own AWS account.
 - A deployment to prd goes through a GitHub Environment that requires the approval of a reviewer.
 
 ### Consequences
 
 - Good, because a failure in CI can be reproduced on a laptop with the same `make` command.
-- Good, because a leaked log or a compromised step can expose only short-lived credentials, and only the named repository and environment can obtain them.
+- Good, because a leaked log or a compromised step can expose only short-lived credentials, and only the named repository and environment can obtain credentials that change anything.
 - Good, because the ruleset names a single check, so jobs can be added, split, or renamed without a change on GitHub.
 - Good, because the checks, the approval for prd, and the logs sit next to the pull request.
 - Bad, because the condition of the job `check` must be written with care: a mistake in it lets a failed job through.
 - Bad, because the trust policy must be exact. A condition that matches too much, such as any repository of the owner, gives the role to code that nobody reviewed.
 - Bad, because an outage of GitHub Actions stops both CI and deployments.
-- Bad, because a path filter that misses a file lets a change skip the job that should check it.
+- Bad, because on a pull request the slow checks look only at the changed files, so a problem in a file that the pull request did not touch, such as a dead link in another document, shows up only on `main`.
 - Bad, because the pinned SHAs must be kept up to date. Renovate does that (TPL-0025).
 
 ### Confirmation
 
 - `make check` runs four checks on the workflows in `.github/workflows/` (`make/actions.mk`): actionlint for syntax and expressions, zizmor for security weaknesses such as template injection and broad permissions, ghalint for the policy on permissions and timeouts, and pinact for pins to full commit SHAs.
 - gitleaks, which `make check` runs, and GitHub secret scanning find an AWS key that is written into a file. A key stored as a secret on GitHub is out of their reach, so review of the repository settings confirms that there is none.
-- Review confirms that each step calls `make` and holds no logic of its own, and that the ruleset requires `check`. No check enforces these.
+- Review confirms that each step calls `make` and holds no logic of its own; no check enforces it. `make github-settings` compares the ruleset, which requires `check`, with `docs/guides/github-settings.md`.
 - The IAM roles and their trust policies arrive with the infrastructure milestone. Until then, no workflow needs access to AWS, and the rules for deployments are not yet in effect.
 
 ## Pros and Cons of the Options

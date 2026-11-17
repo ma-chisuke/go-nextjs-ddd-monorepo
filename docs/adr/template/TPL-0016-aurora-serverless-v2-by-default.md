@@ -43,10 +43,11 @@ The rules are as follows.
 - The `database` module takes a variable that selects Serverless v2, with a minimum and a maximum capacity, or provisioned instances.
 - stg uses Serverless v2 with a minimum of 0 ACU, so it pauses when idle.
 - prd chooses by its needs, for example provisioned instances for a steady load.
-- One open connection keeps the cluster awake. In stg, the connection pool therefore keeps no idle connection and closes unused connections after a few minutes.
+- One open connection keeps the cluster awake. In stg, the connection pool therefore keeps a minimum of zero connections, and closes a connection that has been idle for a few minutes.
 - The health check of a service does not query the database. A health check that connects every few seconds would never let the cluster pause.
 - Resuming takes about 15 seconds, and 30 seconds or more after a pause longer than 24 hours. Connections use a timeout longer than that, and retry.
 - RDS Proxy is not used. It keeps a connection open to each instance, so a cluster with RDS Proxy never pauses.
+- Logical replication is not used either. The Aurora documentation on automatic pause, linked below, names it as another condition that keeps a cluster from pausing.
 
 ### Consequences
 
@@ -54,7 +55,7 @@ The rules are as follows.
 - Good, because stg and prd use the same module and the same engine. Only the kind and amount of capacity differ.
 - Good, because Serverless v2 also scales up within its range under load, without a change of instance class.
 - Bad, because the first request after a pause waits about 15 seconds or longer, which people and tests in stg notice.
-- Bad, because the code follows rules that exist only for pausing (no idle connections, a health check that leaves the database alone, retries on connect), and one mistake, such as a tool left connected, silently keeps stg awake and costing money.
+- Bad, because the code follows rules that exist only for pausing (a pool with no minimum of connections, a health check that leaves the database alone, retries on connect), and one mistake, such as a tool left connected, silently keeps stg awake and costing money.
 - Bad, because stg and prd may use different kinds of capacity, so the behavior of stg under load does not predict prd exactly.
 - Bad, because scheduled jobs inside the database, such as those of `pg_cron`, do not run while the cluster is paused, and autovacuum work in progress is canceled when it pauses.
 
@@ -90,6 +91,6 @@ Review checks the settings of the connection pool and of the health checks for s
 
 ## More Information
 
-- As of November 2026, Aurora PostgreSQL has supported major version 18 since June 2026 (18.3).
+- Aurora PostgreSQL has supported major version 18 since June 2026, with version 18.3 ([announcement](https://aws.amazon.com/about-aws/whats-new/2026/06/amazon-aurora-postgresql-major-version-18)).
 - Not yet verified: whether Serverless v2 with a minimum of 0 ACU is available for Aurora PostgreSQL 18. AWS lists the engine versions that support 0 ACU, and for earlier major versions the support began at a particular minor version (for example 16.3). This is checked when the infrastructure is built.
 - [Scaling to zero ACUs with automatic pause and resume](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2-auto-pause.html) in the Aurora documentation

@@ -41,7 +41,8 @@ The rules are as follows.
 - SQL is written by hand in `backend/internal/<context>/internal/adapter/postgres/queries/*.sql`, with a name for each statement.
 - sqlc generates typed Go for pgx (version 5) from those queries. `make gen` runs it, and nobody edits the generated code by hand.
 - sqlc is configured per context. The configuration of a context reads only that context's `schema.sql` (TPL-0010) and that context's queries.
-- The generated code stays in the adapter. A repository in the adapter turns the generated rows into domain objects, so generated types never reach the domain or the use cases (TPL-0004).
+- The generated code stays in the adapter. In a core context, a repository in the adapter turns the generated rows into domain objects, so generated types never reach the domain or the use cases (TPL-0004). In a supporting context, which has no domain layer, the use cases call the generated queries directly (TPL-0003).
+- Generated Go files end in `.gen.go`, so that `.gitattributes` and `.lintignore` treat them as generated code, as with the code generated from OpenAPI (TPL-0006). The options of sqlc for the names of its output files, such as `output_db_file_name`, `output_models_file_name`, and `output_files_suffix`, set these names. Not yet verified: that these options cover every file that sqlc writes. This is checked with the first bounded context.
 
 ### Consequences
 

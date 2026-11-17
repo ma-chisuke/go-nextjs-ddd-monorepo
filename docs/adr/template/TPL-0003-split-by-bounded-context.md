@@ -86,14 +86,14 @@ The sample business is the booking of meeting rooms.
 Review enforces the classification, because no program can tell a core subdomain from a supporting one.
 A reviewer compares a change with the README of each context that the change modifies.
 
-No check of the split exists yet.
+No check of the split in the Go code exists yet.
 These checks arrive with the first bounded context (milestone M1):
 
 - The Go `internal` directories and the import rules of TPL-0004 and TPL-0005 keep the code of each context apart.
-- sqlc, configured for each context, and one database role for each context keep each context inside its own schema (TPL-0005).
+- sqlc, configured for each context, and the runtime role of each context, which has privileges on its own schema only (TPL-0009), keep each context inside its own schema (TPL-0005).
 - A check fails when a directory under `backend/internal/`, other than `platform/`, has no README under `docs/contexts/`.
 
-The screens follow the same split. eslint-plugin-boundaries keeps the features under `frontend/src/features/` apart, and it arrives with the Next.js app.
+The screens follow the same split. eslint-plugin-boundaries, which `lint-frontend` runs, keeps the features under `frontend/src/features/` apart: a feature never imports another feature. Its rules are in `frontend/eslint.config.mjs` already, and they act on the first screen.
 
 ## Pros and Cons of the Options
 

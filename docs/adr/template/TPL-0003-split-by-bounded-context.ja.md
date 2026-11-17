@@ -87,14 +87,14 @@ date: 2026-11-17
 業務領域の分類はレビューで守る。中核の業務領域と補完の業務領域を見分けられるプログラムはないからである。
 レビューする人は、変更を、その変更が手を入れる各文脈の README と照らし合わせる。
 
-分け方を守るチェックは、まだない。
+Go のコードの分け方を守るチェックは、まだない。
 次のチェックが、最初の文脈とともに加わる（マイルストーン M1）。
 
 - Go の `internal` ディレクトリと、TPL-0004・TPL-0005 の import のルールが、ある文脈のコードを別の文脈から使えないようにする。
-- 文脈ごとに設定した sqlc と、文脈ごとのデータベースのロールが、各文脈を自分のスキーマの中にとどめる（TPL-0005）。
+- 文脈ごとに設定した sqlc と、自分のスキーマにだけ権限を持つ文脈ごとの実行時のロール（TPL-0009）が、各文脈を自分のスキーマの中にとどめる（TPL-0005）。
 - `backend/internal/` の下のディレクトリ（`platform/` を除く）に対応する README が `docs/contexts/` の下にないとき、チェックが失敗する。
 
-画面も同じ単位で分ける。`frontend/src/features/` の下の機能どうしは、eslint-plugin-boundaries で分けておく。このチェックは、Next.js の Web アプリとともに加わる。
+画面も同じ単位で分ける。`lint-frontend` が実行する eslint-plugin-boundaries が、`frontend/src/features/` の下の機能どうしを分けておく。ある機能が別の機能を import することはない。ルールはすでに `frontend/eslint.config.mjs` にあり、最初の画面ができた時点で働き始める。
 
 ## 選択肢の長所と短所
 
@@ -127,4 +127,4 @@ date: 2026-11-17
 - Vlad Khononov『ドメイン駆動設計をはじめよう』（オライリー・ジャパン）の10章：業務領域の種類ごとに実装のパターンを選ぶ経験則。原書は "Learning Domain-Driven Design"（O'Reilly、2021）の "Design Heuristics" の章である。
 - 同書の1章：中核・補完・一般の業務領域。
 
-<!-- i18n-source: TPL-0003-split-by-bounded-context.md sha256:3badc32012e566f3ef4096f72e471e4fc449a06df85b162f9ce4ac469976e13f -->
+<!-- i18n-source: TPL-0003-split-by-bounded-context.md sha256:7c89ba21d753d5d388bf62429ab7abf97e0371968f33a409d56e318349260c85 -->

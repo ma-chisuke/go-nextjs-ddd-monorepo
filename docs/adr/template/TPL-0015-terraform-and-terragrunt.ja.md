@@ -47,7 +47,7 @@ date: 2026-11-17
 - state は S3 に置き、S3 のネイティブのロック（`use_lockfile`）を使う。state はユニットごとに1つである。
 - ユニットは、Terragrunt の依存関係を通してほかのユニットの出力を読む。たとえば文脈のユニットは、`network`・`database`・`platform` の出力を読む。
 - stg と prd は別々の AWS アカウントにする。2つのツリーの形は同じで、違うのは `env.hcl` の値だけである。
-- バージョンは `mise.toml` で固定する（TPL-0022）。Terraform は 1.17.2、Terragrunt は 1.2.2 である。
+- Terraform と Terragrunt のバージョンは `mise.toml` で固定する（TPL-0022）。
 - CI は OIDC で各アカウントにサインインし、長期のアクセスキーを持たない（TPL-0018）。
 
 ### 結果
@@ -63,8 +63,10 @@ date: 2026-11-17
 
 ### 確認の方法
 
-`terraform fmt`・`terraform validate`・tflint・Trivy・terraform-docs は、`mise.toml` で版を固定してあり、`make check` と `make check-all` から実行される。
-M0 には `.tf` のファイルがないので、これらが検査するものはまだない。最初の `.tf` のファイルが入った時点で働き始める。
+- `make check` は5つのチェックを実行する。`fmt-check-terraform` は、Terraform の言語のファイルに `terraform fmt` をかける。`fmt-check-terragrunt` は、それ以外の HCL のファイル（`root.hcl` や `terragrunt.hcl` など）に `terragrunt hcl fmt` をかける。`lint-terraform` は、AWS のルールセットを使う tflint を動かす。`lint-terraform-docs` は、terraform-docs が書くモジュールの README が最新かどうかを調べる。`scan-config` は、Trivy で設定ミスを検査する。
+- `.tflint.hcl` が固定する tflint のプラグインは `make setup` が入れるので、これらのチェックはネットワークを使わない。
+- `make check-all` は、さらに `validate-terraform`（`terraform validate`）を実行する。これは `terraform init` を実行し、provider をダウンロードする。
+- これらの道具は `mise.toml` で固定してある（TPL-0022）。M0 には `.tf` のファイルがないので、これらのチェックが検査するものはまだない。最初の `.tf` のファイルが入った時点で働き始める。
 
 インフラのマイルストーンでは、`infra/` を変えるプルリクエストごとに、CI がすべてのユニットを plan する（`terragrunt run --all plan`）。
 
@@ -95,14 +97,14 @@ M0 には `.tf` のファイルがないので、これらが検査するもの�
 ### Pulumi
 
 - 良い点：インフラを汎用の言語で書け、エンジンはオープンソース（Apache 2.0）であり、provider も多い。
-- 悪い点：state の保存先は、既定では Pulumi のホスティングサービスである。そうでなければ、S3 のような保存先をチームが自分で用意して運用する。
+- 悪い点：state の保存先は、既定では Pulumi のホスティングサービスであり、アカウントが要る。テンプレートは、アカウントなしで動く必要がある。Terraform と同じく、S3 に置くこともできる。
 - 悪い点：Terraform ほど知られていない。また、プログラムとして書いたインフラは、CDK と同じくレビューの手間が大きい。
 
 ## 補足
 
-- テンプレートの設計メモには Terragrunt 1.0 と書いていた。テンプレートが固定するのは、作業を始めた時点の最新のリリースである 1.2.2 である。
+- テンプレートの設計メモには Terragrunt 1.0 と書いていた。テンプレートは、作業を始めた日の最新の 1.x のリリースから始め、その後は Renovate が更新する（TPL-0025）。
 - OpenTofu を使いたいチームは、利用者の記録を書いて切り替えられる。モジュールは HCL のままで、Terragrunt はどちらにも対応している。
 - [Terragrunt のドキュメント](https://terragrunt.com/)
 - `use_lockfile` を含む、[Terraform の S3 のバックエンド](https://developer.hashicorp.com/terraform/language/backend/s3)の説明
 
-<!-- i18n-source: TPL-0015-terraform-and-terragrunt.md sha256:b9c63f8a95dbba8cc4af3d7799428656e8d1d7f5fd02b75f066e7ba478c64dea -->
+<!-- i18n-source: TPL-0015-terraform-and-terragrunt.md sha256:688ecd0e8bce1114460f4ca1092a3952b0de6254e9ba8993c45d3f7f06a6583c -->

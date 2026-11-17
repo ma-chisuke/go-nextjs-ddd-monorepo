@@ -47,7 +47,7 @@ The rules are as follows.
 - State is stored in S3 with the native locking of S3 (`use_lockfile`), one state for each unit.
 - Units read the outputs of other units through Terragrunt dependencies. For example, a context unit reads the outputs of `network`, `database`, and `platform`.
 - stg and prd are separate AWS accounts. Their trees have the same shape, and only the values in `env.hcl` differ.
-- The versions are pinned in `mise.toml` (TPL-0022): Terraform 1.17.2 and Terragrunt 1.2.2.
+- The versions of Terraform and Terragrunt are pinned in `mise.toml` (TPL-0022).
 - CI signs in to each account through OIDC, with no long-lived keys (TPL-0018).
 
 ### Consequences
@@ -63,8 +63,10 @@ The rules are as follows.
 
 ### Confirmation
 
-`terraform fmt`, `terraform validate`, tflint, Trivy, and terraform-docs are pinned in `mise.toml` and run from `make check` and `make check-all`.
-M0 has no `.tf` file, so they have nothing to check yet; they act when the first `.tf` file arrives.
+- `make check` runs `fmt-check-terraform` (`terraform fmt` on the files of the Terraform language), `fmt-check-terragrunt` (`terragrunt hcl fmt` on every other HCL file, such as `root.hcl` and `terragrunt.hcl`), `lint-terraform` (tflint with the AWS ruleset), `lint-terraform-docs` (whether the module READMEs that terraform-docs writes are up to date), and `scan-config` (Trivy, for misconfiguration).
+- `make setup` installs the tflint plugin that `.tflint.hcl` pins, so these checks need no network.
+- `make check-all` adds `validate-terraform` (`terraform validate`), which runs `terraform init` and downloads the providers.
+- The tools are pinned in `mise.toml` (TPL-0022). M0 has no `.tf` file, so these checks have nothing to check yet; they act when the first `.tf` file arrives.
 
 With the infrastructure milestone, CI plans every unit (`terragrunt run --all plan`) on each pull request that changes `infra/`.
 
@@ -95,12 +97,12 @@ With the infrastructure milestone, CI plans every unit (`terragrunt run --all pl
 ### Pulumi
 
 - Good, because the infrastructure is written in a general-purpose language, the engine is open source (Apache 2.0), and it offers many providers.
-- Bad, because the state lives in Pulumi's hosted service by default, or in a backend such as S3 that the team sets up and runs itself.
+- Bad, because by default the state lives in Pulumi's hosted service, which needs an account, and the template must work without one. A team can keep the state in S3 instead, as with Terraform.
 - Bad, because it is less widely known than Terraform, and infrastructure written as a program has the same cost in review as with CDK.
 
 ## More Information
 
-- The design notes of the template named Terragrunt 1.0. The template pins 1.2.2, the latest release when the work started.
+- The design notes of the template named Terragrunt 1.0. The template began with the latest 1.x release on the day the work started, and Renovate keeps it up to date (TPL-0025).
 - A team that prefers OpenTofu can switch with a project record. The modules stay in HCL, and Terragrunt supports both.
 - [Terragrunt documentation](https://terragrunt.com/)
 - [The S3 backend of Terraform](https://developer.hashicorp.com/terraform/language/backend/s3), including `use_lockfile`

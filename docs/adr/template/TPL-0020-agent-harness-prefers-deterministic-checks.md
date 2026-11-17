@@ -13,7 +13,7 @@ Nothing then tells the agent, or anyone else, that the rule was broken.
 
 The usual answer is an instruction file that describes the repository: its architecture, its conventions, and every rule.
 An agent reads such a file on every task, so the file costs tokens every time. It goes stale as the code changes, and it gives no signal when an agent breaks a rule in it.
-A 2026 study from ETH Zurich, "Evaluating AGENTS.md: Are Repository-Level Context Files Helpful for Coding Agents?", reported that repository overview files did not raise the rate at which agents completed tasks, and raised the cost by about 20 percent.
+A 2026 study from ETH Zurich, "Evaluating AGENTS.md: Are Repository-Level Context Files Helpful for Coding Agents?", reported that repository overview files did not raise the rate at which agents completed tasks, and raised the cost by more than 20 percent.
 
 How do we make agents follow the rules of this template, and what belongs in the instructions that every agent reads?
 
@@ -46,8 +46,8 @@ The rules are as follows.
 The harness has the following parts.
 
 - Hooks for Claude Code. They format a file after an agent edits it. They block edits to generated files, reading `.env`, applying changes to prd, and force pushes. At the end of a turn, they run the checks for what changed and hand failures back to the agent, a bounded number of times.
-- Skills for recurring procedures, such as writing a record and syncing a translation. More skills arrive with the code in later milestones.
-- Subagents that bring eyes other than the author's: one reviews a change against the records, and one compares a translation with its source.
+- Skills for recurring procedures, in `.claude/skills/`: `write-adr` writes a record, and `sync-translation` brings a translation up to date. More skills arrive with the code in later milestones.
+- Subagents that bring eyes other than the author's, in `.claude/agents/`: `design-reviewer` reviews a change against the records, and `translation-reviewer` compares a translation with its source.
 - Permissions that let safe commands run without asking and deny dangerous ones.
 - lefthook, which gives people the same checks before a commit and before a push (`lefthook.yml`).
 
@@ -57,7 +57,7 @@ The harness has the following parts.
 - Good, because people, agents, and CI share one `make check`, so no agent product needs rules of its own.
 - Good, because `AGENTS.md` stays short, so it costs little on every task and has little that can go stale.
 - Bad, because some rules cannot be checked, such as naming, the shape of a domain model, or whether a test tests the right thing. They depend on review, and on the subagent that reviews.
-- Bad, because a finding names its record only where this repository shapes the output: in its own checks and in the templates for gitleaks and Trivy. Other linters print their own format, and the agent has to find the reason from the name of the rule.
+- Bad, because few findings name their record: those of the checks that this repository writes itself do, and so do the findings of Trivy on licenses. The other findings, including the ones that this repository reformats into one line (gitleaks, Trivy, ESLint, tflint, and others), give the rule and a fix or a link, and the agent has to find the reason from the name of the rule.
 - Bad, because until `evals/` exists, nothing measures whether the short `AGENTS.md` is enough. The choice rests on the study and on judgment.
 - Bad, because the hooks work only in Claude Code. Other agents get the checks through `make check`, lefthook, and CI alone.
 
@@ -65,7 +65,7 @@ The harness has the following parts.
 
 - `make check` is the gate. People, agents, and CI run it, and the hooks run it at the end of a turn.
 - `make check` runs the target `lint-agents-md`, which keeps `AGENTS.md` short.
-- The hooks and the permissions are in `.claude/settings.json`.
+- The hooks and the permissions are registered in `.claude/settings.json`, and the hooks live in `.claude/hooks/`. `make check` feeds each hook sample events and checks what it blocks and allows (`test-hooks`).
 - The evaluation in `evals/` arrives in a later milestone. Until then, review confirms that a new instruction in `AGENTS.md` is one that no check can replace.
 
 ## Pros and Cons of the Options
@@ -95,6 +95,6 @@ The harness has the following parts.
 
 ## More Information
 
-- "Evaluating AGENTS.md: Are Repository-Level Context Files Helpful for Coding Agents?", ETH Zurich, 2026.
+- [Evaluating AGENTS.md: Are Repository-Level Context Files Helpful for Coding Agents?](https://arxiv.org/abs/2602.11988), Thibaud Gloaguen and others, ETH Zurich and LogicStar.ai, 2026.
 - [AGENTS.md](https://agents.md/)
 - The tools behind `make check` are chosen in TPL-0023.

@@ -39,7 +39,7 @@ AWS publishes its sample code under MIT-0 for the same reason: people copy sampl
 The rules are as follows.
 
 - `LICENSE` holds the text of MIT-0, and `package.json` declares `"license": "MIT-0"`.
-- A dependency under a strong copyleft license (GPL, AGPL) or under a source-available license (SSPL, BUSL, the Commons Clause, the Creative Commons licenses with NonCommercial) must not become part of what users copy. `trivy.yaml` lists these licenses as forbidden.
+- A dependency under a strong copyleft license (GPL, AGPL) or under a source-available license (SSPL, BUSL, the Commons Clause, the Creative Commons licenses with NonCommercial) must not become part of a product built from the template. `trivy.yaml` lists these licenses as forbidden, and the license scan fails on them only. Weak copyleft, such as LGPL and MPL, is allowed, because it covers the library itself and not the code that uses it; for example, `next` brings libvips, under LGPL-3.0, through sharp.
 - Third-party files kept in the repository keep their own licenses, stated in or next to the files. The Google style for Vale in `.vale/styles/Google/` is under the MIT License, and the Japanese writing norm in `.claude/skills/japanese-tech-writing/` is under the Unlicense.
 
 ### Consequences
@@ -49,11 +49,12 @@ The rules are as follows.
 - Bad, because MIT-0, like MIT, has no patent grant. Apache-2.0 has one.
 - Bad, because a team that needs a dependency under a forbidden license has to replace this decision with a record of its own, and change `trivy.yaml`.
 - Bad, because the files under other licenses are exceptions that a team must notice: a copy that keeps them keeps their notices too.
+- Bad, because a product that ships a library under a weak copyleft license, such as libvips under LGPL-3.0, must still meet the terms of that license for the library itself.
 
 ### Confirmation
 
 - Review confirms that `LICENSE` and `package.json` name MIT-0.
-- `make check-all` runs the target `scan-deps`, which fails when Trivy finds a dependency under a license that `trivy.yaml` forbids. The finding names this record (`tools/trivy/findings.tpl`).
+- `make check-all` runs the target `scan-deps`, which fails when Trivy finds a dependency under a license that `trivy.yaml` forbids. The finding names this record (`tools/trivy/findings.tpl`). The scan covers what ships with the product: development dependencies and the `tools/` module are left out.
 - `trivy.yaml` sets `license.full: false`, so Trivy reads the license that each package declares, not the license text of each file. A file copied into the repository by hand is out of its reach, and review confirms that the license of such a file is stated in or next to it.
 
 ## Pros and Cons of the Options

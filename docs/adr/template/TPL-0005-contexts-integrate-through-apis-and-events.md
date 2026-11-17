@@ -38,7 +38,7 @@ How do the contexts exchange data without depending on each other's code and sto
 
 ## Decision Outcome
 
-Chosen option: "HTTP APIs and integration events, with no direct dependency", because it is the only option that fits separate deployments and lets each context change its model on its own.
+Chosen option: "HTTP APIs and integration events, with no direct dependency", because the compiler, the code generator, and the privileges of the database enforce its boundary, not convention, and each context can be changed, tested, and deployed alone. The separate deployments of TPL-0014 rely on exactly that.
 
 The rules are as follows.
 
@@ -75,7 +75,7 @@ Each check catches a different shortcut, at a different moment.
 | Import of another context's layers | Go `internal` directories: only code inside `backend/internal/<context>/` can import `backend/internal/<context>/internal/...` | Compile time |
 | Import of the root package of another context, the one that holds `module.go` | Import lint (depguard or go-arch-lint): only `cmd/<context>` imports it | `make check` |
 | A query on another context's table | sqlc, configured for each context, reads only that context's `schema.sql` (TPL-0011) | Code generation |
-| Access to another context's schema while running | One database role for each context, with rights on its own schema only (TPL-0009) | Run time |
+| Access to another context's schema while running | The runtime role of each context, with privileges on its own schema only (TPL-0009) | Run time |
 | A foreign key across contexts | A check of each `schema.sql` for references to other schemas | `make check` |
 
 The `internal` directories alone are not enough.

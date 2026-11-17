@@ -33,9 +33,9 @@
 | [TPL-0019](template/TPL-0019-mit-0-license.ja.md) | テンプレートのライセンスを MIT-0 にする | accepted | 2026-11-17 |
 | [TPL-0020](template/TPL-0020-agent-harness-prefers-deterministic-checks.ja.md) | コーディングエージェントのハーネスでは決定的なチェックを優先し、指示は最小限から始める | accepted | 2026-11-17 |
 | [TPL-0021](template/TPL-0021-english-source-japanese-translation.ja.md) | 文書は英語で書き、どの文書にも日本語の対訳を隣に置く | accepted | 2026-11-17 |
-| [TPL-0022](template/TPL-0022-pin-tool-versions-with-mise.ja.md) | ツールの版はエコシステムごとに1か所で固定し、全体の土台に mise を置く | accepted | 2026-11-17 |
-| [TPL-0023](template/TPL-0023-one-tool-per-concern.ja.md) | 1つの関心事にツールを1つだけ使い、どのツールも make から動かし、`make check` に時間の上限を設ける | accepted | 2026-11-17 |
+| [TPL-0022](template/TPL-0022-pin-tool-versions-with-mise.ja.md) | 道具のバージョンはエコシステムごとに1か所で固定し、全体の土台に mise を置く | accepted | 2026-11-17 |
+| [TPL-0023](template/TPL-0023-one-tool-per-concern.ja.md) | 1つの関心事に道具を1つだけ使い、どの道具も make から動かし、`make check` に時間の上限を設ける | accepted | 2026-11-17 |
 | [TPL-0024](template/TPL-0024-supply-chain-defenses.ja.md) | サプライチェーンを層を重ねて守る | accepted | 2026-11-17 |
-| [TPL-0025](template/TPL-0025-dependency-updates-with-renovate.ja.md) | 依存とツールの更新を Renovate に任せる | accepted | 2026-11-17 |
+| [TPL-0025](template/TPL-0025-dependency-updates-with-renovate.ja.md) | 依存と道具の更新を Renovate に任せる | accepted | 2026-11-17 |
 
 <!-- i18n-source: README.md sha256:e0c1fb1b93272edb3fd663b2ef7055822f861618fa61ef9d74a10b0eee0b2b9c -->

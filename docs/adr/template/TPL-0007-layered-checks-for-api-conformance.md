@@ -25,7 +25,7 @@ Which checks, together, make each kind of drift visible, and where does each che
 ## Decision Drivers
 
 - A machine catches each kind of drift before the change merges.
-- Each check catches what the earlier ones cannot, so one mistake gives one finding (TPL-0023).
+- Each check catches what the earlier ones cannot, so a mistake usually gives one finding (TPL-0023).
 - The fast checks run in `make check`; the slow ones run in `make check-all` and in CI.
 - Production pays only for the checks that protect it.
 
@@ -57,38 +57,36 @@ Chosen option: "Layered checks, each catching what the one before cannot", becau
 ### Consequences
 
 - Good, because each kind of drift in the problem statement has a check that fails on it.
-- Good, because the layers catch different things, so one mistake gives one finding, not seven.
+- Good, because the layers catch different things, so a mistake usually gives one finding, not seven.
 - Good, because the tests check the shape of every error, along with every other response, without a separate review.
-- Bad, because the template pins and updates several tools for one concern: kin-openapi, Schemathesis, oasdiff, and Redocly CLI, next to the generators.
+- Bad, because the template pins and updates several tools for API conformance, one for each kind of drift: kin-openapi, Schemathesis, oasdiff, and Redocly CLI, next to the generators.
 - Bad, because layer 4 covers only the requests that tests send. Layer 5 narrows the gap, but no layer proves that every response of every operation matches the document.
 - Bad, because a deliberate breaking change fails layer 6. How a team accepts such a change is decided when the check is written.
 - Bad, because layer 5 needs the API and a database to run, which makes `make check-all` slower and harder to run on a laptop.
 
 ### Confirmation
 
-No layer exists yet: the repository has no OpenAPI document and no Go code.
-Layers 1 to 4, 6, and 7 arrive with the first bounded context (milestone M1), except the TypeScript half of layer 1, which arrives with the Next.js app.
-Layer 5 arrives with the milestone that adds Schemathesis.
+No layer checks anything yet: the repository has no OpenAPI document and no Go code.
+The targets of two layers exist already and act when their input arrives: `lint-contracts` (layer 7) lints the first contract, and `lint-frontend-types` (the TypeScript half of layer 1) checks the first TypeScript file.
+The other layers arrive with the first bounded context (milestone M1), except layer 5, which arrives with the milestone that adds Schemathesis.
 
 The table names the target that runs each layer. A target marked "planned" does not exist yet, and its name may change when it is written.
 
 | Layer | Make target | Run by |
 |---|---|---|
-| 1. Compile time | `lint-go` and `test-go` for Go; `lint-ts` (planned) for `tsc --noEmit` | `make check` |
+| 1. Compile time | `lint-go` and `test-go` for Go; `lint-frontend-types` for `tsc --noEmit` | `make check` |
 | 2. Freshness | `gen-check` (planned): runs `make gen`, then fails on a diff | `make check` |
 | 3. No entry point outside the document | `lint-go`, with a forbidigo rule (planned) | `make check` |
 | 4. Validation in tests | `test-go` | `make check` |
 | 5. Generated inputs | `test-api` (planned) | `make check-all` |
 | 6. Compatibility | `lint-openapi-breaking` (planned) | `make check` |
-| 7. The document itself | `lint-openapi` (planned) | `make check` |
-
-Redocly CLI is already pinned in `package.json`, but no target runs it yet.
+| 7. The document itself | `lint-contracts` | `make check` |
 
 ## Pros and Cons of the Options
 
 ### Layered checks, each catching what the one before cannot
 
-- Good, because every kind of drift has a check, and no two checks report the same mistake.
+- Good, because every kind of drift has a check, and each check is aimed at a kind of drift that the others miss.
 - Bad, because there are seven layers to understand, and a contributor must learn which layer failed and why.
 
 ### Generated types only

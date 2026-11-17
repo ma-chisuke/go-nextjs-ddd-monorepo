@@ -42,7 +42,7 @@ Chosen option: "RFC 9457 problem details", because it is the current standard fo
 - The body has the members `type`, `title`, `status`, `detail`, and `instance`.
 - `type` is a URI that resolves to a page under `docs/problems/`. The page explains the problem and what a client can do about it. A client tells problems apart by `type`, so a published URI never changes.
 - A validation error also has an `errors` array. Each item has a `pointer`, a JSON Pointer (RFC 6901) to the wrong field, and a `detail` that says what is wrong with it, following the example in RFC 9457.
-- Business errors are typed errors in the domain (TPL-0004). The HTTP adapter of each context holds one table that maps each business error to a problem: its `type` and its status.
+- Business errors are typed errors: in the domain of a core context (TPL-0004), and in the `app` package of a supporting context, which has no domain layer (TPL-0003). The HTTP adapter of each context holds one table that maps each business error to a problem: its `type` and its status.
 - An error that is not in the table becomes a problem with status 500, and a generic `title` and `detail`. The real error goes to the log, never into the response.
 - The generated code answers some errors by itself, such as a parameter that cannot be parsed (TPL-0006). The template replaces those handlers, so that they answer with a problem too.
 
@@ -58,12 +58,11 @@ Chosen option: "RFC 9457 problem details", because it is the current standard fo
 
 ### Confirmation
 
-No check of this decision exists yet: the repository has no OpenAPI document and no Go code.
-These checks arrive with the first bounded context (milestone M1).
+No check of this decision acts yet: the repository has no OpenAPI document and no Go code.
 
-- A Redocly CLI rule fails when a 4xx or 5xx response in an OpenAPI document has a media type other than `application/problem+json` (TPL-0007, layer 7).
-- A test in the HTTP adapter of each context fails when a business error of the domain has no entry in the table.
-- The tests validate every response against the document (TPL-0007, layer 4), so an error body that is not a problem fails the test that produced it.
+- The rule `rule/problem-details-only` in `redocly.yaml`, which `lint-contracts` runs, fails when a 4xx or 5xx response in an OpenAPI document has a media type other than `application/problem+json` (TPL-0007, layer 7). It is in place, and acts on the first contract.
+- A test in the HTTP adapter of each context fails when a business error of the context has no entry in the table. It arrives with the first bounded context (milestone M1).
+- The tests validate every response against the document (TPL-0007, layer 4), so an error body that is not a problem fails the test that produced it. They arrive with the first bounded context as well.
 
 ## Pros and Cons of the Options
 

@@ -39,8 +39,8 @@ Chosen option: "UUIDv7 in a `uuid` column", because it can be created anywhere w
 The rules are as follows.
 
 - Every primary key is a UUID of version 7 (RFC 9562), in a column of type `uuid`, never `text`.
-- In a core context, the use case gets a new id from a port and passes it to the domain. The domain does not generate ids (TPL-0004), and tests give fixed ids.
-- In a context that uses transaction scripts, the column default `uuidv7()`, built into PostgreSQL 18, creates the id, and the insert returns it.
+- In every context, the use case creates the id in Go, before it writes anything. In a core context, the use case gets the id from a port and passes it to the domain; the domain does not generate ids (TPL-0004), and tests give fixed ids. In a context that uses transaction scripts, the use case calls the same generator.
+- Each primary key column also declares `DEFAULT uuidv7()`, with the function built into PostgreSQL 18, for rows that are inserted outside the application, such as seed data or a manual repair.
 - In APIs and events, an id is the standard text form of a UUID.
 
 ### Consequences
@@ -57,7 +57,7 @@ The rules are as follows.
 
 M0 has no schema and no domain code, so nothing enforces this decision yet.
 With the first bounded context, a check of each `schema.sql` fails when a primary key is not of type `uuid`.
-Review checks that a core context takes new ids from a port and that its domain does not generate them.
+Review checks that every use case creates new ids in Go, that a core context takes them from a port, and that its domain does not generate them.
 
 ## Pros and Cons of the Options
 

@@ -43,7 +43,7 @@ Chosen option: "AWS Emulator", because it is the only option that provides the A
 The rules are as follows.
 
 - Docker Compose runs the whole system: PostgreSQL 18, AWS Emulator, each context, Next.js, and Mailpit for mail.
-- AWS Emulator has no ready-made image for macOS and Windows, so the template builds an image from the published Dockerfile, at a pinned version.
+- AWS publishes AWS Emulator as a Linux package and a Dockerfile, but not as a container image, so the template builds an image from the published Dockerfile, at a pinned version.
 - AWS Emulator sends telemetry by default. The template sets `EMULATOR_TELEMETRY=off`.
 - AWS Emulator keeps its data in memory only, so the local environment creates its queues, rules, and secrets each time it starts.
 - The list of supported services was not published when this decision was made. The behaviors that the template relies on (EventBridge to SQS, dead-letter queues, and Secrets Manager) each get a small test that runs in CI.
@@ -55,9 +55,9 @@ The rules are as follows.
 - Good, because anyone can run the whole system, including the flow of events, without an account or a token, and CI runs it the same way.
 - Good, because AWS Emulator comes from AWS itself and is released under CC0, so it puts no license terms on a team that copies the template.
 - Good, because, if Terraform applies to it, local queues and rules come from the definitions that AWS uses.
-- Bad, because the product is days old and unproven. Its coverage of the services and behaviors that the template needs is unknown until the tests run, and it may change quickly.
+- Bad, because the product was released on November 11, 2026, and is unproven. Its coverage of the services and behaviors that the template needs is unknown until the tests run, and it may change quickly.
 - Bad, because its state is lost when it restarts, so the local environment must recreate the AWS resources every time.
-- Bad, because the image is built from source, which adds a step and some build time to the first start on every machine.
+- Bad, because the image is built locally from the Dockerfile, which adds a step and some build time to the first start on every machine.
 - Bad, because an emulator is not AWS. Permissions, quotas, and latency can differ, so stg remains the first place where the real services run.
 
 ### Confirmation
@@ -96,11 +96,11 @@ Until then, review enforces the decision.
 
 ## More Information
 
-Facts about AWS Emulator, as of November 2026:
+Facts about AWS Emulator, as of November 2026, from [the announcement](https://aws.amazon.com/about-aws/whats-new/2026/11/aws-emulator-now-available/):
 
 - AWS released it on November 11, 2026.
 - It is released under CC0, needs no account, and keeps its data in memory only.
-- There is no ready-made image for macOS and Windows.
+- AWS publishes a Linux package and a Dockerfile, but no container image.
 - It sends telemetry by default; `EMULATOR_TELEMETRY=off` turns it off.
 - The list of supported services was not published.
 

@@ -13,7 +13,7 @@ date: 2026-11-17
 
 よくある対策は、リポジトリを説明する指示のファイルである。そこには、アーキテクチャ・慣習・すべての決まりを書く。
 エージェントはこのファイルを作業のたびに読むので、毎回トークンを消費する。コードが変わるにつれてファイルの中身は古くなり、エージェントがそこに書かれた決まりを破っても何の知らせもない。
-ETH Zurich による2026年の「Evaluating AGENTS.md: Are Repository-Level Context Files Helpful for Coding Agents?」という研究がある。この研究は、リポジトリの概要を書いたファイルがエージェントの作業の成功率を上げず、費用を2割ほど増やしたと報告している。
+ETH Zurich による2026年の「Evaluating AGENTS.md: Are Repository-Level Context Files Helpful for Coding Agents?」という研究がある。この研究は、リポジトリの概要を書いたファイルがエージェントの作業の成功率を上げず、費用を2割以上増やしたと報告している。
 
 エージェントにこのテンプレートの決まりを守らせるにはどうすればよいか。また、すべてのエージェントが読む指示には何を書くべきか。
 
@@ -46,8 +46,8 @@ ETH Zurich による2026年の「Evaluating AGENTS.md: Are Repository-Level Cont
 ハーネスは次の部品からなる。
 
 - Claude Code のフック。エージェントがファイルを編集すると、そのファイルを整形する。生成コードの編集・`.env` の読み取り・prd への変更の適用・force push を止める。ターンの終わりには、変更の及ぶ範囲のチェックを実行し、失敗をエージェントに差し戻す。差し戻す回数には上限がある。
-- 繰り返す手順のためのスキル。記録を書く手順や、対訳をそろえる手順がある。スキルは、後のマイルストーンでコードと一緒に増える。
-- 書いた本人とは別の目で見るサブエージェント。1つは変更を記録に照らしてレビューし、もう1つは対訳を原文と比べる。
+- 繰り返す手順のためのスキル（`.claude/skills/`）。`write-adr` は記録を書き、`sync-translation` は対訳を最新にする。スキルは、後のマイルストーンでコードと一緒に増える。
+- 書いた本人とは別の目で見るサブエージェント（`.claude/agents/`）。`design-reviewer` は変更を記録に照らしてレビューし、`translation-reviewer` は対訳を原文と比べる。
 - 権限の設定。安全なコマンドは確認なしで実行させ、危険なコマンドは拒む。
 - lefthook。人にも、コミットの前とプッシュの前に同じチェックをかける（`lefthook.yml`）。
 
@@ -57,7 +57,7 @@ ETH Zurich による2026年の「Evaluating AGENTS.md: Are Repository-Level Cont
 - 良い点：人・エージェント・CI が1つの `make check` を共有するので、エージェント製品ごとの決まりは要らない。
 - 良い点：`AGENTS.md` が短いままなので、作業ごとの費用が小さく、古くなる部分も少ない。
 - 悪い点：名前の付け方、ドメインモデルの形、テストが確かめるべきことを確かめているかなど、チェックできない決まりもある。それらはレビューと、レビューを担うサブエージェントに頼る。
-- 悪い点：指摘が記録を示すのは、このリポジトリが出力の形を決められるところだけである。具体的には、自前のチェックと、gitleaks と Trivy の出力テンプレートに限られる。ほかの linter は独自の形式で出力するので、エージェントはルールの名前から理由を探す必要がある。
+- 悪い点：記録を示す指摘は少ない。示すのは、このリポジトリが自分で書いたチェックの指摘と、Trivy のライセンスの指摘だけである。ほかの指摘は、このリポジトリが1行の形に整えるもの（gitleaks・Trivy・ESLint・tflint など）も含め、ルールと、直し方かリンクを示すだけである。エージェントは、ルールの名前から理由を探す必要がある。
 - 悪い点：`evals/` ができるまでは、短い `AGENTS.md` で足りるかどうかを測る手段がない。それまでの選択は、先の研究と判断に頼っている。
 - 悪い点：フックが動くのは Claude Code の中だけである。ほかのエージェントがチェックを受けるのは、`make check`・lefthook・CI を通してだけである。
 
@@ -65,7 +65,7 @@ ETH Zurich による2026年の「Evaluating AGENTS.md: Are Repository-Level Cont
 
 - `make check` が関門である。人・エージェント・CI がこれを実行し、フックもターンの終わりにこれを実行する。
 - `make check` はターゲット `lint-agents-md` を実行し、`AGENTS.md` を短く保つ。
-- フックと権限の設定は `.claude/settings.json` にある。
+- フックと権限の設定は `.claude/settings.json` にあり、フックの本体は `.claude/hooks/` にある。`make check` は、各フックに見本のイベントを与え、何を止めて何を通すかを確かめる（`test-hooks`）。
 - `evals/` の評価は、後のマイルストーンで入る。それまでは、`AGENTS.md` に足す指示がどのチェックでも置き換えられないものであることを、レビューで確かめる。
 
 ## 選択肢の長所と短所
@@ -95,8 +95,8 @@ ETH Zurich による2026年の「Evaluating AGENTS.md: Are Repository-Level Cont
 
 ## 補足
 
-- 「Evaluating AGENTS.md: Are Repository-Level Context Files Helpful for Coding Agents?」ETH Zurich、2026年。
+- [Evaluating AGENTS.md: Are Repository-Level Context Files Helpful for Coding Agents?](https://arxiv.org/abs/2602.11988)。Thibaud Gloaguen ほか（ETH Zurich と LogicStar.ai）、2026年。
 - [AGENTS.md](https://agents.md/)
-- `make check` の背後にあるツールの選び方は TPL-0023 にある。
+- `make check` の背後にある道具の選び方は TPL-0023 にある。
 
-<!-- i18n-source: TPL-0020-agent-harness-prefers-deterministic-checks.md sha256:56f38998ccb6f8898d97df590bf79dea20473f0ba35a5840503bd302fe7aaaf9 -->
+<!-- i18n-source: TPL-0020-agent-harness-prefers-deterministic-checks.md sha256:a54d8985ea3d594f2e21e3f455bab452e66cb0c2de25390d3a5f2645f22ba220 -->

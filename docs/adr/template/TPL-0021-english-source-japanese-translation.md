@@ -34,7 +34,7 @@ Which language is the source, where does the other language live, and how does a
 
 ## Decision Outcome
 
-Chosen option: "English as the source, with a Japanese translation next to each document", because it serves both readers, and a check can tell when the two texts drift apart.
+Chosen option: "English as the source, with a Japanese translation next to each document", because the public reads the source rather than a translation while the owner reviews in Japanese, the documents share the language of the code, and a check can tell when the two texts drift apart.
 
 The rules are those of the [translation guide](../../guides/translation.md).
 
@@ -42,7 +42,7 @@ The rules are those of the [translation guide](../../guides/translation.md).
 - Both files change in the same commit.
 - The last line of a translation records the SHA-256 hash of the English file that it translates. `make i18n-stamp` writes that line.
 - Code, comments, commit messages, and the descriptions in OpenAPI documents are in English only.
-- Files under `.claude/` and `.github/` are instructions for tools, and are in English only.
+- Files under `.claude/` and `.github/` are instructions for tools, and are in English only. Third-party files keep the language in which they were published, such as the Japanese writing norm.
 - Vale checks English prose against the Google developer documentation style, and textlint checks Japanese prose. The Japanese writing norm is kept in the repository (`.claude/skills/japanese-tech-writing/`), and translations follow it.
 
 ### Consequences
@@ -52,15 +52,15 @@ The rules are those of the [translation guide](../../guides/translation.md).
 - Good, because the two files sit side by side: relative links work the same in both, and a change to both shows in one diff.
 - Good, because tools and agents read instructions in English only, so no instruction has two versions that can disagree.
 - Bad, because every change to a document is written twice, and its review takes longer.
-- Bad, because a contributor who does not write Japanese cannot pass `make check` alone, and needs the skill that syncs a translation, or the help of a maintainer.
-- Bad, because the hash proves only that someone updated the translation after the source changed, not that the meaning matches. The subagent that compares a translation with its source checks the meaning, and it can miss a difference.
+- Bad, because a contributor who does not write Japanese cannot update a translation alone, and needs the skill `sync-translation` or the help of a maintainer. `make i18n-stamp` would make `make check` pass, but the translation would stay out of date.
+- Bad, because the hash proves only that someone ran `make i18n-stamp` after the source changed, not that the translation was updated or that the meaning matches. The subagent `translation-reviewer` compares the meaning, and it can miss a difference.
 - Bad, because the owner reviews the translation rather than the source, so a mistake that exists only in the English text can pass review.
 
 ### Confirmation
 
 - `make check` runs the target `lint-i18n`, which fails when a document has no translation, or when the hash in a translation differs from the hash of the English file.
 - `make check` runs Vale on English Markdown (`lint-prose-en`) and textlint on Japanese Markdown (`lint-prose-ja`).
-- The subagent that compares a translation with its source checks the meaning, and review covers what it misses.
+- The subagent `translation-reviewer` compares the meaning of a translation with its source, and review covers what it misses.
 - Review confirms that code, comments, commit messages, and OpenAPI descriptions are in English. No check enforces the language.
 
 ## Pros and Cons of the Options
@@ -103,4 +103,4 @@ The rules are those of the [translation guide](../../guides/translation.md).
 
 - [Translate a document](../../guides/translation.md) holds the rules and the table of terms.
 - [Vale](https://vale.sh/), the [Google developer documentation style guide](https://developers.google.com/style), and [textlint](https://textlint.org/)
-- The subagent that compares a translation with its source is part of the harness in TPL-0020.
+- The skill `sync-translation` and the subagent `translation-reviewer` are part of the harness in TPL-0020.
