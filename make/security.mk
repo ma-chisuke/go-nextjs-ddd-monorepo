@@ -1,10 +1,10 @@
-# Trivy: misconfiguration, vulnerable dependencies, and dependency licenses.
-# Settings live in trivy.yaml. mise installs Trivy itself with a pinned version
-# and checksum; see docs/adr/template/TPL-0024. Also the pins of base images
-# to digests.
+# Trivy: misconfiguration, vulnerable dependencies, dependency licenses, and
+# the images of the services with their SBOMs. Settings live in trivy.yaml.
+# mise installs Trivy itself with a pinned version and checksum; see
+# docs/adr/template/TPL-0024. Also the pins of base images to digests.
 
 CHECK_TARGETS += scan-config lint-image-pins
-CHECK_ALL_TARGETS += scan-deps
+CHECK_ALL_TARGETS += scan-deps scan-images
 
 export TRIVY_DISABLE_TELEMETRY := true
 export TRIVY_SKIP_VERSION_CHECK := true
@@ -41,3 +41,37 @@ scan-deps:
 # Neither hadolint nor Trivy has this rule.
 lint-image-pins:
 	@$(TASK) $@ '$(FILES) $(DOCKERFILE_GLOBS) | xargs -r tools/scripts/image-pins.sh'
+
+# Trivy reads the images from the Docker daemon of the current context of the
+# Docker CLI, whose configuration TRIVY_ENV hides, so the address of the daemon
+# is passed on. The images get a cache of their own: scan-images runs next to
+# scan-deps in check-all, and two Trivy processes must not write one cache at
+# the same time.
+TRIVY_DOCKER := DOCKER_HOST="$${DOCKER_HOST:-$$(docker context inspect --format "{{.Endpoints.docker.Host}}")}"
+TRIVY_IMAGE := $(TRIVY_ENV) $(TRIVY_DOCKER) trivy image --image-src docker --cache-dir $(CURDIR)/.cache/trivy-images
+
+# Known vulnerabilities in the image of every service that compose.yaml builds
+# (backend/Dockerfile): in the packages of the base image and in the modules
+# of the binary, with the severities of trivy.yaml. It builds the images and
+# downloads the vulnerability database, so it runs in check-all, when the
+# sources of the images are in scope (STACK_SOURCES in make/stack.mk).
+scan-images:
+	@$(TASK) $@ 'if [ -n "$$($(FILES) $(STACK_SOURCES))" ]; then \
+		mkdir -p .cache/trivy-docker-config && $(STACK) build && code=0 && \
+		while read -r service image; do \
+			$(TRIVY_IMAGE) $(TRIVY_REPORT) --scanners vuln "$$image" < /dev/null || code=1; \
+		done < <($(STACK) images) && exit $$code; fi'
+
+# One CycloneDX SBOM per image, dist/sbom/<service>.cdx.json (TPL-0024): the
+# packages of the base image and the modules of the binary. It lists no
+# vulnerabilities, so it needs no database; a scan of the SBOM later
+# (`trivy sbom`) reports what is known then. The workflow that publishes the
+# images attests these files with GitHub artifact attestations.
+.PHONY: sbom
+sbom: ## Write an SBOM of the image of every service to dist/sbom/
+	@mkdir -p dist/sbom .cache/trivy-docker-config
+	@$(STACK) build
+	@$(STACK) images | while read -r service image; do \
+		$(TRIVY_IMAGE) --quiet --format cyclonedx --output "dist/sbom/$$service.cdx.json" "$$image" < /dev/null || exit 1; \
+		echo "sbom: dist/sbom/$$service.cdx.json ($$image)"; \
+	done
