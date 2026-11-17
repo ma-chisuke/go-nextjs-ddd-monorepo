@@ -11,6 +11,8 @@
 #        stack.sh build    build the image of every service that compose.yaml
 #                          builds from this repository
 #        stack.sh images   print "<service> <image>" for each of those services
+#        stack.sh smoke    start the system, run the smoke test against it, and
+#                          stop the services that were not running before
 #
 # Each service publishes its port on the loopback address; compose.yaml holds
 # the defaults (POSTGRES_PORT, FACILITY_PORT, RESERVATION_PORT).
@@ -40,6 +42,38 @@ up() {
   fi
 }
 
+# The base URL of a service on this host, from the port that Compose published.
+url_of() {
+  local address
+  address=$(docker compose port "$1" 8080)
+  echo "http://${address/0.0.0.0/127.0.0.1}"
+}
+
+smoke() {
+  local running service
+  running=$(docker compose ps --status running --services)
+  started=()
+  for service in $(built_services); do
+    if ! grep -qxF "$service" <<< "$running"; then
+      started+=("$service")
+    fi
+  done
+  trap stop_started EXIT
+  up
+  (
+    cd backend
+    FACILITY_URL=$(url_of facility) RESERVATION_URL=$(url_of reservation) \
+      go test -tags smoke -count=1 -v ./test/smoke/
+  )
+}
+
+# Stop the services that the smoke test started; PostgreSQL keeps running.
+stop_started() {
+  if [ "${#started[@]}" -gt 0 ]; then
+    docker compose rm --stop --force "${started[@]}" > /dev/null 2>&1 || true
+  fi
+}
+
 case "${1:-}" in
   up)
     up
@@ -54,8 +88,11 @@ case "${1:-}" in
   images)
     images
     ;;
+  smoke)
+    smoke
+    ;;
   *)
-    echo "usage: stack.sh up|down|build|images" >&2
+    echo "usage: stack.sh up|down|build|images|smoke" >&2
     exit 2
     ;;
 esac
