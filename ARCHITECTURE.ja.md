@@ -137,11 +137,11 @@ PostgreSQL 18 の1つのデータベースに、すべての文脈が入る（TP
 | 文脈は自分のテーブルにだけクエリを出す（TPL-0005、TPL-0009） | 文脈の `schema.sql` だけを読む sqlc。実行時のロールの権限（各文脈の結合テストが試す） | `make check`・実行時・`make check-all` |
 | SQL には、ほかの文脈のスキーマの名前も、自分のスキーマの名前も書かない。外部キーで文脈をまたぐと、前者を書くことになる（TPL-0005、TPL-0009） | `lint-arch` のルール `arch/schema-reference` | `make check` |
 | 各クエリはスキーマに対して prepare でき、`WHERE` のない `UPDATE` や `DELETE` はない（TPL-0011） | `sqlc vet`（`lint-sqlc`） | `make check-all` |
-| スキーマの変更は、使用中のデータベースに対して安全である（TPL-0010） | ベースのコミットからの pgschema の plan に対する squawk（`lint-sql-plan`） | `make check-all` |
+| スキーマの変更は、使用中のデータベースに対して安全である（TPL-0010） | ベースのコミットからの pgschema の plan に対する squawk（`lint-sql-plan`）。危険な SQL 文が通るのは、`schema-changes.allow` にレビューを経た行があるときだけである | `make check-all` |
 | テーブルと列にはすべてコメントがあり、スキーマの文書は最新である（TPL-0023） | tbls（`lint-db-docs`） | `make check-all` |
 | 1つの会議室の確定した予約どうしは重ならない（TPL-0009） | 排他制約 `reservations_no_overlap`。Reservation の結合テストが、同時の予約で試す | 実行時・`make check-all` |
 | 文脈の用語集は、`domain` パッケージ（ないときは `app`）がエクスポートする型をすべて、英語と日本語の両方で挙げる（TPL-0003） | `lint-arch` のルール `arch/glossary` | `make check` |
 
 次の決まりを守らせるチェックはまだないので、レビューで守る。文脈の業務領域の種類とその README（TPL-0003）と、各主キーの型が `uuid` であること（TPL-0012）である。
 
-<!-- i18n-source: ARCHITECTURE.md sha256:fc2443a57b459988adc8fde404b2268e4f7f1d53ae28193294e642451dfe3c49 -->
+<!-- i18n-source: ARCHITECTURE.md sha256:2a8feaf0da5748323fa2f2c002ea6ba161107e5f3ff7806b230e5f547b85f1b9 -->
