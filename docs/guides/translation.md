@@ -149,3 +149,4 @@ Use these Japanese terms. The table grows when a new term appears; add the term 
 | container image | コンテナイメージ |
 | smoke test | スモークテスト |
 | worktree (Git) | ワークツリー |
+| allowance (of a dangerous statement, in `schema-changes.allow`) | 許可 |

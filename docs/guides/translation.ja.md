@@ -149,5 +149,6 @@
 | container image | コンテナイメージ |
 | smoke test | スモークテスト |
 | worktree（Git の） | ワークツリー |
+| allowance（`schema-changes.allow` に書く、危険な文の） | 許可 |
 
-<!-- i18n-source: translation.md sha256:519c25d561b269cd013fa773d997abbfb16f0a19ebc2901aa8ccbb797b8d847d -->
+<!-- i18n-source: translation.md sha256:bb45d0e35e11312b5b2a0dcf2da9e48d8e749bad5768051df89d68066f684d4b -->
