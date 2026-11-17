@@ -402,6 +402,184 @@ EOF
   passes
 }
 
+# The architecture of the backend: one case for each rule of tools/cmd/arch.
+# The rules read Go files without compiling them, so these fixtures need not
+# build, and their indentation does not matter.
+
+# The module path of the backend, which the imports of the fixtures start with.
+backend_module() {
+  sed -n 's/^module //p' "$COPY/backend/go.mod"
+}
+
+# A core context next to Facility: a domain layer, and its glossary.
+put_core_context() {
+  put backend/internal/selftest/internal/domain/visit.go << 'EOF'
+// Package domain is a fixture of the self-test.
+package domain
+
+// Visit is a fixture.
+type Visit struct{}
+EOF
+  put docs/contexts/selftest/glossary.md << 'EOF'
+# Selftest glossary
+
+| Identifier | Term | Meaning |
+|---|---|---|
+| `Visit` | visit | A fixture. |
+EOF
+  put docs/contexts/selftest/glossary.ja.md << 'EOF'
+# selftest の用語集
+
+| 識別子 | 用語 | 意味 |
+|---|---|---|
+| `Visit` | 訪問 | 自己テストの部品。 |
+EOF
+}
+
+case_lint_arch() {
+  # A test of Facility that imports the domain of another context.
+  put_core_context
+  local module
+  module=$(backend_module)
+  put backend/internal/facility/internal/app/visit_test.go << EOF
+package app
+
+import _ "$module/internal/selftest/internal/domain"
+EOF
+  fails 'arch/context-import'
+  drop backend/internal/facility/internal/app/visit_test.go
+  passes
+}
+
+case_lint_arch__module_import() {
+  # A command that wires Facility, but is not cmd/facility.
+  local module
+  module=$(backend_module)
+  put backend/cmd/report/main.go << EOF
+package main
+
+import _ "$module/internal/facility"
+
+func main() {}
+EOF
+  fails 'arch/module-import'
+  drop backend/cmd/report
+  passes
+}
+
+case_lint_arch__platform_import() {
+  local module
+  module=$(backend_module)
+  put backend/internal/platform/rooms/rooms.go << EOF
+package rooms
+
+import _ "$module/internal/facility/internal/app"
+EOF
+  fails 'arch/platform-import'
+  drop backend/internal/platform/rooms
+  passes
+}
+
+case_lint_arch__layer() {
+  # An adapter that uses another adapter of its context.
+  local module
+  module=$(backend_module)
+  put backend/internal/facility/internal/adapter/http/rows.go << EOF
+package http
+
+import _ "$module/internal/facility/internal/adapter/postgres"
+EOF
+  fails 'arch/layer'
+  drop backend/internal/facility/internal/adapter/http/rows.go
+  passes
+}
+
+case_lint_arch__domain_purity() {
+  put_core_context
+  put backend/internal/selftest/internal/domain/home.go << 'EOF'
+package domain
+
+import "os"
+
+// Home is a fixture.
+func Home() string { return os.Getenv("HOME") }
+EOF
+  fails 'arch/domain-purity'
+  put backend/internal/selftest/internal/domain/home.go << 'EOF'
+package domain
+
+// Home is a fixture.
+func Home(getenv func(string) string) string { return getenv("HOME") }
+EOF
+  passes
+}
+
+case_lint_arch__domain_clock() {
+  put_core_context
+  put backend/internal/selftest/internal/domain/late.go << 'EOF'
+package domain
+
+import "time"
+
+// Late is a fixture.
+func Late(start time.Time) bool { return time.Now().After(start) }
+EOF
+  fails 'arch/domain-clock'
+  put backend/internal/selftest/internal/domain/late.go << 'EOF'
+package domain
+
+import "time"
+
+// Late is a fixture.
+func Late(start, now time.Time) bool { return now.After(start) }
+EOF
+  passes
+}
+
+case_lint_arch__route_registration() {
+  # A use case that registers a route by hand, outside the API document.
+  put backend/internal/facility/internal/app/export.go << 'EOF'
+package app
+
+import "net/http"
+
+func register() {
+    http.HandleFunc("/rooms/export", nil)
+}
+EOF
+  fails 'arch/route-registration'
+  drop backend/internal/facility/internal/app/export.go
+  passes
+}
+
+case_lint_arch__schema_reference() {
+  # A query that names the schema of its own context.
+  local queries=backend/internal/facility/internal/adapter/postgres/queries/count.sql
+  put "$queries" << 'EOF'
+-- name: CountRooms :one
+SELECT count(*) FROM facility.rooms;
+EOF
+  fails 'arch/schema-reference'
+  put "$queries" << 'EOF'
+-- name: CountRooms :one
+SELECT count(*) FROM rooms;
+EOF
+  passes
+}
+
+case_lint_arch__glossary() {
+  # An exported type that the glossary of Facility does not explain.
+  put backend/internal/facility/internal/app/hold.go << 'EOF'
+package app
+
+// Hold keeps a room for a while.
+type Hold struct{}
+EOF
+  fails 'arch/glossary'
+  drop backend/internal/facility/internal/app/hold.go
+  passes
+}
+
 case_test_commit_msg() {
   # A script that accepts every subject must fail its tests.
   put tools/scripts/commit-msg.sh << 'EOF'

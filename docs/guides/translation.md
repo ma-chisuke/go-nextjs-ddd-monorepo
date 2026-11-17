@@ -116,3 +116,9 @@ Use these Japanese terms. The table grows when a new term appears; add the term 
 | notice (verb) | 気づく |
 | fake (in a test) | 偽物 |
 | self-test (`make selftest`) | 自己テスト |
+| room | 会議室 |
+| capacity (of a room) | 定員 |
+| opening hours | 使える時間帯 |
+| time zone | タイムゾーン |
+| time of day | 時刻 |
+| exported (Go) | エクスポートされた |

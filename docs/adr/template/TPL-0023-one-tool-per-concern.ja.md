@@ -72,6 +72,7 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 | リンク | lychee | `lint-links`・`lint-links-remote`（check-all） |
 | 決定の記録とその一覧（TPL-0001） | このリポジトリの docs コマンド（`tools/cmd/docs`） | `lint-adr` |
 | 英語版と照らし合わせた対訳（TPL-0021） | このリポジトリの docs コマンド | `lint-i18n` |
+| Go のバックエンドの境界（文脈と層のあいだの import、I/O のないドメイン、手で登録したルート、SQL に書いたスキーマの名前、文脈ごとの用語集。TPL-0003・TPL-0004・TPL-0005・TPL-0007・TPL-0009） | このリポジトリの arch コマンド（`tools/cmd/arch`） | `lint-arch` |
 | `AGENTS.md` の長さ（TPL-0020） | `make/agents.mk` で行数を数える | `lint-agents-md` |
 | つづり | typos | `lint-typos` |
 | 改行コード・末尾の改行・行末の空白・インデントの種類 | editorconfig-checker | `lint-editorconfig` |
@@ -99,6 +100,8 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 - GitHub の側のスキャナー（CodeQL とシークレットスキャン。TPL-0024）は、`make` の外で動く。golangci-lint（gosec）や gitleaks と重なるが、これは意図したものである。手元で何が起きても GitHub の上で動く、もう1つの層だからである。
 - コミットメッセージとプルリクエストの題は、このリポジトリの短いスクリプト `tools/scripts/commit-msg.sh` が検査する。commitlint のような Node.js のパッケージも、別のバイナリも使わない。固定するバイナリには、`mise.lock` の4つのプラットフォームのそれぞれでビルドが要る（TPL-0022）。最初に選んだ committed は Linux の arm64 向けのビルドを出していない。スクリプトなら依存が要らない。
 - OpenAPI と AsyncAPI の文書は、どちらも Redocly CLI で lint する。最初の計画では、AsyncAPI のコマンドラインの道具と、候補として Spectral も挙げていた。どちらも入れていない。1つの道具で両方の契約を扱え、リポジトリが抱える大きな依存のツリーが1つ減るからである。
+- 層の import のルールと、ドメインで時計を読むことを禁じるルールは、golangci-lint が動かす depguard と forbidigo ではなく、`tools/cmd/arch` に置く。このコマンドはすべてのルールをディレクトリの構成から導くので、文脈を足しても設定は要らない。depguard と forbidigo には、すべての Go のファイルに当てはまるルールだけを残す。
+- 別の文脈の `internal/` の下のパッケージを import するとコンパイルが通らないので、`lint-go` と `test-go` がそれを報告し、`lint-arch` も報告する（`arch/context-import`）。この重なりは認めている。記録を挙げ、代わりに文脈どうしをどうつなぐかを示すのは、`lint-arch` の指摘だけだからである（TPL-0005）。
 
 道具の動かし方の決まりは次のとおりである。
 
@@ -158,4 +161,4 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 - `make help` が主なターゲットを一覧にし、`make/<area>.mk` が領域ごとのターゲットを持つ。
 - これらの道具の固定は TPL-0022 に、Trivy と GitHub の側のスキャナーを選んだ理由は TPL-0024 にある。
 
-<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:c2cf0e20527f99927e4edc6b3f14becb9b4101c3d8104923c59827446990fb3b -->
+<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:79edab17fcf59dec9fd98d9a1529e4d74227b2c51402ced929e48494dff53551 -->

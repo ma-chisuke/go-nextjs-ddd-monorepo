@@ -72,6 +72,7 @@ Inside `make`, each concern has one tool. Targets marked "check-all" run only in
 | Links | lychee | `lint-links`, `lint-links-remote` (check-all) |
 | Decision records and their index (TPL-0001) | the docs command of this repository (`tools/cmd/docs`) | `lint-adr` |
 | Translations against their English files (TPL-0021) | the docs command of this repository | `lint-i18n` |
+| The boundaries of the Go backend: imports between contexts and layers, a domain without I/O, routes registered by hand, schemas named in SQL, and the glossary of each context (TPL-0003, TPL-0004, TPL-0005, TPL-0007, TPL-0009) | the arch command of this repository (`tools/cmd/arch`) | `lint-arch` |
 | Length of `AGENTS.md` (TPL-0020) | a line count in `make/agents.mk` | `lint-agents-md` |
 | Spelling | typos | `lint-typos` |
 | Line endings, final newlines, trailing spaces, and the style of indentation | editorconfig-checker | `lint-editorconfig` |
@@ -99,6 +100,8 @@ These overlaps were resolved as follows.
 - The scanners on GitHub's side, CodeQL and secret scanning (TPL-0024), run outside `make`. They overlap with golangci-lint (gosec) and gitleaks on purpose: they are a second layer, which runs on GitHub whatever happens on a laptop.
 - Commit messages and pull request titles are checked by `tools/scripts/commit-msg.sh`, a short script of this repository, not by a Node.js package such as commitlint or by a separate binary. A pinned binary needs a build for each of the four platforms of `mise.lock` (TPL-0022), and the binary that was chosen first, committed, publishes none for Linux on arm64; the script needs no dependency.
 - OpenAPI and AsyncAPI documents are both linted with Redocly CLI. The first plan also named the AsyncAPI command-line tool, and Spectral as another choice. Neither is installed: one tool covers both kinds of contract, and the repository carries one large dependency tree fewer.
+- The import rules of the layers and the rule against reading the clock in the domain live in `tools/cmd/arch`, not in depguard and forbidigo, which golangci-lint runs. The command derives every rule from the directory layout, so a new context needs no configuration. depguard and forbidigo keep only the rules that apply to every Go file.
+- An import of a package under `internal/` of another context does not compile, so `lint-go` and `test-go` report it, and `lint-arch` reports it as well (`arch/context-import`). This overlap is accepted: only the finding of `lint-arch` names the record and says how contexts integrate instead (TPL-0005).
 
 The rules for running the tools are as follows.
 

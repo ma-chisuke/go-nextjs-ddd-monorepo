@@ -71,14 +71,18 @@ backend/internal/<context>/
 
 ### 確認の方法
 
-層を守るチェックは、まだない。最初の文脈とともに加わる（マイルストーン M1）。
-`.golangci.yml` はすでに depguard と forbidigo を有効にしているが、そのルールはすべての Go のファイルに当てはまるものだけである。層のためのルールは最初の文脈とともに加える、と同じファイルに書いてある。
+`make check` が動かす `lint-arch` が、このリポジトリの arch コマンド（`tools/cmd/arch`）で層を検査する。
+depguard や go-arch-lint ではなくこのコマンドを選んだのは、このコマンドがルールをディレクトリの構成から導くので、文脈を足しても設定が要らないからである。
+このコマンドは、`backend/` のパッケージを `go list` で読み、各ファイルのコードを `go/parser` で読む。
 
-そのとき加わるチェックは次のとおりである。
-
-- import のルール（depguard か go-arch-lint。どちらにするかはルールを書くときに決める）。ドメインが import できるのは、自分のパッケージと、標準ライブラリのうち許可リストに載せたパッケージだけである。許可リストには、`context`・`database/sql`・`net/http`・`os`・`log/slog`・乱数のパッケージを載せない。`app` は `adapter` を import しない。`module.go` のパッケージを import できるのは、`cmd/<context>` だけである。
-- forbidigo：ドメインでは、時計を読む関数（`time.Now` や `time.Since` など）を呼ばない。`time.Time` という型のために `time` パッケージは許可リストに残るので、import のルールだけではこれらの呼び出しを見つけられない。
+- `arch/layer`：`domain` は `app` もアダプターも import しない。`app` はアダプターを import しない。アダプターは、同じ文脈のほかのアダプターを import しない。`domain` パッケージのない文脈（トランザクションスクリプト）では、`app` が自分の `adapter/postgres` を import してよい（TPL-0003）。テストは `module.go` と同じように層を組み合わせてよいので、このルールはテスト以外のファイルだけを読む。
+- `arch/domain-purity`：ドメインが import できるのは、自分のパッケージと、標準ライブラリのうち許可リストに載せたパッケージだけである。許可リストは `cmp`・`errors`・`fmt`・`maps`・`math`・`net/mail`・`regexp`・`slices`・`sort`・`strconv`・`strings`・`time`・`unicode`・`unicode/utf8` である。`context`・`database/sql`・`net/http`・`os`・`log/slog`・乱数のパッケージは載せない。許可リストを広げるには、記録が要る。
+- `arch/domain-clock`：ドメインでは、時計を読む関数や時計を待つ関数（`time.Now` や `time.Since` など）を使わない。`time.Time` という型のために `time` パッケージは許可リストに残るので、import のルールだけではこれらの呼び出しを見つけられない。
+- `arch/module-import`：`module.go` のパッケージを import できるのは、`cmd/<context>` だけである。
+- `arch/platform-import`：`backend/internal/platform/` の下のパッケージは、どの文脈も import しない。
 - Go の `internal` ディレクトリ：`backend/internal/<context>/` の外から `backend/internal/<context>/internal/...` を import すると、コンパイラーが拒む。
+
+`.golangci.yml` の depguard と forbidigo には、すべての Go のファイルに当てはまるルールだけがある。
 
 ## 選択肢の長所と短所
 
@@ -112,4 +116,4 @@ backend/internal/<context>/
 - Vlad Khononov『ドメイン駆動設計をはじめよう』（オライリー・ジャパン）の8章：レイヤードアーキテクチャ、ポートとアダプター。原書の "Architectural Patterns" の章である。
 - `internal` ディレクトリを導入した Go 1.4 のリリースノートの [Internal packages](https://go.dev/doc/go1.4#internalpackages)
 
-<!-- i18n-source: TPL-0004-clean-architecture-with-io-free-domain.md sha256:94897904f2f0ef498ea8c2584d061ea03dc292bfd5ac96d6a3eeef2f1c87051b -->
+<!-- i18n-source: TPL-0004-clean-architecture-with-io-free-domain.md sha256:39f132d55ea5bc7ceb3ae5abfaa0416217f9e3b833d00ed7415182beeb30e340 -->

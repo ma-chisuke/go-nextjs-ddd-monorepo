@@ -116,5 +116,11 @@
 | notice（動詞） | 気づく |
 | fake（テストの） | 偽物 |
 | self-test（`make selftest`） | 自己テスト |
+| room | 会議室 |
+| capacity（会議室の） | 定員 |
+| opening hours | 使える時間帯 |
+| time zone | タイムゾーン |
+| time of day | 時刻 |
+| exported（Go の） | エクスポートされた |
 
-<!-- i18n-source: translation.md sha256:6fb588c3f68a2d86dcdac65987c5d0ee94884ebba5bd41aac06d39606377c92e -->
+<!-- i18n-source: translation.md sha256:1c918e45b04af3bbc351759c51a78c6207a55e789c1d5ba2c5ec431be003f38e -->
