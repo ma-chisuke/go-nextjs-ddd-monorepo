@@ -13,5 +13,12 @@
 | ID | 決定 | 状態 | 日付 |
 |---|---|---|---|
 | [TPL-0001](template/TPL-0001-record-decisions-as-adrs.ja.md) | 決定を ADR に残し、テンプレートの決定と利用者の決定を分ける | accepted | 2026-11-17 |
+| [TPL-0002](template/TPL-0002-single-repository-for-go-and-nextjs.ja.md) | Go の API と Next.js の Web アプリを1つのリポジトリに置く | accepted | 2026-11-17 |
+| [TPL-0003](template/TPL-0003-split-by-bounded-context.ja.md) | 区切られた文脈ごとにコードを分け、実装の重さを業務領域の種類で決める | accepted | 2026-11-17 |
+| [TPL-0004](template/TPL-0004-clean-architecture-with-io-free-domain.ja.md) | クリーンアーキテクチャを採り、ドメイン層では I/O を扱わない | accepted | 2026-11-17 |
+| [TPL-0005](template/TPL-0005-contexts-integrate-through-apis-and-events.ja.md) | 区切られた文脈どうしは直接依存せず、HTTP の API とイベントで連携する | accepted | 2026-11-17 |
+| [TPL-0006](template/TPL-0006-openapi-with-oapi-codegen-strict-server.ja.md) | HTTP の契約を OpenAPI 3.1 で書き、Go のサーバーを oapi-codegen の strict server で生成する | accepted | 2026-11-17 |
+| [TPL-0007](template/TPL-0007-layered-checks-for-api-conformance.ja.md) | OpenAPI の文書と実装の一致を、層に分けたチェックで保つ | accepted | 2026-11-17 |
+| [TPL-0008](template/TPL-0008-errors-as-rfc-9457-problem-details.ja.md) | エラーはすべて RFC 9457 の problem details で返す | accepted | 2026-11-17 |
 
-<!-- i18n-source: README.md sha256:80024b016bb36dcd7d38c1fe0ce7fdd1f02b1b26ca76228a176d16c049fa369a -->
+<!-- i18n-source: README.md sha256:988f2f47f8be881f9288aa4a9b08464058f40cfd67874997dad5051addfd6bc1 -->

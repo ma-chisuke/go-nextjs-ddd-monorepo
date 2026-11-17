@@ -1,2 +1,16 @@
 0cd9ab0cdfc5ecc3b37e29d022d5d7d93289e973aac1cac484fc4a4d97a7b072  TPL-0001-record-decisions-as-adrs.ja.md
 d716041139255d82f3f41d6a255fa54690fbeff0f1fbe48b10dd0781dd445242  TPL-0001-record-decisions-as-adrs.md
+f36426962b5da65837cd0a8d2646633474a083551b59c89be1b8acc3e9bd9a59  TPL-0002-single-repository-for-go-and-nextjs.ja.md
+e950a78b7320a5dd15a4f8b532bfec0be207f58c00a7722314fb44197877436e  TPL-0002-single-repository-for-go-and-nextjs.md
+433463c3c0401f2119b76adcd07e672e32b809624667a47ba6fd6c253315fc42  TPL-0003-split-by-bounded-context.ja.md
+3badc32012e566f3ef4096f72e471e4fc449a06df85b162f9ce4ac469976e13f  TPL-0003-split-by-bounded-context.md
+4a4a1df646dc52a921a58ff0725cbe76fe4756dbde9c732e613fc52813b55779  TPL-0004-clean-architecture-with-io-free-domain.ja.md
+94897904f2f0ef498ea8c2584d061ea03dc292bfd5ac96d6a3eeef2f1c87051b  TPL-0004-clean-architecture-with-io-free-domain.md
+cce998dd9f29793d49c084f75d2e036e2fb31ef4ef405c7841c4c01d385bc702  TPL-0005-contexts-integrate-through-apis-and-events.ja.md
+b254f78b63c995a3c8ed23984ebebbddbfd29d3337d2ebc0bfbcbcc7b546fb00  TPL-0005-contexts-integrate-through-apis-and-events.md
+c105da55282e424a162f67ebf631c8b1dbf78f4d85ee059009ebee0a126806dd  TPL-0006-openapi-with-oapi-codegen-strict-server.ja.md
+02864d4485d10e9cf0132bff480845c2b7dcf6b04617b6e5a0e621b2896cfade  TPL-0006-openapi-with-oapi-codegen-strict-server.md
+d2cedbd5ce087db49f7dbbad4312171748183ff2e46c03989d1ce4e06e9aea76  TPL-0007-layered-checks-for-api-conformance.ja.md
+8d270e5c747f1ee222c9d2cbd4b8b355345877d63213c70bde08268e0bb81c5b  TPL-0007-layered-checks-for-api-conformance.md
+d51317d282adb4e6c8259e483159e1f7e72fa8b77b30f430797692edd5e9179e  TPL-0008-errors-as-rfc-9457-problem-details.ja.md
+54bb8949bd5f571868a27c69ed6e40a83854184312053d0f9ed4676d6b236c8b  TPL-0008-errors-as-rfc-9457-problem-details.md

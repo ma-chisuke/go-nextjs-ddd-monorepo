@@ -114,3 +114,5 @@ Redocly CLI は `package.json` ですでに版を固定しているが、それ�
 - [Schemathesis](https://github.com/schemathesis/schemathesis)
 - [oasdiff](https://github.com/oasdiff/oasdiff)
 - [Redocly CLI](https://redocly.com/docs/cli)
+
+<!-- i18n-source: TPL-0007-layered-checks-for-api-conformance.md sha256:8d270e5c747f1ee222c9d2cbd4b8b355345877d63213c70bde08268e0bb81c5b -->

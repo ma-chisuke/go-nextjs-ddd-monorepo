@@ -112,3 +112,5 @@ Reservation は、予約の確定と取り消しをイベントで Notification 
 ## 補足
 
 - Vlad Khononov『ドメイン駆動設計をはじめよう』（オライリー・ジャパン）の4章：共有カーネル、モデル変換装置、共用サービス、公開された言語。原書の "Integrating Bounded Contexts" の章である。
+
+<!-- i18n-source: TPL-0005-contexts-integrate-through-apis-and-events.md sha256:b254f78b63c995a3c8ed23984ebebbddbfd29d3337d2ebc0bfbcbcc7b546fb00 -->

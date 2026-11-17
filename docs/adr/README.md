@@ -13,3 +13,10 @@ None yet.
 | ID | Decision | Status | Date |
 |---|---|---|---|
 | [TPL-0001](template/TPL-0001-record-decisions-as-adrs.md) | Record decisions as ADRs, and keep template decisions apart from project decisions | accepted | 2026-11-17 |
+| [TPL-0002](template/TPL-0002-single-repository-for-go-and-nextjs.md) | Keep the Go API and the Next.js app in one repository | accepted | 2026-11-17 |
+| [TPL-0003](template/TPL-0003-split-by-bounded-context.md) | Split the code by bounded context, and let the kind of subdomain set the weight of the implementation | accepted | 2026-11-17 |
+| [TPL-0004](template/TPL-0004-clean-architecture-with-io-free-domain.md) | Use a clean architecture, with a domain layer that does no I/O | accepted | 2026-11-17 |
+| [TPL-0005](template/TPL-0005-contexts-integrate-through-apis-and-events.md) | Bounded contexts do not depend on each other, and integrate through HTTP APIs and events | accepted | 2026-11-17 |
+| [TPL-0006](template/TPL-0006-openapi-with-oapi-codegen-strict-server.md) | Write each HTTP contract in OpenAPI 3.1, and generate the Go server with the oapi-codegen strict server | accepted | 2026-11-17 |
+| [TPL-0007](template/TPL-0007-layered-checks-for-api-conformance.md) | Keep the OpenAPI documents and the implementation in agreement with layered checks | accepted | 2026-11-17 |
+| [TPL-0008](template/TPL-0008-errors-as-rfc-9457-problem-details.md) | Return every error as RFC 9457 problem details | accepted | 2026-11-17 |

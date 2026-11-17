@@ -94,3 +94,5 @@ HTTP のアダプターは、こうしたエラーをそれぞれステータス
 
 - [RFC 9457: Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457.html)
 - [RFC 6901: JavaScript Object Notation (JSON) Pointer](https://www.rfc-editor.org/rfc/rfc6901.html)
+
+<!-- i18n-source: TPL-0008-errors-as-rfc-9457-problem-details.md sha256:54bb8949bd5f571868a27c69ed6e40a83854184312053d0f9ed4676d6b236c8b -->

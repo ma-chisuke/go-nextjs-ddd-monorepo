@@ -109,3 +109,5 @@ API と画面が別のリポジトリにあると、エージェントは片側�
 - [pnpm のワークスペース](https://pnpm.io/workspaces)
 - [Go モジュールのリファレンス](https://go.dev/ref/mod)
 - `backend/` と `frontend/` の中を文脈ごとにどう分けるかは、TPL-0003 で決める。
+
+<!-- i18n-source: TPL-0002-single-repository-for-go-and-nextjs.md sha256:e950a78b7320a5dd15a4f8b532bfec0be207f58c00a7722314fb44197877436e -->

@@ -126,3 +126,5 @@ date: 2026-11-17
 
 - Vlad Khononov『ドメイン駆動設計をはじめよう』（オライリー・ジャパン）の10章：業務領域の種類ごとに実装のパターンを選ぶ経験則。原書は "Learning Domain-Driven Design"（O'Reilly、2021）の "Design Heuristics" の章である。
 - 同書の1章：中核・補完・一般の業務領域。
+
+<!-- i18n-source: TPL-0003-split-by-bounded-context.md sha256:3badc32012e566f3ef4096f72e471e4fc449a06df85b162f9ce4ac469976e13f -->

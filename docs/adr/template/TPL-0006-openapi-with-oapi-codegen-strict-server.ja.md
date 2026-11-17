@@ -108,3 +108,5 @@ OpenAPI 3.1 の文書を、使う道具のすべてが読めるかどうかは�
 - [OpenAPI Specification 3.1.0](https://spec.openapis.org/oas/v3.1.0)
 - [oapi-codegen](https://github.com/oapi-codegen/oapi-codegen)
 - [openapi-typescript](https://openapi-ts.dev/)
+
+<!-- i18n-source: TPL-0006-openapi-with-oapi-codegen-strict-server.md sha256:02864d4485d10e9cf0132bff480845c2b7dcf6b04617b6e5a0e621b2896cfade -->

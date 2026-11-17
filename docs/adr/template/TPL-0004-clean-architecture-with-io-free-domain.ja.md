@@ -111,3 +111,5 @@ backend/internal/<context>/
 - [The Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)（Robert C. Martin）
 - Vlad Khononov『ドメイン駆動設計をはじめよう』（オライリー・ジャパン）の8章：レイヤードアーキテクチャ、ポートとアダプター。原書の "Architectural Patterns" の章である。
 - `internal` ディレクトリを導入した Go 1.4 のリリースノートの [Internal packages](https://go.dev/doc/go1.4#internalpackages)
+
+<!-- i18n-source: TPL-0004-clean-architecture-with-io-free-domain.md sha256:94897904f2f0ef498ea8c2584d061ea03dc292bfd5ac96d6a3eeef2f1c87051b -->
