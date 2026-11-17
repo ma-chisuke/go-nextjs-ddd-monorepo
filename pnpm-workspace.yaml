@@ -19,6 +19,9 @@ overrides:
   # textlint 15.8.0 requires glob 13, which has CVE-2026-118773; glob 13 in
   # turn requires minimatch 10, which has CVE-2026-118764.
   glob: 14.0.6
+  # typescript-eslint 8.72.2 requires minimatch 10 (CVE-2026-118764); its next
+  # release requires a fixed version but is younger than minimumReleaseAge.
+  minimatch@10: 11.0.8
 
 # eslint-config-next 16 supports ESLint 10 with shims of its own, but three of
 # the plugins it bundles still declare ESLint 9 as their newest peer.
