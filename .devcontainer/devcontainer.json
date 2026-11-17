@@ -13,7 +13,8 @@
     "source=go-nextjs-ddd-monorepo-claude-${devcontainerId},target=/home/dev/.claude,type=volume"
   ],
   "containerEnv": {
-    "CLAUDE_CONFIG_DIR": "/home/dev/.claude"
+    "CLAUDE_CONFIG_DIR": "/home/dev/.claude",
+    "MISE_TRUSTED_CONFIG_PATHS": "${containerWorkspaceFolder}"
   },
   "postCreateCommand": "make setup"
 }
