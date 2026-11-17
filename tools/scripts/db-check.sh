@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# The checks that need PostgreSQL. Each run works in a
+# The checks and the documents that need PostgreSQL. Each run works in a
 # scratch database of the local server, which it creates and drops, so it
 # never changes the schemas in the database app (TPL-0009).
 #
 # Usage: db-check.sh plan        lint the DDL of each schema change (TPL-0010)
 #        db-check.sh vet         sqlc vet on the queries of each context (TPL-0011)
+#        db-check.sh docs-lint   tbls lint, and fail on out-of-date documents (TPL-0023)
+#        db-check.sh docs        write docs/generated/db/<context>/ for every context
 #
-# plan and vet read the paths in scope on stdin, one per line
+# plan, vet, and docs-lint read the paths in scope on stdin, one per line
 # (tools/scripts/files.sh). A path under backend/internal/<context>/ selects
 # that context; any other path, such as db/bootstrap.sql, selects every
 # context. With no path, nothing runs.
@@ -34,6 +36,7 @@ cd "$(git rev-parse --show-toplevel)"
 host="${PGHOST:-127.0.0.1}"
 port="${POSTGRES_PORT:-55432}"
 sslmode="${PGSSLMODE:-disable}"
+docs_root=docs/generated/db
 kind="${1:-}"
 
 tmp=$(mktemp -d)
@@ -141,6 +144,20 @@ apply_schema() {
   fi
 }
 
+# The line of a table, or of a column in it, in a schema.sql; 1 when not found.
+line_of() {
+  awk -v table="$2" -v column="${3:-}" '
+    BEGIN { pattern = "^create table (if not exists )?([a-z0-9_\"]+\\.)?\"?" table "\"?[ (]" }
+    !inside && tolower($0) ~ pattern {
+      if (column == "") { print NR; found = 1; exit }
+      inside = 1; start = NR; next
+    }
+    inside && /^\)/ { print start; found = 1; exit }
+    inside && ($1 == column || $1 == "\"" column "\"") { print NR; found = 1; exit }
+    END { if (!found) print 1 }
+  ' "$1"
+}
+
 plan() {
   local list base short context schema plan status=0
   list=$(selected)
@@ -235,11 +252,121 @@ vet() {
   return "$status"
 }
 
+# The schema documents of each context in the list, written under $1.
+write_docs() {
+  local out="$1" context
+  shift
+  for context in "$@"; do
+    apply_schema "$context" "$(dir_of "$context")/schema.sql" || return 1
+    TBLS_DSN="$(owner_dsn "$context")" TBLS_NAME="$context" TBLS_DOC_PATH="$out/$context" \
+      tbls doc --config .tbls.yml > "$tmp/tbls.log" 2>&1 || {
+      cat "$tmp/tbls.log"
+      return 1
+    }
+  done
+}
+
+docs() {
+  local context list
+  list=$(contexts)
+  create_scratch
+  # shellcheck disable=SC2086 # one context per word
+  write_docs "$tmp/docs" $list
+  rm -rf "$docs_root"
+  mkdir -p "$docs_root"
+  for context in $list; do
+    cp -R "$tmp/docs/$context" "$docs_root/$context"
+    echo "db: wrote $docs_root/$context"
+  done
+}
+
+# tbls lint prints "<schema>.<table>[.<column>]: <message>".
+lint_finding() {
+  local context="$1" line="$2" schema subject table column rule fix
+  schema="$(dir_of "$context")/schema.sql"
+  subject=${line%%: *}
+  subject=${subject#"$context".}
+  table=${subject%%.*}
+  column=''
+  if [ "$subject" != "$table" ]; then
+    column=${subject#*.}
+  fi
+  case "$line" in
+    *': table comment required.'*)
+      rule=requireTableComment
+      fix="add COMMENT ON TABLE $table IS '...' to $schema"
+      ;;
+    *': column comment required.'*)
+      rule=requireColumnComment
+      fix="add COMMENT ON COLUMN $table.$column IS '...' to $schema"
+      ;;
+    *'foreign key columns do not have an index'*)
+      rule=requireForeignKeyIndex
+      fix="add an index whose first columns are those of the foreign key to $schema"
+      ;;
+    *)
+      rule=lint
+      fix="change $schema so that tbls lint passes (.tbls.yml)"
+      ;;
+  esac
+  echo "$schema:$(line_of "$schema" "$table" "$column"): [tbls/$rule] ${line%.}. Fix: $fix. See TPL-0023."
+}
+
+docs_lint() {
+  local list context line file dir name status=0
+  list=$(selected)
+  [ -n "$list" ] || return 0
+  create_scratch
+  for context in $list; do
+    apply_schema "$context" "$(dir_of "$context")/schema.sql" || {
+      status=1
+      continue
+    }
+    if ! TBLS_DSN="$(owner_dsn "$context")" TBLS_NAME="$context" TBLS_DOC_PATH="$tmp/docs/$context" \
+      tbls lint --config .tbls.yml > "$tmp/lint.log" 2>&1; then
+      status=1
+      while IFS= read -r line; do
+        case "$line" in
+          '' | *' detected') ;;
+          "$context".*': '*) lint_finding "$context" "$line" ;;
+          *) echo "$line" ;;
+        esac
+      done < "$tmp/lint.log"
+    fi
+    TBLS_DSN="$(owner_dsn "$context")" TBLS_NAME="$context" TBLS_DOC_PATH="$tmp/docs/$context" \
+      tbls doc --config .tbls.yml > "$tmp/tbls.log" 2>&1 || {
+      cat "$tmp/tbls.log"
+      status=1
+      continue
+    }
+    # Every file that tbls writes now, and every file in the repository.
+    for file in $({ (cd "$tmp/docs/$context" && find . -type f) && { [ ! -d "$docs_root/$context" ] || (cd "$docs_root/$context" && find . -type f); }; } | sort -u); do
+      file=${file#./}
+      if ! cmp -s "$tmp/docs/$context/$file" "$docs_root/$context/$file"; then
+        echo "$docs_root/$context/$file:1: [gen/stale] the schema document is not what tbls writes from $(dir_of "$context")/schema.sql. Fix: run make gen-db-docs. See TPL-0023."
+        status=1
+      fi
+    done
+  done
+  # Documents of a context that no longer exists.
+  for dir in "$docs_root"/*/; do
+    [ -d "$dir" ] || continue
+    name=$(basename "$dir")
+    if ! contexts | grep -Fxq "$name"; then
+      echo "$docs_root/$name:1: [gen/stale] there is no context $name. Fix: run make gen-db-docs. See TPL-0023."
+      status=1
+    fi
+  done
+  return "$status"
+}
+
 case "$kind" in
   plan) plan ;;
   vet) vet ;;
+  docs-lint) docs_lint ;;
+  docs) docs ;;
   *)
-    echo "usage: db-check.sh plan|vet" >&2
+    echo "usage: db-check.sh plan|vet|docs-lint|docs" >&2
     exit 2
     ;;
 esac

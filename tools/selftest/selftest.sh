@@ -988,6 +988,17 @@ EOF
   passes
 }
 
+case_lint_db_docs() {
+  printf '\nCREATE TABLE seats (id uuid PRIMARY KEY);\n' >> "$COPY/$facility_postgres/schema.sql"
+  fails '[tbls/requireTableComment] facility.seats: table comment required.'
+  prints '[tbls/requireColumnComment] facility.seats.id: column comment required.'
+  printf "COMMENT ON TABLE seats IS 'Seats.';\nCOMMENT ON COLUMN seats.id IS 'The id.';\n" \
+    >> "$COPY/$facility_postgres/schema.sql"
+  fails 'docs/generated/db/facility/README.md:1: [gen/stale]'
+  run "$make_cmd" --no-print-directory gen-db-docs
+  passes
+}
+
 good_openapi() {
   put contracts/http/facility.openapi.yaml << 'EOF'
 openapi: 3.1.0
