@@ -1,0 +1,22 @@
+# terraform-docs writes the requirements, inputs, outputs, and resources of each
+# Terraform module into its README.md, between the BEGIN_TF_DOCS and
+# END_TF_DOCS markers. `make gen` updates them, and `make check` fails when a
+# README is out of date. https://terraform-docs.io/user-guide/configuration/
+version: ">= 0.25.0, < 1.0.0"
+
+formatter: markdown table
+
+output:
+  file: README.md
+  mode: inject
+
+settings:
+  # Plain Markdown tables, without HTML anchors that markdownlint rejects.
+  anchor: false
+  html: false
+  # Versions come from the configuration, not from a local `terraform init`.
+  lockfile: false
+
+sort:
+  enabled: true
+  by: name
