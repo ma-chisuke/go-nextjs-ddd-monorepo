@@ -69,7 +69,7 @@ Go のモジュールには次の決まりを置き、Go のツールチェー�
 - `GOFLAGS=-mod=readonly` により、コマンドは `go.mod` や `go.sum` を書き換える代わりに失敗する。`GOTOOLCHAIN=local` により、Go は別のツールチェーンをダウンロードしない。
 - govulncheck は、実際に呼ばれているコードにある既知の脆弱性を報告する（`make check-all` の `vuln-go`）。
 
-Trivy は、ロックファイルをもとに、既知の脆弱性と、禁止したライセンスの依存を探す（`make check-all` の `scan-deps`、および TPL-0019）。ライセンスのスキャンは製品とともに配るものだけを対象にし、開発のための依存と `tools/` のモジュールは外す。設定ミス・脆弱性・ライセンス・SBOM のスキャナーは Trivy だけである。固定した1つのバイナリで4つを扱えるので、固定して見張るスキャナーがもう1つ増えることはない。Go については、govulncheck が脆弱性を実際に呼ばれているコードに絞る（TPL-0023）。
+Trivy は、ロックファイルをもとに、既知の脆弱性と、禁止したライセンスの依存を探す（`make check-all` の `scan-deps`、および TPL-0019）。ライセンスのスキャンは製品とともに配るものだけを対象にし、開発のための依存と `tools/` のモジュールは外す。Trivy が脆弱性を報告するのは、修正されたバージョンが出た日からである（`trivy.yaml` の `ignore-unfixed`）。直しようのない指摘は、依存のメンテナーが修正を出すまで、すべてのプルリクエストを失敗させるからである。それまでの間は、Dependabot alerts がその脆弱性を一覧に出す。呼ばれている Go のコードが影響を受けるなら、govulncheck が失敗する。設定ミス・脆弱性・ライセンス・SBOM のスキャナーは Trivy だけである。固定した1つのバイナリで4つを扱えるので、固定して見張るスキャナーがもう1つ増えることはない。Go については、govulncheck が脆弱性を実際に呼ばれているコードに絞る（TPL-0023）。
 
 秘密情報は、2つの仕組みでコードの中から探す。
 
@@ -147,4 +147,4 @@ Trivy は、ロックファイルをもとに、既知の脆弱性と、禁止�
 - [OpenSSF Scorecard](https://github.com/ossf/scorecard)
 - 道具の固定は TPL-0022 に、1つの関心事に道具を1つだけ使う決まりは TPL-0023 に、更新は TPL-0025 にある。
 
-<!-- i18n-source: TPL-0024-supply-chain-defenses.md sha256:86823a2229479987965f2be152014d43cdcccaf0c3178741543acb3a01d952f4 -->
+<!-- i18n-source: TPL-0024-supply-chain-defenses.md sha256:82be00628a2a24256eb9039cc58832b7ede9cf0d2afc5717c42eabb08c755bf9 -->
