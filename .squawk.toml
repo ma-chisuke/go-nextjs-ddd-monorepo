@@ -13,4 +13,8 @@ excluded_rules = [
   "require-concurrent-index-creation",
   # A schema file is not a script that is run again after a failure.
   "prefer-robust-stmts",
+  # Ids are UUIDs (TPL-0012). Any other whole number, such as the capacity of
+  # a room, has the size that its meaning needs.
+  "prefer-bigint-over-int",
+  "prefer-bigint-over-smallint",
 ]

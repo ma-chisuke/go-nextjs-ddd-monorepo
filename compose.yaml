@@ -1,0 +1,29 @@
+# The local environment: everything runs with Docker Compose alone, without
+# an AWS account (TPL-0017).
+#
+#   make db-up      start PostgreSQL and bring every schema up to date
+#   make db-down    stop it and delete its data
+name: go-nextjs-ddd-monorepo
+
+services:
+  postgres:
+    image: postgres:18.7@sha256:2ea8630df176ad090ec92136dee850397c5af8781e4bcf2e4162593691c61bbc
+    environment:
+      POSTGRES_DB: app
+      # Local only; see db/local.sql.
+      POSTGRES_PASSWORD: postgres
+    ports:
+      # Loopback only. 5432 is often taken by another PostgreSQL.
+      - 127.0.0.1:${POSTGRES_PORT:-55432}:5432
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./db/bootstrap.sql:/docker-entrypoint-initdb.d/10-bootstrap.sql:ro
+      - ./db/local.sql:/docker-entrypoint-initdb.d/20-local.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, pg_isready --username postgres --dbname app]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+volumes:
+  postgres-data:
