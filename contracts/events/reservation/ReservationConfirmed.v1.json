@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReservationConfirmed",
+  "description": "The data of the event reservation.ReservationConfirmed.v1: a reservation holds its room for its period. Reservation publishes it when a room is booked, and again when the reservation is rescheduled, with the new period and attendees. A consumer ignores the properties that it does not know.",
+  "type": "object",
+  "required": ["reservationId", "roomId", "startsAt", "endsAt", "attendees", "organizerEmail"],
+  "properties": {
+    "reservationId": {
+      "description": "The id of the reservation.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "roomId": {
+      "description": "The id of the reserved room, as the Facility API knows it.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "startsAt": {
+      "description": "When the reservation starts. The period includes this instant.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "endsAt": {
+      "description": "When the reservation ends. The period excludes this instant.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "attendees": {
+      "description": "The number of people who attend, the organizer included.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "organizerEmail": {
+      "description": "The email address of the person who organizes the meeting.",
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 254
+    }
+  },
+  "examples": [
+    {
+      "reservationId": "0193a6f0-7b5c-7e2a-9c3d-1f2e3d4c5b6a",
+      "roomId": "0193a6f0-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "startsAt": "2026-11-20T01:00:00Z",
+      "endsAt": "2026-11-20T02:00:00Z",
+      "attendees": 4,
+      "organizerEmail": "organizer@example.com"
+    }
+  ]
+}

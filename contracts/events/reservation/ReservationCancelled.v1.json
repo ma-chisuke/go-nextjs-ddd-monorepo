@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReservationCancelled",
+  "description": "The data of the event reservation.ReservationCancelled.v1: a reservation was cancelled, and its room is free for its period. A consumer ignores the properties that it does not know.",
+  "type": "object",
+  "required": ["reservationId", "roomId", "startsAt", "endsAt", "organizerEmail"],
+  "properties": {
+    "reservationId": {
+      "description": "The id of the reservation.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "roomId": {
+      "description": "The id of the room that the reservation held, as the Facility API knows it.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "startsAt": {
+      "description": "When the cancelled reservation would have started.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "endsAt": {
+      "description": "When the cancelled reservation would have ended.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "organizerEmail": {
+      "description": "The email address of the person who organized the meeting.",
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 254
+    }
+  },
+  "examples": [
+    {
+      "reservationId": "0193a6f0-7b5c-7e2a-9c3d-1f2e3d4c5b6a",
+      "roomId": "0193a6f0-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "startsAt": "2026-11-20T01:00:00Z",
+      "endsAt": "2026-11-20T02:00:00Z",
+      "organizerEmail": "organizer@example.com"
+    }
+  ]
+}

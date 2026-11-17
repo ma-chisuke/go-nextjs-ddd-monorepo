@@ -35,11 +35,16 @@ func NewHandler(doc *openapi3.T, logger *slog.Logger, routes Routes) (http.Handl
 	// database, so that it never keeps a paused database awake (TPL-0016).
 	// Docker Compose and ECS call it every few seconds, so it stays out of
 	// the access log.
-	root.HandleFunc("GET "+HealthPath, func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusNoContent)
-	})
+	handleHealth(root)
 	root.Handle("/", AccessLog(logger)(Recover(logger)(validate(api))))
 	return root, nil
+}
+
+// handleHealth serves the health check on mux.
+func handleHealth(mux *http.ServeMux) {
+	mux.HandleFunc("GET "+HealthPath, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
 }
 
 // Server timeouts. A slow or stalled client must not hold a connection open.
