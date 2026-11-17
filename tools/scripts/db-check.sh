@@ -4,8 +4,9 @@
 # never changes the schemas in the database app (TPL-0009).
 #
 # Usage: db-check.sh plan        lint the DDL of each schema change (TPL-0010)
+#        db-check.sh vet         sqlc vet on the queries of each context (TPL-0011)
 #
-# plan reads the paths in scope on stdin, one per line
+# plan and vet read the paths in scope on stdin, one per line
 # (tools/scripts/files.sh). A path under backend/internal/<context>/ selects
 # that context; any other path, such as db/bootstrap.sql, selects every
 # context. With no path, nothing runs.
@@ -82,6 +83,11 @@ owner_password() {
   local variable
   variable="DB_OWNER_PASSWORD_$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]')"
   printf '%s' "${!variable:-${1}_owner}"
+}
+
+# The address of the scratch database for the owner role of a context.
+owner_dsn() {
+  printf 'postgresql://%s_owner:%s@%s:%s/%s?sslmode=%s' "$1" "$(owner_password "$1")" "$host" "$port" "$scratch" "$sslmode"
 }
 
 psql_in() {
@@ -184,10 +190,56 @@ plan() {
   return "$status"
 }
 
+# The fix that each rule of sqlc vet needs.
+vet_fix() {
+  case "$1" in
+    sqlc/db-prepare) echo "change the query until PostgreSQL prepares it against schema.sql" ;;
+    *) echo "change the query so that it follows the rule $1 in sqlc.yaml" ;;
+  esac
+}
+
+vet() {
+  local list context dir config line where status=0
+  local finding='^([^:]+): ([A-Za-z0-9_]+): ([^:]+): (.*)$'
+  list=$(selected)
+  [ -n "$list" ] || return 0
+  create_scratch
+  for context in $list; do
+    dir=$(dir_of "$context")
+    config="$dir/sqlc.yaml"
+    [ -f "$config" ] || continue
+    if ! grep -Eq '^[[:space:]]*-[[:space:]]*sqlc/db-prepare[[:space:]]*$' "$config"; then
+      echo "$config:1: [sqlc/no-db-prepare] sqlc vet does not prepare the queries of $context in a database. Fix: copy the settings database, analyzer, and rules from the sqlc.yaml of another context. See TPL-0011."
+      status=1
+      continue
+    fi
+    apply_schema "$context" "$dir/schema.sql" || {
+      status=1
+      continue
+    }
+    if (cd "$dir" && SQLC_VET_DATABASE_URI="$(owner_dsn "$context")" sqlc vet) > "$tmp/vet.log" 2>&1; then
+      continue
+    fi
+    status=1
+    # sqlc vet prints "<file>: <query>: <rule>: <message>"; the line is that
+    # of the name of the query.
+    while IFS= read -r line; do
+      if [[ $line =~ $finding ]]; then
+        where=$(grep -rnE --include='*.sql' -- "^-- name: ${BASH_REMATCH[2]}( |$)" "$dir" | head -n 1 | cut -d: -f1,2)
+        echo "${where:-$config:1}: [${BASH_REMATCH[3]}] ${BASH_REMATCH[2]}: ${BASH_REMATCH[4]}. Fix: $(vet_fix "${BASH_REMATCH[3]}"). See TPL-0011."
+      else
+        echo "$line"
+      fi
+    done < "$tmp/vet.log"
+  done
+  return "$status"
+}
+
 case "$kind" in
   plan) plan ;;
+  vet) vet ;;
   *)
-    echo "usage: db-check.sh plan" >&2
+    echo "usage: db-check.sh plan|vet" >&2
     exit 2
     ;;
 esac

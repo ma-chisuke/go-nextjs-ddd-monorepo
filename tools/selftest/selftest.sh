@@ -969,6 +969,25 @@ case_lint_sql_plan() {
   passes
 }
 
+case_lint_sqlc() {
+  local queries="$facility_postgres/queries/selftest.sql"
+  put "$queries" << 'EOF'
+-- name: CountLargeRooms :one
+SELECT count(*) FROM rooms WHERE capacity > 'many';
+EOF
+  fails "$queries:1: [sqlc/db-prepare] CountLargeRooms:"
+  put "$queries" << 'EOF'
+-- name: ClearRooms :exec
+DELETE FROM rooms;
+EOF
+  fails "$queries:1: [no-unfiltered-write] ClearRooms:"
+  put "$queries" << 'EOF'
+-- name: CountLargeRooms :one
+SELECT count(*) FROM rooms WHERE capacity > sqlc.arg(capacity);
+EOF
+  passes
+}
+
 good_openapi() {
   put contracts/http/facility.openapi.yaml << 'EOF'
 openapi: 3.1.0
