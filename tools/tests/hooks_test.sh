@@ -214,6 +214,8 @@ blocked 'git -c diff.external=x diff' "$root" design-reviewer
 want="translation-reviewer is read-only"
 blocked 'find docs -name "*.md" -delete' "$root" translation-reviewer
 allowed 'git diff main...HEAD -- docs' "$root" design-reviewer
+allowed 'git diff $(git merge-base origin/main HEAD) && git diff HEAD' "$root" design-reviewer
+allowed 'git diff --name-only $(git merge-base origin/main HEAD) && git status --short' "$root" translation-reviewer
 allowed 'git log --oneline -5 && git status' "$root" design-reviewer
 allowed 'grep -rn "aggregate" docs 2> /dev/null | head -20' "$root" design-reviewer
 allowed 'cat docs/guides/translation.md' "$root" translation-reviewer
