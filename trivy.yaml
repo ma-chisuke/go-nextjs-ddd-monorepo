@@ -1,0 +1,34 @@
+# Trivy settings shared by every scan. https://trivy.dev/latest/docs/references/configuration/config-file/
+severity:
+  - MEDIUM
+  - HIGH
+  - CRITICAL
+
+scan:
+  skip-dirs:
+    - node_modules
+    - .venv
+    - .cache
+    - .claude/worktrees
+    - tmp
+
+# This template is distributed under MIT-0. A dependency under a strong
+# copyleft or a restrictive license must not become part of what users copy.
+license:
+  full: false
+  forbidden:
+    - AGPL-1.0
+    - AGPL-3.0
+    - GPL-1.0
+    - GPL-2.0
+    - GPL-3.0
+    - SSPL-1.0
+    - BUSL-1.1
+    - CC-BY-NC-1.0
+    - CC-BY-NC-2.0
+    - CC-BY-NC-2.5
+    - CC-BY-NC-3.0
+    - CC-BY-NC-4.0
+    - CC-BY-NC-ND-4.0
+    - CC-BY-NC-SA-4.0
+    - Commons-Clause
