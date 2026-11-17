@@ -113,3 +113,5 @@ M0 にはイベントがないので、この決定を守らせるものはま�
 - [CloudEvents 1.0](https://github.com/cloudevents/spec)
 - [AsyncAPI 3.0](https://www.asyncapi.com/docs/reference/specification/v3.0.0)
 - [送信箱のパターン（transactional outbox）](https://microservices.io/patterns/data/transactional-outbox.html)
+
+<!-- i18n-source: TPL-0013-events-with-outbox-cloudevents-eventbridge-sqs.md sha256:80a790b82e4e153c0ca9b3597218b3d801832f20fc1358b245d4c8da97b401d7 -->

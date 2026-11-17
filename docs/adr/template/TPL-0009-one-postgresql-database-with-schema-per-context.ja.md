@@ -102,3 +102,5 @@ date: 2026-11-17
 - PostgreSQL 18 のドキュメントの[スキーマ](https://www.postgresql.org/docs/18/ddl-schemas.html)と[権限](https://www.postgresql.org/docs/18/ddl-priv.html)
 - 見本の排他制約は `EXCLUDE USING gist (room_id WITH =, period WITH &&)` である。GiST のインデックスで `room_id` のような列に `=` を使えるのは、`btree_gist` 拡張を入れた場合だけである。
 - スキーマの管理には pgschema（TPL-0010）を、クエリの生成には sqlc（TPL-0011）を使う。AWS 上のデータベースは Aurora PostgreSQL である（TPL-0016）。
+
+<!-- i18n-source: TPL-0009-one-postgresql-database-with-schema-per-context.md sha256:c2bdfd6b3f1d62d65416547525c90e2107716c87979bd3a01701613e1ea0955c -->

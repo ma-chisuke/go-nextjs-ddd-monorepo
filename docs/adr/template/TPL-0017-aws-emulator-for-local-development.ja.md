@@ -105,3 +105,5 @@ M0 にはまだ手元の環境がないので、この決定を守らせるも�
 - 対応するサービスの一覧は公開されていなかった。
 
 まだ確かめていないこと：EventBridge から SQS への配信、デッドレターキュー、Secrets Manager、AWS Emulator への Terraform の適用。これらは、イベントを扱うマイルストーンで確かめる。
+
+<!-- i18n-source: TPL-0017-aws-emulator-for-local-development.md sha256:b1b4411842b108b0a0386b90a62f4216d82ecf34aaf45bbe98286a4e6ca726b5 -->

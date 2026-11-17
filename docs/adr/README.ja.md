@@ -20,6 +20,15 @@
 | [TPL-0006](template/TPL-0006-openapi-with-oapi-codegen-strict-server.ja.md) | HTTP の契約を OpenAPI 3.1 で書き、Go のサーバーを oapi-codegen の strict server で生成する | accepted | 2026-11-17 |
 | [TPL-0007](template/TPL-0007-layered-checks-for-api-conformance.ja.md) | OpenAPI の文書と実装の一致を、層に分けたチェックで保つ | accepted | 2026-11-17 |
 | [TPL-0008](template/TPL-0008-errors-as-rfc-9457-problem-details.ja.md) | エラーはすべて RFC 9457 の problem details で返す | accepted | 2026-11-17 |
+| [TPL-0009](template/TPL-0009-one-postgresql-database-with-schema-per-context.ja.md) | PostgreSQL 18 のデータベースを1つにし、文脈ごとにスキーマとロールを分ける | accepted | 2026-11-17 |
+| [TPL-0010](template/TPL-0010-declarative-schema-with-pgschema.ja.md) | スキーマを pgschema で宣言的に管理する | accepted | 2026-11-17 |
+| [TPL-0011](template/TPL-0011-database-access-with-sqlc.ja.md) | データベースへのアクセスに sqlc を使う | accepted | 2026-11-17 |
+| [TPL-0012](template/TPL-0012-uuidv7-primary-keys.ja.md) | 主キーに UUIDv7 を使う | accepted | 2026-11-17 |
+| [TPL-0013](template/TPL-0013-events-with-outbox-cloudevents-eventbridge-sqs.ja.md) | 統合イベントは送信箱から CloudEvents の形で EventBridge に発行し、受け取る文脈ごとに SQS のキューを置く | accepted | 2026-11-17 |
+| [TPL-0014](template/TPL-0014-deploy-each-context-to-ecs.ja.md) | 文脈ごとに ECS へデプロイし、入口を ECS Gateway にする | accepted | 2026-11-17 |
+| [TPL-0015](template/TPL-0015-terraform-and-terragrunt.ja.md) | インフラを Terraform と Terragrunt で管理し、stg と prd を別々の AWS アカウントに置く | accepted | 2026-11-17 |
+| [TPL-0016](template/TPL-0016-aurora-serverless-v2-by-default.ja.md) | Aurora は Serverless v2 を既定にし、キャパシティを環境ごとに選ぶ | accepted | 2026-11-17 |
+| [TPL-0017](template/TPL-0017-aws-emulator-for-local-development.ja.md) | 手元の環境では AWS Emulator で AWS を代用する | accepted | 2026-11-17 |
 | [TPL-0018](template/TPL-0018-github-actions-with-oidc.ja.md) | CI/CD を GitHub Actions で動かし、AWS には OIDC で入る | accepted | 2026-11-17 |
 | [TPL-0019](template/TPL-0019-mit-0-license.ja.md) | テンプレートのライセンスを MIT-0 にする | accepted | 2026-11-17 |
 | [TPL-0020](template/TPL-0020-agent-harness-prefers-deterministic-checks.ja.md) | コーディングエージェントのハーネスでは決定的なチェックを優先し、指示は最小限から始める | accepted | 2026-11-17 |
@@ -29,4 +38,4 @@
 | [TPL-0024](template/TPL-0024-supply-chain-defenses.ja.md) | サプライチェーンを層を重ねて守る | accepted | 2026-11-17 |
 | [TPL-0025](template/TPL-0025-dependency-updates-with-renovate.ja.md) | 依存とツールの更新を Renovate に任せる | accepted | 2026-11-17 |
 
-<!-- i18n-source: README.md sha256:d1b076a6f6f5f628a33ba66b9e37ed4df0438d64cc7fd2eac15571da64a488b4 -->
+<!-- i18n-source: README.md sha256:e0c1fb1b93272edb3fd663b2ef7055822f861618fa61ef9d74a10b0eee0b2b9c -->

@@ -96,3 +96,5 @@ M0 にはスキーマもドメインのコードもないので、この決定�
 
 - UUID のバージョン7を定める [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562.html)
 - PostgreSQL 18 のドキュメントの [UUID の関数](https://www.postgresql.org/docs/18/functions-uuid.html)
+
+<!-- i18n-source: TPL-0012-uuidv7-primary-keys.md sha256:16a1be9615d487dc6fff36f88c1a922e24f81dbd0217e948dbebe9e8705c2cff -->

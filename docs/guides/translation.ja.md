@@ -100,9 +100,8 @@
 | consumer（イベントの） | 受け取る側 |
 | subscribe（イベントを） | 購読する |
 | at-least-once delivery | 少なくとも1回の配信 |
-| idempotent | 冪等 |
 | dead-letter queue | デッドレターキュー |
 | ingress、entry（リクエストの） | 入口 |
 | unit（Terragrunt の） | ユニット |
 
-<!-- i18n-source: translation.md sha256:654b60882f2c1ca4be37745c279c92b9961c35d7c7d37fe91c42b1ba1014ac79 -->
+<!-- i18n-source: translation.md sha256:174d048d28f026b0649f516be6f8c2b80b4be55c077ce4ffd28d6601611601e1 -->

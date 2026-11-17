@@ -112,3 +112,5 @@ plan を使うチェックは、最初の区切られた文脈と一緒に入る
 - [pgschema](https://www.pgschema.com/) とその[リポジトリ](https://github.com/pgplex/pgschema)
 - PostgreSQL のマイグレーション用のリンター [squawk](https://squawkhq.com/)
 - [Atlas の機能の一覧](https://atlasgo.io/features)（Pro プランに含まれる機能も載っている）
+
+<!-- i18n-source: TPL-0010-declarative-schema-with-pgschema.md sha256:12e79a25f6606ed7525291a47c7713117fbb63f650f10b5b3ded212b5f2ca338 -->

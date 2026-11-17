@@ -95,3 +95,5 @@ M0 にはクエリも生成コードもないので、この決定を守らせ�
 - まだ確かめていないこと：テンプレートのスキーマとクエリが使う構文を、sqlc が PostgreSQL 18 の分まで全部読めるか。これは最初の区切られた文脈で確かめる。
 - [sqlc のドキュメント](https://docs.sqlc.dev/)
 - Go 向けの PostgreSQL のドライバ [pgx](https://github.com/jackc/pgx)
+
+<!-- i18n-source: TPL-0011-database-access-with-sqlc.md sha256:eddc9b771ef4af63d81221e033dd648ece799a664182a9eccc3913d1f20aa452 -->

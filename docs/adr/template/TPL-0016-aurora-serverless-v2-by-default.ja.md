@@ -93,3 +93,5 @@ stg の接続プールとヘルスチェックの設定は、レビューで確�
 - 2026年11月時点で、Aurora PostgreSQL は2026年6月からメジャーバージョン18（18.3）に対応している。
 - まだ確かめていないこと：Aurora PostgreSQL 18 で、最小 0 ACU の Serverless v2 を使えるか。AWS は 0 ACU に対応するエンジンのバージョンを一覧にしており、以前のメジャーバージョンでは、特定のマイナーバージョン（たとえば 16.3）から対応が始まっている。これはインフラを作るときに確かめる。
 - Aurora のドキュメントの [Scaling to zero ACUs with automatic pause and resume](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2-auto-pause.html)
+
+<!-- i18n-source: TPL-0016-aurora-serverless-v2-by-default.md sha256:87ba03053ca6cd4d6c80341e2e735e374ab3b08bfc5a80e3bbe215518605bbc9 -->

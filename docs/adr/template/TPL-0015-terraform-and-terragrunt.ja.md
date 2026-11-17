@@ -104,3 +104,5 @@ M0 には `.tf` のファイルがないので、これらが検査するもの�
 - OpenTofu を使いたいチームは、利用者の記録を書いて切り替えられる。モジュールは HCL のままで、Terragrunt はどちらにも対応している。
 - [Terragrunt のドキュメント](https://terragrunt.com/)
 - `use_lockfile` を含む、[Terraform の S3 のバックエンド](https://developer.hashicorp.com/terraform/language/backend/s3)の説明
+
+<!-- i18n-source: TPL-0015-terraform-and-terragrunt.md sha256:b9c63f8a95dbba8cc4af3d7799428656e8d1d7f5fd02b75f066e7ba478c64dea -->

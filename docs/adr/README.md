@@ -20,6 +20,15 @@ None yet.
 | [TPL-0006](template/TPL-0006-openapi-with-oapi-codegen-strict-server.md) | Write each HTTP contract in OpenAPI 3.1, and generate the Go server with the oapi-codegen strict server | accepted | 2026-11-17 |
 | [TPL-0007](template/TPL-0007-layered-checks-for-api-conformance.md) | Keep the OpenAPI documents and the implementation in agreement with layered checks | accepted | 2026-11-17 |
 | [TPL-0008](template/TPL-0008-errors-as-rfc-9457-problem-details.md) | Return every error as RFC 9457 problem details | accepted | 2026-11-17 |
+| [TPL-0009](template/TPL-0009-one-postgresql-database-with-schema-per-context.md) | Use one PostgreSQL 18 database, with a schema and roles for each context | accepted | 2026-11-17 |
+| [TPL-0010](template/TPL-0010-declarative-schema-with-pgschema.md) | Manage the schema declaratively with pgschema | accepted | 2026-11-17 |
+| [TPL-0011](template/TPL-0011-database-access-with-sqlc.md) | Access the database with sqlc | accepted | 2026-11-17 |
+| [TPL-0012](template/TPL-0012-uuidv7-primary-keys.md) | Use UUIDv7 for primary keys | accepted | 2026-11-17 |
+| [TPL-0013](template/TPL-0013-events-with-outbox-cloudevents-eventbridge-sqs.md) | Publish integration events through an outbox to EventBridge, as CloudEvents, with an SQS queue for each consuming context | accepted | 2026-11-17 |
+| [TPL-0014](template/TPL-0014-deploy-each-context-to-ecs.md) | Deploy each context to ECS on its own, behind ECS Gateway | accepted | 2026-11-17 |
+| [TPL-0015](template/TPL-0015-terraform-and-terragrunt.md) | Manage the infrastructure with Terraform and Terragrunt, with stg and prd in separate AWS accounts | accepted | 2026-11-17 |
+| [TPL-0016](template/TPL-0016-aurora-serverless-v2-by-default.md) | Use Aurora Serverless v2 by default, and choose the capacity for each environment | accepted | 2026-11-17 |
+| [TPL-0017](template/TPL-0017-aws-emulator-for-local-development.md) | Emulate AWS in the local environment with AWS Emulator | accepted | 2026-11-17 |
 | [TPL-0018](template/TPL-0018-github-actions-with-oidc.md) | Run CI/CD on GitHub Actions, and reach AWS through OIDC | accepted | 2026-11-17 |
 | [TPL-0019](template/TPL-0019-mit-0-license.md) | License the template under MIT-0 | accepted | 2026-11-17 |
 | [TPL-0020](template/TPL-0020-agent-harness-prefers-deterministic-checks.md) | Prefer deterministic checks in the harness for coding agents, and start with minimal instructions | accepted | 2026-11-17 |

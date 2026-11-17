@@ -100,7 +100,6 @@ Use these Japanese terms. The table grows when a new term appears; add the term 
 | consumer (of an event) | 受け取る側 |
 | subscribe (to an event) | 購読する |
 | at-least-once delivery | 少なくとも1回の配信 |
-| idempotent | 冪等 |
 | dead-letter queue | デッドレターキュー |
 | ingress, entry (of requests) | 入口 |
 | unit (of Terragrunt) | ユニット |
