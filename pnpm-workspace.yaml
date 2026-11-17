@@ -1,0 +1,14 @@
+# pnpm settings for the whole repository. See docs/adr/template/TPL-0024.
+packages:
+  - frontend
+
+# Supply chain: wait three days before a new release can be installed, pin exact
+# versions, refuse dependencies that are not from the registry, and refuse a
+# package whose publisher trust got weaker than in an earlier release.
+minimumReleaseAge: 4320
+saveExact: true
+blockExoticSubdeps: true
+trustPolicy: no-downgrade
+
+# Dependency build scripts do not run unless a package is listed in allowBuilds.
+strictDepBuilds: true
