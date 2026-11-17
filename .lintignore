@@ -6,11 +6,14 @@
 .vale/styles/Google
 .claude/skills/japanese-tech-writing
 
-# Lockfiles
+# Lockfiles. A pathspec without a wildcard matches at the root only.
 mise.lock
 pnpm-lock.yaml
 uv.lock
 go.sum
+*/go.sum
+.terraform.lock.hcl
+*/.terraform.lock.hcl
 
 # Generated
 CHANGELOG.md
