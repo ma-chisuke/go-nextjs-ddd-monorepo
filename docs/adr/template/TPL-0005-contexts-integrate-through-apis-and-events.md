@@ -82,6 +82,9 @@ The `internal` directories alone are not enough.
 The root package of a context sits directly in `backend/internal/`, so any package under `backend/` may import it.
 `lint-arch` closes that gap.
 
+The adapter of Reservation for Facility, `internal/adapter/facility/`, is tested against a fake of the Facility API that validates each request of the adapter, and each answer of the fake, against `contracts/http/facility.openapi.yaml`, read as a file rather than as a Go package of Facility.
+A change to that document that the adapter does not follow therefore fails the tests of Reservation, and the fake cannot drift from the API that it stands in for.
+
 ## Pros and Cons of the Options
 
 ### HTTP APIs and integration events, with no direct dependency

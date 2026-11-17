@@ -131,5 +131,24 @@
 | organizer | 主催者 |
 | confirmed（予約が） | 確定 |
 | idempotency key | 冪等キー |
+| core context、supporting context | 中核の文脈、補完の文脈 |
+| problem（RFC 9457 の形式の1つのエラー応答） | problem（訳さない） |
+| operation（API の文書の） | 操作 |
+| health check | ヘルスチェック |
+| access log | アクセスログ |
+| wire（`module.go` で文脈の部品を） | 組み立てる |
+| generator（コードの） | 生成器 |
+| owner role、runtime role（文脈の） | 所有者のロール、実行時のロール |
+| privilege（データベースの） | 権限 |
+| search path（データベースのロールの） | 検索パス |
+| exclusion constraint | 排他制約 |
+| scratch database | 作業用のデータベース |
+| merge base | マージベース |
+| integration test | 結合テスト |
+| optimistic locking | 楽観的ロック |
+| container image | コンテナイメージ |
+| smoke test | スモークテスト |
+| worktree（Git の） | ワークツリー |
+| allowance（`schema-changes.allow` に書く、危険な文の） | 許可 |
 
-<!-- i18n-source: translation.md sha256:587a434c294b513d6683ef168775fcd4f70ffd0899083b085c768145b65588be -->
+<!-- i18n-source: translation.md sha256:bb45d0e35e11312b5b2a0dcf2da9e48d8e749bad5768051df89d68066f684d4b -->

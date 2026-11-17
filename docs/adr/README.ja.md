@@ -17,13 +17,13 @@
 | [TPL-0003](template/TPL-0003-split-by-bounded-context.ja.md) | 区切られた文脈ごとにコードを分け、実装の重さを業務領域の種類で決める | accepted | 2026-11-17 |
 | [TPL-0004](template/TPL-0004-clean-architecture-with-io-free-domain.ja.md) | クリーンアーキテクチャを採り、ドメイン層では I/O を扱わない | accepted | 2026-11-17 |
 | [TPL-0005](template/TPL-0005-contexts-integrate-through-apis-and-events.ja.md) | 区切られた文脈どうしは直接依存せず、HTTP の API とイベントで連携する | accepted | 2026-11-17 |
-| [TPL-0006](template/TPL-0006-openapi-with-oapi-codegen-strict-server.ja.md) | HTTP の契約を OpenAPI 3.1 で書き、Go のサーバーを oapi-codegen の strict server で生成する | accepted | 2026-11-17 |
+| [TPL-0006](template/TPL-0006-openapi-with-oapi-codegen-strict-server.ja.md) | HTTP の契約を OpenAPI 3.1 で書き、Go のサーバーを oapi-codegen の strict server で生成する | accepted | 2026-11-18 |
 | [TPL-0007](template/TPL-0007-layered-checks-for-api-conformance.ja.md) | OpenAPI の文書と実装の一致を、層に分けたチェックで保つ | accepted | 2026-11-17 |
-| [TPL-0008](template/TPL-0008-errors-as-rfc-9457-problem-details.ja.md) | エラーはすべて RFC 9457 の problem details で返す | accepted | 2026-11-17 |
-| [TPL-0009](template/TPL-0009-one-postgresql-database-with-schema-per-context.ja.md) | PostgreSQL 18 のデータベースを1つにし、文脈ごとにスキーマとロールを分ける | accepted | 2026-11-17 |
-| [TPL-0010](template/TPL-0010-declarative-schema-with-pgschema.ja.md) | スキーマを pgschema で宣言的に管理する | accepted | 2026-11-17 |
+| [TPL-0008](template/TPL-0008-errors-as-rfc-9457-problem-details.ja.md) | エラーはすべて RFC 9457 の problem details で返す | accepted | 2026-11-18 |
+| [TPL-0009](template/TPL-0009-one-postgresql-database-with-schema-per-context.ja.md) | PostgreSQL 18 のデータベースを1つにし、文脈ごとにスキーマとロールを分ける | accepted | 2026-11-18 |
+| [TPL-0010](template/TPL-0010-declarative-schema-with-pgschema.ja.md) | スキーマを pgschema で宣言的に管理する | accepted | 2026-11-18 |
 | [TPL-0011](template/TPL-0011-database-access-with-sqlc.ja.md) | データベースへのアクセスに sqlc を使う | accepted | 2026-11-17 |
-| [TPL-0012](template/TPL-0012-uuidv7-primary-keys.ja.md) | 主キーに UUIDv7 を使う | accepted | 2026-11-17 |
+| [TPL-0012](template/TPL-0012-uuidv7-primary-keys.ja.md) | 主キーに UUIDv7 を使う | accepted | 2026-11-18 |
 | [TPL-0013](template/TPL-0013-events-with-outbox-cloudevents-eventbridge-sqs.ja.md) | 統合イベントは送信箱から CloudEvents の形で EventBridge に発行し、受け取る文脈ごとに SQS のキューを置く | accepted | 2026-11-17 |
 | [TPL-0014](template/TPL-0014-deploy-each-context-to-ecs.ja.md) | 文脈ごとに ECS へデプロイし、入口を ECS Gateway にする | accepted | 2026-11-17 |
 | [TPL-0015](template/TPL-0015-terraform-and-terragrunt.ja.md) | インフラを Terraform と Terragrunt で管理し、stg と prd を別々の AWS アカウントに置く | accepted | 2026-11-17 |
@@ -38,4 +38,4 @@
 | [TPL-0024](template/TPL-0024-supply-chain-defenses.ja.md) | サプライチェーンを層を重ねて守る | accepted | 2026-11-17 |
 | [TPL-0025](template/TPL-0025-dependency-updates-with-renovate.ja.md) | 依存と道具の更新を Renovate に任せる | accepted | 2026-11-17 |
 
-<!-- i18n-source: README.md sha256:e0c1fb1b93272edb3fd663b2ef7055822f861618fa61ef9d74a10b0eee0b2b9c -->
+<!-- i18n-source: README.md sha256:98076e53647415d9a69421d94f143b45ba19efb0b41e9369d225003a4b2a8d3f -->

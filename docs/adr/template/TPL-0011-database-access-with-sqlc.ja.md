@@ -42,7 +42,7 @@ date: 2026-11-17
 - sqlc は、それらのクエリから pgx（バージョン5）向けの型付きの Go を生成する。sqlc を実行するのは `make gen` であり、生成コードは誰も手で編集しない。
 - sqlc は文脈ごとに設定する。文脈の設定が読むのは、その文脈の `schema.sql`（TPL-0010）とその文脈のクエリだけである。
 - 生成コードはアダプターの中に置く。中核の文脈では、アダプターのリポジトリが生成された行をドメインのオブジェクトに変えるので、生成された型がドメインやユースケースに届くことはない（TPL-0004）。ドメイン層のない補完の文脈では、ユースケースが生成したクエリを直接呼ぶ（TPL-0003）。
-- 生成した Go のファイルの名前は `.gen.go` で終える。そうすれば、OpenAPI から生成したコード（TPL-0006）と同じく、`.gitattributes` と `.lintignore` がそれを生成コードとして扱う。名前は、sqlc の出力ファイルの名前の設定（`output_db_file_name`・`output_models_file_name`・`output_files_suffix` など）で決める。まだ確かめていないこと：これらの設定が、sqlc の書くすべてのファイルに及ぶか。これは最初の区切られた文脈で確かめる。
+- 生成した Go のファイルの名前は `.gen.go` で終える。そうすれば、OpenAPI から生成したコード（TPL-0006）と同じく、`.gitattributes` と `.lintignore` がそれを生成コードとして扱う。名前は、sqlc の出力ファイルの名前の設定（`output_db_file_name`・`output_models_file_name`・`output_files_suffix` など）で決める。これらの設定は、sqlc 1.31.1 の書くすべてのファイルに及ぶ。`db.gen.go`・`models.gen.go`・`querier.gen.go` と、クエリのファイルごとの `<file>.sql.gen.go` である。
 
 ### 結果
 
@@ -90,8 +90,8 @@ date: 2026-11-17
 
 ## 補足
 
-- まだ確かめていないこと：テンプレートのスキーマとクエリが使う構文を、sqlc が PostgreSQL 18 の分まで全部読めるか。これは最初の区切られた文脈で確かめる。
+- 最初の区切られた文脈で確かめたこと：sqlc 1.31.1 は、見本の PostgreSQL 18 のスキーマとクエリを読める。`DEFAULT uuidv7()` と、Reservation の排他制約も含む。
 - [sqlc のドキュメント](https://docs.sqlc.dev/)
 - Go 向けの PostgreSQL のドライバ [pgx](https://github.com/jackc/pgx)
 
-<!-- i18n-source: TPL-0011-database-access-with-sqlc.md sha256:52fcb4fcdf8c03ebfba552a41ea4b6412e5b154570f9f7d1242faed0d2d7530e -->
+<!-- i18n-source: TPL-0011-database-access-with-sqlc.md sha256:c9a7c1bd28f465996c4f9e2c5367f69b1dd52af91bd2c615bb87717280478bc2 -->

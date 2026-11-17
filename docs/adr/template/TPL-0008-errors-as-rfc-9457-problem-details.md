@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-17
+date: 2026-11-18
 ---
 
 # TPL-0008: Return every error as RFC 9457 problem details
@@ -42,7 +42,8 @@ Chosen option: "RFC 9457 problem details", because it is the current standard fo
 - The body has the members `type`, `title`, `status`, `detail`, and `instance`.
 - `type` is a URI that resolves to a page under `docs/problems/`. The page explains the problem and what a client can do about it. A client tells problems apart by `type`, so a published URI never changes.
 - A validation error also has an `errors` array. Each item has a `pointer`, a JSON Pointer (RFC 6901) to the wrong field, and a `detail` that says what is wrong with it, following the example in RFC 9457.
-- Business errors are typed errors: in the domain of a core context (TPL-0004), and in the `app` package of a supporting context, which has no domain layer (TPL-0003). The HTTP adapter of each context holds one table that maps each business error to a problem: its `type` and its status.
+- Business errors are typed errors, and each layer that has them enumerates their kinds: the domain of a core context, for its rules (TPL-0004), and the `app` package, for the errors of the use cases, which in a supporting context are all of its business errors (TPL-0003). The HTTP adapter of each context holds one table that maps each kind to a problem, its `type` and its status, as a `switch` without a default for each enumeration.
+- An operation returns a problem as an error, and the server writes it as the response.
 - An error that is not in the table becomes a problem with status 500, and a generic `title` and `detail`. The real error goes to the log, never into the response.
 - The generated code answers some errors by itself, such as a parameter that cannot be parsed (TPL-0006). The template replaces those handlers, so that they answer with a problem too.
 
@@ -53,16 +54,16 @@ Chosen option: "RFC 9457 problem details", because it is the current standard fo
 - Good, because a new business error without an entry in the table fails a test, instead of turning into a 500 for a user.
 - Good, because an unexpected failure gives the client a 500 and nothing more, while the details go to the log.
 - Bad, because each `type` URI needs a page that stays at the same address. A team that copies the template points the URIs at its own site, and each page also needs a Japanese translation (TPL-0021).
-- Bad, because making oapi-codegen produce responses with the media type `application/problem+json` needs care. This is not verified yet; the first endpoint tests it.
+- Bad, because the Go types do not prove that an operation answers only the statuses that its document declares. The strict server of oapi-codegen types the `application/problem+json` responses of each operation, but the operations return a problem as an error, with any status. The validation of responses in the tests (TPL-0007, layer 4) proves it instead, for the requests that the tests send.
 - Bad, because the standard leaves the shape of extension members open, so the template defines `errors` itself, and a client learns that part from the template's documents.
 
 ### Confirmation
 
-No check of this decision acts yet: the repository has no OpenAPI document and no Go code.
+These checks enforce this decision.
 
-- The rule `rule/problem-details-only` in `redocly.yaml`, which `lint-contracts` runs, fails when a 4xx or 5xx response in an OpenAPI document has a media type other than `application/problem+json` (TPL-0007, layer 7). It is in place, and acts on the first contract.
-- A test in the HTTP adapter of each context fails when a business error of the context has no entry in the table. It arrives with the first bounded context (milestone M1).
-- The tests validate every response against the document (TPL-0007, layer 4), so an error body that is not a problem fails the test that produced it. They arrive with the first bounded context as well.
+- The rule `rule/problem-details-only` in `redocly.yaml`, which `lint-contracts` runs, fails when a 4xx or 5xx response in an OpenAPI document has a media type other than `application/problem+json` (TPL-0007, layer 7).
+- The linter exhaustive, in `lint-go`, fails when a kind of business error has no case in the table. A test in the HTTP adapter of each context, `problems_test.go`, fails when a kind maps to no problem of its own, or when a problem has no page under `docs/problems/` or no translation of the page.
+- The API tests validate every response against the document through the client of `backend/internal/platform/apitest` (TPL-0007, layer 4), so an error body that is not a problem, or a status that the operation does not declare, fails the test that produced it.
 
 ## Pros and Cons of the Options
 

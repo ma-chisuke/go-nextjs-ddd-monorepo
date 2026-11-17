@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-17
+date: 2026-11-18
 ---
 
 # TPL-0010: スキーマを pgschema で宣言的に管理する
@@ -48,6 +48,8 @@ date: 2026-11-17
 - マイグレーションの履歴ファイルは置かない。スキーマの履歴は、`schema.sql` の Git の履歴である。
 - plan の DDL はすべて squawk で検査し、`schema.sql` を変えるプルリクエストでレビューする。
 - スキーマ・ロール・拡張は pgschema では作らない。作るのは `db/bootstrap.sql` である（TPL-0009）。
+- pgschema は、あるべき状態を検証するために作業用のスキーマを作る。その場所は、フラグ `--plan-host`・`--plan-db` などの `--plan-*` で指定した PostgreSQL のサーバーであり、pgschema が変えるのと同じサーバーである。既定では、pgschema は検証用に組み込みの PostgreSQL を実行時にダウンロードする。これは何も固定していないダウンロードであり、TPL-0024 はそれを認めない。
+- pgschema は権限も管理する。そのため、文脈の `schema.sql` が、文脈の各テーブルについて実行時のロールに権限を与え、`db/bootstrap.sql` は既定の権限を設定しない。
 - データを動かしたり書き換えたりする変更（バックフィルなど）は、別の明示的な手順として書き、単独でレビューする。2つのスキーマを比べるだけでは、データをどうすべきかはわからないからである。
 - 名前は段階を踏んで変える。新しい列やテーブルを足し、データを写し、コードを移してから、古いほうを消す。plan は2つの状態を比べるので、`schema.sql` 上の名前の変更は削除と追加に見え、その削除でデータが失われる。
 
@@ -67,7 +69,8 @@ date: 2026-11-17
 
 `make check-all` のターゲット `lint-sql-plan` は、変更ごとの DDL を検査する。手元の PostgreSQL に作業用のデータベースを作り、そこに各文脈の `schema.sql` を、ベースのコミットの時点の内容で適用する。ベースのコミットは `origin/main` とのマージベースであり、`CHECK_BASE` を設定したときはそれとのマージベースである（CI はベースブランチを設定する）。次に、変更後の `schema.sql` への plan を pgschema に求め、その plan を squawk で検査する。設定は `.squawk.plan.toml` であり、マイグレーションの実行に関わるルールを有効にしてある。plan は `.cache/sql-plan/` に残り、指摘はそこを指す。
 CI は、plan をまだプルリクエストに示さない。レビュアーは、チェックを実行してから `.cache/sql-plan/` で plan を読む。
-名前を変える手順の最後に古い列を削除する場合のように、ルールが禁じる変更を意図して行っても、このチェックで失敗する。チームがそうした変更をどう受け入れるかは、まだ決めていない。
+名前を変える手順の最後に古い列を削除する場合のように、ルールが禁じる変更を意図して行うこともある。そうした変更は、文脈がその SQL 文を `backend/internal/<context>/internal/adapter/postgres/schema-changes.allow` に書けば、チェックを通る。書き方は SQL 文1つにつき1行で、`<squawk のルール> | <指摘が引用するとおりの SQL 文> | <理由>` である。
+この行は、レビューで人が下す判断である。理由のない行は指摘になる（`sql-plan/allowance-format`）。いまの plan のどの SQL 文にも合わない行も指摘になる（`sql-plan/unused-allowance`）ので、スキーマを次に変える変更がその行を消し、許可は積み上がらない。そうした変更に至る手順は、[スキーマを変える](../../guides/change-a-schema.ja.md)が説明している。
 
 ## 選択肢の長所と短所
 
@@ -78,7 +81,7 @@ CI は、plan をまだプルリクエストに示さない。レビュアーは
 - 良い点：スキーマを1つずつ扱うので、文脈ごとに1つのスキーマという形（TPL-0009）に合う。
 - 良い点：オープンソース（Apache 2.0）であり、アカウントが要らない。
 - 悪い点：若く、コミュニティが小さい。
-- 悪い点：テンプレートが必要とするものを全部扱えるかどうかは、まだ確かめていない（「補足」を参照）。
+- 悪い点：plan を求めるだけでも PostgreSQL のサーバーが要る。既定では実行時にダウンロードするので、テンプレートは自分のサーバーを指定する（決まりを参照）。
 
 ### バージョン付きのマイグレーション（golang-migrate・goose・Flyway）
 
@@ -108,9 +111,9 @@ CI は、plan をまだプルリクエストに示さない。レビュアーは
 
 ## 補足
 
-- まだ確かめていないこと：見本が必要とする排他制約 `EXCLUDE USING gist (room_id WITH =, period WITH &&)` を、pgschema が扱えるか。2026年11月時点の pgschema のドキュメントは、制約として主キー・外部キー・一意・検査を挙げており、排他制約の記載はない。これは最初の区切られた文脈で確かめる。扱えなければ、どうするかを新しい記録で決める。
+- 最初の区切られた文脈で確かめたこと：pgschema 1.14.1 は、見本の部分的な排他制約を plan に含めて適用できる。その制約は `EXCLUDE USING gist (room_id WITH =, tstzrange(starts_at, ends_at, '[)') WITH &&) WHERE (status = 'confirmed')` である。適用したあとのデータベースに対する2回目の plan は空である。2026年11月時点の pgschema のドキュメントは、制約として主キー・外部キー・一意・検査を挙げており、排他制約の記載はない。
 - [pgschema](https://www.pgschema.com/) とその[リポジトリ](https://github.com/pgplex/pgschema)
 - PostgreSQL のマイグレーション用のリンター [squawk](https://squawkhq.com/)
 - [Atlas の機能の一覧](https://atlasgo.io/features)（Pro プランに含まれる機能も載っている）
 
-<!-- i18n-source: TPL-0010-declarative-schema-with-pgschema.md sha256:26763badc562a18f67c26879aa2ab2005a4f5cba1a492a7ce70fd002c9bca4b7 -->
+<!-- i18n-source: TPL-0010-declarative-schema-with-pgschema.md sha256:7876d8e17ca9e6738539dcafb0077d154b3c946302987b21cf725a12117704d9 -->

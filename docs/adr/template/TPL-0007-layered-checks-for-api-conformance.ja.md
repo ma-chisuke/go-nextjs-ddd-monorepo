@@ -61,23 +61,26 @@ date: 2026-11-17
 - 良い点：エラーの形は、ほかの応答と一緒にテストで確かめられる。別のレビューは要らない。
 - 悪い点：API の一致のために、テンプレートは生成器のほかに複数の道具（kin-openapi・Schemathesis・oasdiff・Redocly CLI）を固定し、更新し続ける。道具は、食い違いの種類ごとに1つずつである。
 - 悪い点：層4が確かめるのは、テストが送るリクエストだけである。層5がその隙間を狭めるが、すべての操作のすべての応答が文書に合うことを証明する層はない。
-- 悪い点：意図して互換性を壊す変更も、層6で失敗する。チームがそうした変更をどう受け入れるかは、このチェックを書くときに決める。
+- 悪い点：意図して互換性を壊す変更も、同じ変更で文書のバージョンを上げない限り、層6で失敗する。
 - 悪い点：層5を動かすには API とデータベースが要る。そのため `make check-all` が遅くなり、手元のノートパソコンでは動かしにくくなる。
 
 ### 確認の方法
 
-どの層も、まだ何も検査していない。リポジトリには、OpenAPI の文書も Go のコードもまだないからである。
-2つの層のターゲットはすでにあり、入力ができた時点で働き始める。`lint-contracts`（層7）は最初の契約を lint し、`lint-frontend-types`（層1のうち TypeScript の部分）は最初の TypeScript のファイルを検査する。
-ほかの層は、最初の文脈とともに加わる（マイルストーン M1）。ただし層5は、Schemathesis を加えるマイルストーンで加わる。
+層1から4と、層6と7は、いま Go の側を検査している。
+層1は各操作を strict server のインターフェースに照らしてコンパイルし（`lint-go`、`test-go`）、層2は `gen-check-api` である。層2の隣では、sqlc の生成コードを `gen-check-sqlc` が調べる。
+層3は、`lint-arch` のルール `arch/route-registration` である。
+層4は API のテストのクライアント `backend/internal/platform/apitest` であり、すべての応答を kin-openapi で検証する。テストのリクエストはどれも `platform/httpserver` のリクエストの検証を通るので、それも層4に加わる。
+層6は `lint-contracts-breaking`、層7は `lint-contracts` である。
+まだないのは、Schemathesis を加えるマイルストーンで加わる層5と、Next.js の画面とともに加わる層1と層2の TypeScript の側である。`lint-frontend-types` はすでにあり、最初の TypeScript のファイルができた時点で検査を始める。
 
 次の表は、各層を動かすターゲットである。「予定」と書いたターゲットはまだなく、作るときに名前を変えることもある。
 
 | 層 | Make のターゲット | 呼び出し元 |
 |---|---|---|
 | 1. コンパイル時 | Go は `lint-go` と `test-go`。`tsc --noEmit` は `lint-frontend-types` | `make check` |
-| 2. 生成物の更新漏れ | `gen-check`（予定）。`make gen` を実行し、差分があれば失敗する | `make check` |
+| 2. 生成物の更新漏れ | `gen-check-api`。oapi-codegen をもう一度実行し、結果がコミットしたコードと違えば失敗する | `make check` |
 | 3. 文書にない入口の禁止 | `lint-arch` のルール `arch/route-registration` | `make check` |
-| 4. テストでの検証 | `test-go` | `make check` |
+| 4. テストでの検証 | `test-go`。`platform/apitest` のクライアントを通す | `make check` |
 | 5. 生成した入力 | `test-api`（予定） | `make check-all` |
 | 6. 互換性 | `lint-contracts-breaking`。oasdiff で、`origin/main` とのマージベース（`CHECK_BASE` を設定したときはそれとのマージベースで、CI はベースブランチを設定する）にある同じ文書と比べる | `make check` |
 | 7. 文書そのもの | `lint-contracts` | `make check` |
@@ -115,4 +118,4 @@ date: 2026-11-17
 - [oasdiff](https://github.com/oasdiff/oasdiff)
 - [Redocly CLI](https://redocly.com/docs/cli)
 
-<!-- i18n-source: TPL-0007-layered-checks-for-api-conformance.md sha256:2325674281e8cc403a82df0a3338ee1f12bab133d636f0854f1ee31f100017e0 -->
+<!-- i18n-source: TPL-0007-layered-checks-for-api-conformance.md sha256:af529d369096162f03853ca790a4dc75722bbfd80d68255d08f55b23825a1612 -->

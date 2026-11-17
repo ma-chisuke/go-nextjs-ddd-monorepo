@@ -99,17 +99,20 @@ func facilityRouter(t *testing.T) routers.Router {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Walk up to the directory that holds the document itself: other files
+	// of the root, such as AGENTS.md, also exist in subdirectories.
+	document := filepath.Join("contracts", "http", "facility.openapi.yaml")
 	for {
-		if _, err := os.Stat(filepath.Join(dir, "AGENTS.md")); err == nil {
+		if _, err := os.Stat(filepath.Join(dir, document)); err == nil {
 			break
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			t.Fatal("no AGENTS.md above the working directory, so the repository root is unknown")
+			t.Fatalf("no %s above the working directory, so the repository root is unknown", document)
 		}
 		dir = parent
 	}
-	doc, err := openapi3.NewLoader().LoadFromFile(filepath.Join(dir, "contracts", "http", "facility.openapi.yaml"))
+	doc, err := openapi3.NewLoader().LoadFromFile(filepath.Join(dir, document))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-17
+date: 2026-11-18
 ---
 
 # TPL-0008: エラーはすべて RFC 9457 の problem details で返す
@@ -43,7 +43,8 @@ HTTP のアダプターは、こうしたエラーをそれぞれステータス
 - 本文には、`type`・`title`・`status`・`detail`・`instance` のメンバーを置く。
 - `type` は、`docs/problems/` の下のページを指す URI である。そのページは、その問題と、クライアントがとれる対処を説明する。クライアントは `type` で問題を見分けるので、一度公開した URI は変えない。
 - 検証のエラーには、`errors` の配列も置く。各要素には、誤っているフィールドを指す JSON Pointer（RFC 6901）の `pointer` と、何が誤っているかを述べる `detail` を置く。これは、RFC 9457 が示す例に倣った形である。
-- 業務エラーは型付きのエラーであり、中核の文脈ではドメインに（TPL-0004）、ドメイン層のない補完の文脈では `app` に置く（TPL-0003）。各文脈の HTTP のアダプターは、業務エラーを problem details（その `type` とステータス）に対応させる表を1つ持つ。
+- 業務エラーは型付きのエラーであり、業務エラーを持つ層は、それぞれその種類を列挙する。中核の文脈のドメインは自分の決まりについて列挙し（TPL-0004）、`app` パッケージはユースケースのエラーについて列挙する。補完の文脈では、業務エラーはすべてユースケースのエラーである（TPL-0003）。各文脈の HTTP のアダプターは、各種類を problem details（その `type` とステータス）に対応させる表を1つ持つ。表は、列挙ごとに既定の分岐のない `switch` として書く。
+- 操作は problem details をエラーとして返し、サーバーがそれを応答として書く。
 - 表にないエラーは、ステータスが 500 で、`title` と `detail` が汎用の文面である problem details にする。本当のエラーはログに書き、応答には決して入れない。
 - 生成コードは、一部のエラー（解析できないパラメーターなど）に自分で応答する（TPL-0006）。テンプレートはその処理を差し替え、そこからも problem details で応答させる。
 
@@ -54,16 +55,16 @@ HTTP のアダプターは、こうしたエラーをそれぞれステータス
 - 良い点：表に載っていない新しい業務エラーは、ユーザーが 500 を受け取るより先に、テストで見つかる。
 - 良い点：予期しない障害では、クライアントは 500 だけを受け取り、詳細はログに残る。
 - 悪い点：各 `type` の URI には、同じアドレスにあり続けるページが要る。テンプレートをコピーしたチームは URI を自分のサイトに向け直す必要があり、各ページには日本語の対訳も要る（TPL-0021）。
-- 悪い点：oapi-codegen に、メディアタイプが `application/problem+json` の応答を生成させるには工夫が要る。これはまだ確かめておらず、最初のエンドポイントで確かめる。
+- 悪い点：操作が文書の宣言したステータスだけで答えることを、Go の型は証明しない。oapi-codegen の strict server は各操作の `application/problem+json` の応答に型を付けるが、操作は problem details をエラーとして、どのステータスででも返せるからである。代わりに、テストでの応答の検証（TPL-0007 の層4）が、テストの送るリクエストについてこれを証明する。
 - 悪い点：標準は拡張のメンバーの形を決めていないので、`errors` はテンプレートが自分で定める。クライアントは、その部分をテンプレートの文書から学ぶことになる。
 
 ### 確認の方法
 
-この決定を守るチェックは、まだ働いていない。リポジトリには、OpenAPI の文書も Go のコードもまだないからである。
+次のチェックが、この決定を守る。
 
-- `redocly.yaml` のルール `rule/problem-details-only` は、OpenAPI の文書にある 4xx と 5xx の応答のメディアタイプを調べる。`application/problem+json` 以外があれば失敗する（TPL-0007 の層7）。このルールは `lint-contracts` が実行する。ルールはすでにあり、最初の契約ができた時点で働き始める。
-- 各文脈の HTTP のアダプターにあるテストは、その文脈の業務エラーのうち表に載っていないものを見つけると失敗する。このテストは、最初の文脈とともに加わる（マイルストーン M1）。
-- テストはすべての応答を文書と照らし合わせて検証する（TPL-0007 の層4）。そのため、problem details でないエラーの本文は、それを返したテストで失敗する。このテストも、最初の文脈とともに加わる。
+- `redocly.yaml` のルール `rule/problem-details-only` は、OpenAPI の文書にある 4xx と 5xx の応答のメディアタイプを調べる。`application/problem+json` 以外があれば失敗する（TPL-0007 の層7）。このルールは `lint-contracts` が実行する。
+- `lint-go` のリンター exhaustive は、表に case のない業務エラーの種類があると失敗する。各文脈の HTTP のアダプターにあるテスト `problems_test.go` は、専用の problem に対応しない種類があると失敗する。`docs/problems/` のページか、その対訳の欠けた problem があっても失敗する。
+- API のテストは、`backend/internal/platform/apitest` のクライアントを通して、すべての応答を文書と照らし合わせて検証する（TPL-0007 の層4）。そのため、problem details でないエラーの本文や、操作が宣言していないステータスは、それを返したテストで失敗する。
 
 ## 選択肢の長所と短所
 
@@ -94,4 +95,4 @@ HTTP のアダプターは、こうしたエラーをそれぞれステータス
 - [RFC 9457: Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457.html)
 - [RFC 6901: JavaScript Object Notation (JSON) Pointer](https://www.rfc-editor.org/rfc/rfc6901.html)
 
-<!-- i18n-source: TPL-0008-errors-as-rfc-9457-problem-details.md sha256:db1d9566be129f8f7cb0d23a0deb00686f4ff5aced2ced96fab3b833ffdf576f -->
+<!-- i18n-source: TPL-0008-errors-as-rfc-9457-problem-details.md sha256:bb3a789ddcf9d2403ccf009b6ea58aeefadb131a472e8977db98335ac9ec66bc -->

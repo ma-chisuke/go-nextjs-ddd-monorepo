@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-17
+date: 2026-11-18
 ---
 
 # TPL-0006: Write each HTTP contract in OpenAPI 3.1, and generate the Go server with the oapi-codegen strict server
@@ -43,10 +43,11 @@ Chosen option: "OpenAPI 3.1 written first, with the oapi-codegen strict server a
 - openapi-typescript generates the TypeScript types that the Next.js app uses.
 - Generated code is committed, in files named `*.gen.go` and `*.gen.ts`, which `.gitattributes` collapses in pull request diffs. `make gen` writes these files, and nobody edits them by hand.
 - The descriptions in the documents are in English (TPL-0021).
+- The health check, `GET /healthz`, is not an operation of the API document. The HTTP server of the platform, `backend/internal/platform/httpserver`, registers it next to the generated routes, because it belongs to the service that runs the API, not to the contract with the clients.
+- The API of a context has no authentication of its own, and its document declares `security: []`: only the private network reaches it (TPL-0014).
 
-Not yet verified: whether an OpenAPI 3.1 document passes through every tool in the chain (oapi-codegen, openapi-typescript, kin-openapi, Schemathesis, oasdiff, and Redocly CLI).
-The first bounded context tests this.
-If one of the tools cannot read 3.1, the documents use OpenAPI 3.0.3, and a new record states the change and the reason.
+The first bounded context verified that an OpenAPI 3.1 document passes oapi-codegen v2.8.2, kin-openapi, Redocly CLI, and oasdiff, so the documents need no fallback to OpenAPI 3.0.3.
+openapi-typescript and Schemathesis arrive with later milestones, and are not verified yet. If one of them cannot read 3.1, a new record states the change and the reason.
 
 ### Consequences
 
@@ -61,12 +62,11 @@ If one of the tools cannot read 3.1, the documents use OpenAPI 3.0.3, and a new 
 
 ### Confirmation
 
-No check of this decision exists yet: the repository has no OpenAPI document and no generator.
-These checks arrive with the first bounded context (milestone M1).
+These checks enforce this decision.
 
 - The compiler: the generated code takes an implementation of the strict server interface, so a missing or wrongly typed handler is a compile error. `lint-go` and `test-go` report it.
-- Freshness: a check runs `make gen` and fails when the generated files differ from the committed ones.
-- Routes: a lint rule forbids registering an HTTP route by hand, so every route comes from the generated code.
+- Freshness: `gen-check-api`, in `make check`, runs oapi-codegen again for each `oapi-codegen.yaml`, and fails when the result differs from the committed file.
+- Routes: the rule `arch/route-registration` of `lint-arch` fails on a route that code other than the generated code and `platform/httpserver` registers, so every route of an API comes from its document.
 
 TPL-0007 describes these checks, and the ones that catch what types cannot express.
 

@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-17
+date: 2026-11-18
 ---
 
 # TPL-0010: Manage the schema declaratively with pgschema
@@ -48,6 +48,8 @@ The rules are as follows.
 - There are no migration history files. The history of the schema is the Git history of `schema.sql`.
 - The DDL of every plan is linted with squawk and reviewed in the pull request that changes `schema.sql`.
 - pgschema does not create schemas, roles, or extensions. `db/bootstrap.sql` does (TPL-0009).
+- pgschema validates the desired state in a scratch schema of the PostgreSQL server that its flags `--plan-host`, `--plan-db`, and the other `--plan-*` flags name: the same server that it changes. By default it downloads an embedded PostgreSQL at run time to do this: a download that nothing pins, which TPL-0024 rules out.
+- pgschema manages privileges as well, so the `schema.sql` of a context grants its runtime role the rights on each of its tables, and `db/bootstrap.sql` sets no default privileges.
 - A change that must move or rewrite data, such as a backfill, is a separate, explicit step, reviewed on its own. A comparison of two schemas cannot know what should happen to the data.
 - A rename is done in steps: add the new column or table, copy the data, move the code, and then drop the old one. A plan compares two states, so a rename in `schema.sql` looks like a drop and an add, and the drop loses the data.
 
@@ -67,7 +69,8 @@ The target `lint-sql` of `make check` runs squawk on every SQL file in the repos
 
 The target `lint-sql-plan` of `make check-all` lints the DDL of each change. In a scratch database of the local PostgreSQL, it applies the `schema.sql` of each context as it is at the base commit (the merge base with `origin/main`, or with `CHECK_BASE`, which CI sets to the base branch), asks pgschema for the plan to the `schema.sql` of the change, and lints that plan with squawk under `.squawk.plan.toml`, which keeps the rules for a running migration. The plan stays in `.cache/sql-plan/`, where the findings point.
 CI does not show the plan in the pull request yet; the reviewer reads it in `.cache/sql-plan/` after running the check.
-A deliberate change that a rule forbids, such as dropping the old column at the end of a rename, fails the check, and how a team accepts such a change is not decided yet.
+A deliberate change that a rule forbids, such as dropping the old column at the end of a rename, gets through when the context lists the statement in `backend/internal/<context>/internal/adapter/postgres/schema-changes.allow`, one line per statement: `<squawk rule> | <statement exactly as the finding quotes it> | <reason>`.
+Such a line is the decision of a person in review. A line without a reason is a finding (`sql-plan/allowance-format`), and so is a line that matches no statement of the current plan (`sql-plan/unused-allowance`), so the next change to the schema removes it, and allowances do not pile up. [Change a schema](../../guides/change-a-schema.md) describes the steps that lead to such a change.
 
 ## Pros and Cons of the Options
 
@@ -78,7 +81,7 @@ A deliberate change that a rule forbids, such as dropping the old column at the 
 - Good, because it works on one schema at a time, which matches one schema per context (TPL-0009).
 - Good, because it is open source (Apache 2.0) and needs no account.
 - Bad, because it is young and has a small community.
-- Bad, because it is not yet verified that it handles every object that the template needs (see More Information).
+- Bad, because it needs a PostgreSQL server even to plan: by default it downloads one at run time, so the template points it at a server of its own (see the rules).
 
 ### Versioned migrations (golang-migrate, goose, or Flyway)
 
@@ -108,7 +111,7 @@ A deliberate change that a rule forbids, such as dropping the old column at the 
 
 ## More Information
 
-- Not yet verified: whether pgschema handles the exclusion constraint that the sample needs, `EXCLUDE USING gist (room_id WITH =, period WITH &&)`. As of November 2026, the documentation of pgschema lists primary key, foreign key, unique, and check constraints, and does not mention exclusion constraints. This is checked with the first bounded context. If pgschema cannot handle it, a new record decides what to do.
+- Verified with the first bounded context: pgschema 1.14.1 plans and applies the partial exclusion constraint of the sample, `EXCLUDE USING gist (room_id WITH =, tstzrange(starts_at, ends_at, '[)') WITH &&) WHERE (status = 'confirmed')`, and a second plan against the database that it changed is empty. As of November 2026, the documentation of pgschema lists primary key, foreign key, unique, and check constraints, and does not mention exclusion constraints.
 - [pgschema](https://www.pgschema.com/) and its [repository](https://github.com/pgplex/pgschema)
 - [squawk](https://squawkhq.com/), the linter for PostgreSQL migrations
 - [Features of Atlas](https://atlasgo.io/features), including which features are in the Pro plan

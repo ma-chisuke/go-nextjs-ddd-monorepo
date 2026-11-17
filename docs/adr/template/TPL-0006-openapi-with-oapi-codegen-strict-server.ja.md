@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-17
+date: 2026-11-18
 ---
 
 # TPL-0006: HTTP の契約を OpenAPI 3.1 で書き、Go のサーバーを oapi-codegen の strict server で生成する
@@ -43,10 +43,11 @@ Go のサーバー、画面の TypeScript のコード、文脈の間のクラ�
 - Next.js の Web アプリが使う TypeScript の型は、openapi-typescript で生成する。
 - 生成コードはコミットする。ファイル名は `*.gen.go` と `*.gen.ts` にし、`.gitattributes` の設定によってプルリクエストの差分では畳んで表示する。これらのファイルは `make gen` が書き、手では編集しない。
 - 文書の中の説明は英語で書く（TPL-0021）。
+- ヘルスチェック `GET /healthz` は、API の文書の操作ではない。これは、プラットフォームの HTTP サーバー `backend/internal/platform/httpserver` が、生成されたルートの隣に登録する。ヘルスチェックは API を動かすサービスのものであり、クライアントとの契約のものではないからである。
+- 文脈の API は独自の認証を持たず、その文書は `security: []` を宣言する。API に届くのは、プライベートなネットワークからだけだからである（TPL-0014）。
 
-OpenAPI 3.1 の文書を、使う道具のすべてが読めるかどうかは、まだ確かめていない。対象の道具は、oapi-codegen・openapi-typescript・kin-openapi・Schemathesis・oasdiff・Redocly CLI である。
-最初の文脈で確かめる。
-読めない道具があれば、文書は OpenAPI 3.0.3 で書き、その変更と理由を新しい記録に残す。
+最初の文脈で、OpenAPI 3.1 の文書が oapi-codegen v2.8.2・kin-openapi・Redocly CLI・oasdiff を通ることを確かめた。そのため、文書を OpenAPI 3.0.3 で書き直す必要はない。
+openapi-typescript と Schemathesis は後のマイルストーンで加わるので、まだ確かめていない。どちらかが 3.1 を読めなければ、その変更と理由を新しい記録に残す。
 
 ### 結果
 
@@ -61,12 +62,11 @@ OpenAPI 3.1 の文書を、使う道具のすべてが読めるかどうかは�
 
 ### 確認の方法
 
-この決定を守るチェックは、まだない。リポジトリには、OpenAPI の文書も生成器もまだないからである。
-次のチェックが、最初の文脈とともに加わる（マイルストーン M1）。
+次のチェックが、この決定を守る。
 
 - コンパイラー：生成コードは strict server のインターフェースの実装を受け取るので、ハンドラーの実装漏れや型の誤りはコンパイルエラーになる。`lint-go` と `test-go` がこれを報告する。
-- 生成物の更新漏れ：チェックが `make gen` を実行し、生成したファイルとコミットしたファイルの差分を調べる。差分があれば失敗する。
-- ルーティング：HTTP のルートを手で登録することを、lint のルールで禁じる。すべてのルートは生成コードが登録する。
+- 生成物の更新漏れ：`make check` の `gen-check-api` が、`oapi-codegen.yaml` ごとに oapi-codegen をもう一度実行し、結果がコミットしたファイルと違えば失敗する。
+- ルーティング：`lint-arch` のルール `arch/route-registration` は、生成コードと `platform/httpserver` 以外のコードがルートを登録すると失敗する。そのため、API のすべてのルートは、その文書から生まれる。
 
 これらのチェックと、型では表せないものを捕まえるチェックは、TPL-0007 で説明する。
 
@@ -109,4 +109,4 @@ OpenAPI 3.1 の文書を、使う道具のすべてが読めるかどうかは�
 - [oapi-codegen](https://github.com/oapi-codegen/oapi-codegen)
 - [openapi-typescript](https://openapi-ts.dev/)
 
-<!-- i18n-source: TPL-0006-openapi-with-oapi-codegen-strict-server.md sha256:ffb95f740b68c60244c17bcaa1b41a2e20829cee97c5a6ef4caecc7a2ca98069 -->
+<!-- i18n-source: TPL-0006-openapi-with-oapi-codegen-strict-server.md sha256:05a30d0882d03eda9890e8028813b0db56a5a3889cb4fe741652fc6436c353b3 -->
