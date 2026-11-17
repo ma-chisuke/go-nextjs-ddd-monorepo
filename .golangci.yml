@@ -1,0 +1,134 @@
+# golangci-lint v2 runs the Go formatters and linters, including go vet.
+# https://golangci-lint.run/docs/configuration/file/
+#
+# Rules that depend on the architecture (which layer may import what, and what
+# the domain layer must not call) are added with the first bounded context.
+version: "2"
+
+run:
+  timeout: 3m
+  modules-download-mode: readonly
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      rewrite-rules:
+        - pattern: interface{}
+          replacement: any
+    goimports:
+      local-prefixes:
+        - github.com/ma-chisuke/go-nextjs-ddd-monorepo
+  exclusions:
+    generated: strict
+
+linters:
+  default: standard
+  enable:
+    - bodyclose
+    - contextcheck
+    - copyloopvar
+    - depguard
+    - durationcheck
+    - errorlint
+    - exhaustive
+    - forbidigo
+    - gochecknoinits
+    - gocritic
+    - gomoddirectives
+    - gosec
+    - intrange
+    - musttag
+    - nilerr
+    - nilnil
+    - noctx
+    - nolintlint
+    - predeclared
+    - reassign
+    - revive
+    - rowserrcheck
+    - sloglint
+    - sqlclosecheck
+    - thelper
+    - unconvert
+    - unparam
+    - usestdlibvars
+    - wastedassign
+  settings:
+    depguard:
+      rules:
+        superseded:
+          deny:
+            - pkg: io/ioutil
+              desc: use io and os
+            - pkg: github.com/pkg/errors
+              desc: use errors and fmt.Errorf with %w
+            - pkg: math/rand$
+              desc: use math/rand/v2
+            - pkg: log$
+              desc: use log/slog
+    errcheck:
+      check-type-assertions: true
+    exhaustive:
+      default-signifies-exhaustive: false
+    forbidigo:
+      forbid:
+        - pattern: ^(fmt\.Print(|f|ln)|print|println)$
+          msg: write to an io.Writer that the caller passes in, or use log/slog
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+        - shadow
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: exported
+          arguments:
+            - checkPrivateReceivers
+            - sayRepetitiveInsteadOfStutters
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: redefines-builtin-id
+        - name: superfluous-else
+        - name: time-naming
+        - name: unexported-return
+        - name: unreachable-code
+        - name: unused-parameter
+        - name: var-declaration
+        - name: var-naming
+    staticcheck:
+      checks:
+        - all
+  exclusions:
+    generated: strict
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+output:
+  formats:
+    text:
+      path: stdout
+      print-issued-lines: false
+      print-linter-name: true
+      colors: false
+  sort-order:
+    - file
+    - linter
