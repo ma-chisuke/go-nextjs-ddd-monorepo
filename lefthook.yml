@@ -13,7 +13,7 @@ pre-commit:
 commit-msg:
   jobs:
     - name: conventional commit message
-      run: mise exec -- committed --commit-file {1}
+      run: tools/scripts/commit-msg.sh {1}
 
 pre-push:
   jobs:

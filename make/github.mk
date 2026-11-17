@@ -12,8 +12,7 @@ codeql-languages:
 #   PR_TITLE='feat: add orders' make lint-pr-title
 lint-pr-title:
 	@if [ -z "$${PR_TITLE:-}" ]; then echo "lint-pr-title: set PR_TITLE to the title of the pull request" >&2; exit 2; fi
-	@printf '%s\n' "$$PR_TITLE" | committed --commit-file - \
-		|| { echo "lint-pr-title: write the title as a Conventional Commit, for example 'feat: add orders'" >&2; exit 1; }
+	@printf '%s\n' "$$PR_TITLE" | tools/scripts/commit-msg.sh -
 
 # Compare the settings of the repository on GitHub with the guide and print the
 # differences. APPLY=1 changes them. REPO=<owner>/<name> picks another repository.
