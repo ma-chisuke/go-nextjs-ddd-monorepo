@@ -123,6 +123,8 @@ issues:
   max-same-issues: 0
 
 output:
+  # One line per finding, without a summary after them.
+  show-stats: false
   formats:
     text:
       path: stdout

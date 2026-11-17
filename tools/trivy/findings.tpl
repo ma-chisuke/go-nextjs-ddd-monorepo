@@ -6,4 +6,4 @@
 {{ end }}
 {{- range .Licenses }}{{ $target }}: [license] {{ .Severity }} {{ .PkgName }} is under {{ .Name }}, which trivy.yaml forbids. Fix: replace the dependency (docs/adr/template/TPL-0019)
 {{ end }}
-{{- end }}
+{{- end -}}
