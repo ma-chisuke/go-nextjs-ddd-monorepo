@@ -1,5 +1,6 @@
 # Git hooks for people. Agents get the same checks from .claude/settings.json.
-# Every hook calls make, so a hook and CI can never disagree.
+# The hooks call make, so a hook and CI cannot disagree. The one exception is
+# commit-msg, which runs the script that also checks pull request titles in CI.
 min_version: 2.2.0
 
 pre-commit:

@@ -17,7 +17,8 @@
 # scope.
 #
 # Paths matched by .lintignore are never printed. That file is the single
-# place where vendored and generated files are excluded from every check.
+# place where vendored and generated files are excluded from every check that
+# takes its files from this script.
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
