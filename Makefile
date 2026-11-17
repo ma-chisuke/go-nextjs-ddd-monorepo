@@ -52,6 +52,12 @@ help: ## Show the main targets
 setup: ## Install the pinned tools and dependencies, and the Git hooks
 	mise trust --quiet
 	mise install
+	@$(MAKE) --no-print-directory setup-deps
+
+# A second make, because PATH above is computed before mise trusts this
+# directory and installs the tools; in a fresh clone it holds none of them.
+.PHONY: setup-deps
+setup-deps:
 	pnpm install --frozen-lockfile
 	uv sync --locked
 	lefthook install
