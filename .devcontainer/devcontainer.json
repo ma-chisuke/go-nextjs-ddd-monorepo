@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.schema.json",
+  "name": "go-nextjs-ddd-monorepo",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "containerUser": "dev",
+  "remoteUser": "dev",
+  "updateRemoteUserUID": true,
+  "mounts": [
+    "source=go-nextjs-ddd-monorepo-tools-${devcontainerId},target=/home/dev/.local/share,type=volume",
+    "source=go-nextjs-ddd-monorepo-cache-${devcontainerId},target=/home/dev/.cache,type=volume",
+    "source=go-nextjs-ddd-monorepo-claude-${devcontainerId},target=/home/dev/.claude,type=volume"
+  ],
+  "containerEnv": {
+    "CLAUDE_CONFIG_DIR": "/home/dev/.claude"
+  },
+  "postCreateCommand": "make setup"
+}
