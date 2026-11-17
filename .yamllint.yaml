@@ -22,6 +22,9 @@ rules:
   quoted-strings:
     quote-type: double
     required: only-when-needed
+    # A string that holds double quotes, such as an ETag, is written in single
+    # quotes, as Prettier writes it.
+    allow-quoted-quotes: true
     # A time of day such as "09:00" stays quoted: YAML 1.1 parsers read the
     # bare form as a number in base 60.
     extra-allowed:
