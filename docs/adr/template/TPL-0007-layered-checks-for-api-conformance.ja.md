@@ -76,7 +76,7 @@ date: 2026-11-17
 |---|---|---|
 | 1. コンパイル時 | Go は `lint-go` と `test-go`。`tsc --noEmit` は `lint-frontend-types` | `make check` |
 | 2. 生成物の更新漏れ | `gen-check`（予定）。`make gen` を実行し、差分があれば失敗する | `make check` |
-| 3. 文書にない入口の禁止 | `lint-go`。forbidigo のルールを足す（予定） | `make check` |
+| 3. 文書にない入口の禁止 | `lint-arch` のルール `arch/route-registration` | `make check` |
 | 4. テストでの検証 | `test-go` | `make check` |
 | 5. 生成した入力 | `test-api`（予定） | `make check-all` |
 | 6. 互換性 | `lint-openapi-breaking`（予定） | `make check` |
@@ -113,4 +113,4 @@ date: 2026-11-17
 - [oasdiff](https://github.com/oasdiff/oasdiff)
 - [Redocly CLI](https://redocly.com/docs/cli)
 
-<!-- i18n-source: TPL-0007-layered-checks-for-api-conformance.md sha256:464d1d7b6e2486c9f5ada65ea100c33125f03c1162e277ecc9e7e81aaea9109f -->
+<!-- i18n-source: TPL-0007-layered-checks-for-api-conformance.md sha256:b6268ffd6df33899c490575e274a36e9b8365247b77802f4020a269177f2b38f -->

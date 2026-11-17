@@ -67,20 +67,20 @@ A function call from one context into another is not possible at run time, and a
 
 ### Confirmation
 
-No check of this rule exists yet; the checks arrive with the first bounded context (milestone M1).
 Each check catches a different shortcut, at a different moment.
 
 | Shortcut | Check | Fails at |
 |---|---|---|
 | Import of another context's layers | Go `internal` directories: only code inside `backend/internal/<context>/` can import `backend/internal/<context>/internal/...` | Compile time |
-| Import of the root package of another context, the one that holds `module.go` | Import lint (depguard or go-arch-lint): only `cmd/<context>` imports it | `make check` |
+| Import of any package of another context, in code or in tests | `lint-arch`, rule `arch/context-import` | `make check` |
+| Import of the root package of another context, the one that holds `module.go` | `lint-arch`, rule `arch/module-import`: only `cmd/<context>` imports it | `make check` |
 | A query on another context's table | sqlc, configured for each context, reads only that context's `schema.sql` (TPL-0011) | Code generation |
 | Access to another context's schema while running | The runtime role of each context, with privileges on its own schema only (TPL-0009) | Run time |
-| A foreign key across contexts | A check of each `schema.sql` for references to other schemas | `make check` |
+| A foreign key across contexts | `lint-arch`, rule `arch/schema-reference`: no `schema.sql` and no file under `queries/` of a context names the schema of another context | `make check` |
 
 The `internal` directories alone are not enough.
 The root package of a context sits directly in `backend/internal/`, so any package under `backend/` may import it.
-The import lint closes that gap.
+`lint-arch` closes that gap.
 
 ## Pros and Cons of the Options
 

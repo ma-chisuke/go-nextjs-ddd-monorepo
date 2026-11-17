@@ -67,20 +67,20 @@ Reservation は、予約の確定と取り消しをイベントで Notification 
 
 ### 確認の方法
 
-この決まりを守るチェックは、まだない。最初の文脈とともに加わる（マイルストーン M1）。
 チェックごとに、捕まえる近道と、失敗する時点が違う。
 
 | 近道 | チェック | 失敗する時点 |
 |---|---|---|
 | 別の文脈の層の import | Go の `internal` ディレクトリ。`backend/internal/<context>/internal/...` を import できるのは、`backend/internal/<context>/` の中のコードだけである | コンパイル時 |
-| 別の文脈の最上位のパッケージ（`module.go` のあるパッケージ）の import | import の lint（depguard か go-arch-lint）。これを import できるのは `cmd/<context>` だけである | `make check` |
+| 別の文脈のパッケージの import（どのパッケージでも、テストからでも） | `lint-arch` のルール `arch/context-import` | `make check` |
+| 別の文脈の最上位のパッケージ（`module.go` のあるパッケージ）の import | `lint-arch` のルール `arch/module-import`。これを import できるのは `cmd/<context>` だけである | `make check` |
 | 別の文脈のテーブルへのクエリ | 文脈ごとに設定した sqlc。その文脈の `schema.sql` だけを読む（TPL-0011） | コードの生成時 |
 | 実行中の、別の文脈のスキーマへのアクセス | 文脈ごとの実行時のロール。権限は自分のスキーマにだけある（TPL-0009） | 実行時 |
-| 文脈をまたぐ外部キー | 各 `schema.sql` が、ほかのスキーマを参照していないかを調べるチェック | `make check` |
+| 文脈をまたぐ外部キー | `lint-arch` のルール `arch/schema-reference`。文脈の `schema.sql` と `queries/` の下のファイルが、ほかの文脈のスキーマの名前を書いていないかを調べる | `make check` |
 
 `internal` ディレクトリだけでは足りない。
 文脈の最上位のパッケージは `backend/internal/` の直下にあるので、`backend/` の下のどのパッケージからも import できてしまう。
-その穴を、import の lint がふさぐ。
+その穴を、`lint-arch` がふさぐ。
 
 ## 選択肢の長所と短所
 
@@ -113,4 +113,4 @@ Reservation は、予約の確定と取り消しをイベントで Notification 
 
 - Vlad Khononov『ドメイン駆動設計をはじめよう』（オライリー・ジャパン）の4章：共有カーネル、モデル変換装置、共用サービス、公開された言語。原書の "Integrating Bounded Contexts" の章である。
 
-<!-- i18n-source: TPL-0005-contexts-integrate-through-apis-and-events.md sha256:bd3adb9fc67055a6c825c1192b9e59231a527f3cb4f3012b1c353ac79575824b -->
+<!-- i18n-source: TPL-0005-contexts-integrate-through-apis-and-events.md sha256:7821e31154d4ac98a94f211a229720b4a6901251011caeebac197ec5f1ce7df9 -->

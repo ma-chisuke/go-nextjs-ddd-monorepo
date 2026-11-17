@@ -76,7 +76,7 @@ The table names the target that runs each layer. A target marked "planned" does 
 |---|---|---|
 | 1. Compile time | `lint-go` and `test-go` for Go; `lint-frontend-types` for `tsc --noEmit` | `make check` |
 | 2. Freshness | `gen-check` (planned): runs `make gen`, then fails on a diff | `make check` |
-| 3. No entry point outside the document | `lint-go`, with a forbidigo rule (planned) | `make check` |
+| 3. No entry point outside the document | `lint-arch`, with the rule `arch/route-registration` | `make check` |
 | 4. Validation in tests | `test-go` | `make check` |
 | 5. Generated inputs | `test-api` (planned) | `make check-all` |
 | 6. Compatibility | `lint-openapi-breaking` (planned) | `make check` |

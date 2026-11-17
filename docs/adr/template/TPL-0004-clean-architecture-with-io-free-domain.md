@@ -71,14 +71,18 @@ backend/internal/<context>/
 
 ### Confirmation
 
-No check of the layers exists yet; they arrive with the first bounded context (milestone M1).
-`.golangci.yml` already turns on depguard and forbidigo, but only with rules that apply to every Go file, and it states that the rules for the layers come with the first bounded context.
+`lint-arch`, which `make check` runs, checks the layers with the arch command of this repository (`tools/cmd/arch`).
+The command was chosen over depguard and go-arch-lint because it derives its rules from the directory layout, so a new context needs no configuration.
+It reads the packages of `backend/` with `go list`, and the code of each file with `go/parser`.
 
-The checks that arrive then are as follows.
-
-- Import rules, with depguard or go-arch-lint (the choice is made when the rules are written): the domain imports only its own packages and an allow-list of standard library packages, which leaves out `context`, `database/sql`, `net/http`, `os`, `log/slog`, and the random number packages; `app` does not import `adapter`; only `cmd/<context>` imports the package of `module.go`.
-- forbidigo: the domain does not call functions that read the clock, such as `time.Now` and `time.Since`. The `time` package stays on the allow-list for the type `time.Time`, so the import rules alone cannot catch these calls.
+- `arch/layer`: `domain` imports neither `app` nor an adapter, `app` imports no adapter, and an adapter imports no other adapter of its context. In a context without a `domain` package, which is a transaction script, `app` may import its own `adapter/postgres` (TPL-0003). A test may wire the layers together, as `module.go` does, so this rule reads only the files that are not tests.
+- `arch/domain-purity`: the domain imports only its own packages and an allow-list of standard library packages: `cmp`, `errors`, `fmt`, `maps`, `math`, `net/mail`, `regexp`, `slices`, `sort`, `strconv`, `strings`, `time`, `unicode`, and `unicode/utf8`. The list leaves out `context`, `database/sql`, `net/http`, `os`, `log/slog`, and the random number packages. Widening it needs a decision record.
+- `arch/domain-clock`: the domain does not use the functions that read the clock or wait for it, such as `time.Now` and `time.Since`. The `time` package stays on the allow-list for the type `time.Time`, so the import rules alone cannot catch these calls.
+- `arch/module-import`: only `cmd/<context>` imports the package of `module.go`.
+- `arch/platform-import`: the packages under `backend/internal/platform/` import no context.
 - Go `internal` directories: the compiler refuses an import of `backend/internal/<context>/internal/...` from outside `backend/internal/<context>/`.
+
+`.golangci.yml` turns on depguard and forbidigo only with rules that apply to every Go file.
 
 ## Pros and Cons of the Options
 
