@@ -1,7 +1,7 @@
 # GitHub: the inputs that the workflows in .github/workflows need, and the
 # settings of the repository itself (docs/guides/github-settings.md).
 
-.PHONY: codeql-languages lint-pr-title
+.PHONY: codeql-languages lint-pr-title github-settings
 
 # The CodeQL languages that have source files, as the JSON matrix of codeql.yml.
 codeql-languages:
@@ -14,3 +14,8 @@ lint-pr-title:
 	@if [ -z "$${PR_TITLE:-}" ]; then echo "lint-pr-title: set PR_TITLE to the title of the pull request" >&2; exit 2; fi
 	@printf '%s\n' "$$PR_TITLE" | committed --commit-file - \
 		|| { echo "lint-pr-title: write the title as a Conventional Commit, for example 'feat: add orders'" >&2; exit 1; }
+
+# Compare the settings of the repository on GitHub with the guide and print the
+# differences. APPLY=1 changes them. REPO=<owner>/<name> picks another repository.
+github-settings:
+	@tools/github/apply-settings.sh $(if $(APPLY),--apply) $(REPO)
