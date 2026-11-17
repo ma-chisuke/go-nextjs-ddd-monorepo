@@ -122,3 +122,5 @@ Renovate のプルリクエストが `mise.toml` を変えて `mise.lock` を変
 pnpm と uv は、リリースから3日たっていない版を拒む。今日リリースされたセキュリティの修正も例外ではない。
 そうした修正をすぐ取り込むには、そのパッケージを `pnpm-workspace.yaml`（`minimumReleaseAgeExclude`）か `pyproject.toml`（`exclude-newer-package`）で決まりから外す。
 リリースから3日たったら、その例外を消す。
+
+<!-- i18n-source: github-settings.md sha256:e5ba7c742614febc7a5f7df0afbcbc22e8eff8b07795869945fa8de631c3e606 -->
