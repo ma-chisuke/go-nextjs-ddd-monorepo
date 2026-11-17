@@ -244,7 +244,6 @@ components:
         minLength: 1
         maxLength: 255
         pattern: ^[!-~]+$
-        examples: [0193a6f0-7b5c-7e2a-9c3d-1f2e3d4c5b6a]
     IfMatch:
       name: If-Match
       in: header
