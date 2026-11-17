@@ -11,7 +11,7 @@ Go の API と Next.js の画面を1つのリポジトリに置く製品のた�
 | マイルストーン | 中身 | 状態 |
 |---|---|---|
 | M0 | 品質の基盤：道具のバージョンの固定、`make check`、整形と lint、セキュリティの検査、CI、Git フック、エージェントのフック、決定の記録 | 完了 |
-| M1 | 中核と補完の文脈を1つずつ。OpenAPI からユースケースとドメインを通って PostgreSQL まで | 予定 |
+| M1 | 中核と補完の文脈を1つずつ。OpenAPI からユースケースとドメインを通って PostgreSQL まで | 作業中 |
 | M2 | イベント：送信箱、EventBridge、SQS、手元の AWS エミュレーター | 予定 |
 | M3 | Next.js の画面と、端から端までのテスト | 予定 |
 | M4 | stg と prd の Terraform・Terragrunt と、デプロイ | 予定 |
@@ -25,7 +25,7 @@ Go の API と Next.js の画面を1つのリポジトリに置く製品のた�
 
 - **アーキテクチャ。** 文脈どうしは HTTP の API とイベントだけで依存する。文脈の中はクリーンアーキテクチャで、ドメイン層は I/O をしない。
 - **契約。** OpenAPI を先に書く。Go のサーバーのコードと TypeScript の型を生成し、何層かのチェックで文書とコードの一致を保つ。エラーは RFC 9457 の problem details で返す。
-- **データ。** PostgreSQL 18 のデータベースを1つ使い、文脈ごとにスキーマとロールを分ける。スキーマは宣言的に管理し、クエリには型を付ける。
+- **データ。** PostgreSQL 18 のデータベースを1つ使い、文脈ごとにスキーマを1つとロールを2つ持たせる。スキーマは宣言的に管理し、クエリには型を付ける。
 - **AWS。** 文脈ごとの ECS、Aurora、EventBridge と SQS、Terraform と Terragrunt を使う。stg と prd はアカウントを分ける。手元の環境は AWS のアカウントなしで動く。
 - **品質。** 1つの関心事に道具を1つ割り当て、`make check` から実行する。道具のバージョンはチェックサムとともに固定する。サプライチェーンを守る設定を入れ、CI では手元と同じコマンドを実行する。
 - **エージェント。** 決まりは、直し方を出力するチェックで守る。`AGENTS.md` は短く保つ。
@@ -46,10 +46,13 @@ make check   # 速いチェック。数秒で終わる
 | `make fmt` | ファイルを整形する。 |
 | `make gen` | 生成物を作り直す。 |
 | `make check` | 速いチェック。ネットワークを使わない。コミットの前に必ず実行する。 |
-| `make check-all` | 速いチェックと遅いチェック。CI が実行する。 |
+| `make check-all` | 速いチェックと遅いチェック。手元の PostgreSQL を要するチェックも含む。CI が実行する。 |
+| `make db-up` | 手元の PostgreSQL を Docker で起動し、すべての文脈のスキーマを適用する。 |
 | `make help` | 主なターゲットの一覧を出す。 |
 
 `.devcontainer/` の dev container を使うと、手元に何も入れずに同じ環境が手に入る。
+
+手元のデータベースと `make check-all` には Docker が要る。[サービスを手元で動かす](docs/guides/run-locally.ja.md)では、データベースと2つのサービスを起動し、それらの API を通して curl で会議室を予約する。
 
 ## テンプレートの使い方
 
@@ -64,13 +67,15 @@ make check   # 速いチェック。数秒で終わる
 | 分野 | チェック |
 |---|---|
 | すべてのファイル | つづり、EditorConfig の決まり、秘密情報 |
-| Go | 整形、golangci-lint（go vet を含む）、race detector 付きのテスト。既知の脆弱性は `make check-all` |
+| Go | 整形、golangci-lint（go vet を含む）、race detector 付きのテスト。既知の脆弱性と、PostgreSQL に対する結合テストは `make check-all` |
+| バックエンドの構成 | `lint-arch`。文脈と層の間の import、I/O をしないドメイン、API の文書からだけ作るルート、SQL に書いたスキーマの名前、文脈ごとの用語集 |
+| 生成コード | API の文書と各文脈の SQL から生成したコードが、生成器がいま書く内容と同じであること |
 | TypeScript と Next.js | Prettier、import の境界を含む ESLint、型の検査、使っていないコード |
 | シェルと Dockerfile | shfmt、shellcheck、hadolint |
 | GitHub Actions | actionlint、zizmor、ghalint、pinact |
 | Terraform と Terragrunt | 整形、tflint、Trivy。validate とモジュールの文書は `make check-all` |
-| SQL | squawk |
-| OpenAPI と AsyncAPI | Redocly |
+| SQL | squawk。`make check-all` では、スキーマの変更ごとの DDL に対する squawk（`lint-sql-plan`）、スキーマに対するすべてのクエリの prepare（`lint-sqlc`）、各スキーマのコメントと文書（`lint-db-docs`） |
+| OpenAPI と AsyncAPI | Redocly。oasdiff による、ベースブランチと比べた互換性を壊す変更（`lint-contracts-breaking`） |
 | YAML・JSON・TOML | Prettier、yamllint、taplo、設定ファイルの JSON Schema による検証 |
 | Markdown | markdownlint、リンク、英語の文体（Vale）、日本語の文体（textlint） |
 | 文書 | 決定の記録の形式とその一覧、英語版と一致する対訳 |
@@ -80,6 +85,8 @@ make check   # 速いチェック。数秒で終わる
 
 ## 文書
 
+- [ARCHITECTURE.ja.md](ARCHITECTURE.ja.md)：バックエンドの地図。文脈・層・データベースと、それらを保つチェック。
+- [docs/contexts/](docs/contexts/)：区切られた文脈ごとの README と用語集。
 - [AGENTS.ja.md](AGENTS.ja.md)：コーディングエージェント向けの指示。
 - [docs/adr/](docs/adr/README.ja.md)：決定の記録。
 - [docs/guides/](docs/guides/)：繰り返す作業のやり方。
@@ -94,4 +101,4 @@ make check   # 速いチェック。数秒で終わる
 
 [MIT No Attribution](LICENSE)。表示を残さずに、テンプレートをコピーして自分のものにできる。
 
-<!-- i18n-source: README.md sha256:5230753be82869f18f3c6eaebf964c8fae0f54a147e029e29cba7a2956935a55 -->
+<!-- i18n-source: README.md sha256:16d2b2b1d7cc826a5b6e048da938b62f6a09b0c7dbc3be0eaa1d49b3412a97fd -->
