@@ -6,6 +6,8 @@
 .claude/
 .github/
 .vale/
+# CLAUDE.md only imports AGENTS.md.
+CLAUDE.md
 
 # Generated.
 CHANGELOG.md
