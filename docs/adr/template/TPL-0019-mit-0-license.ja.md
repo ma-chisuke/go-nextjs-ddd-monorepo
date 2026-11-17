@@ -91,3 +91,5 @@ AWS も、サンプルコードを同じ理由で MIT-0 にしている。利用
 - [SPDX License List の MIT-0](https://spdx.org/licenses/MIT-0.html)
 - [AWS が公開している MIT-0](https://github.com/aws/mit-0)
 - ライセンスのスキャンと、そのほかのサプライチェーンの守りは TPL-0024 にある。
+
+<!-- i18n-source: TPL-0019-mit-0-license.md sha256:fce348f41260f9d865b4d115c60e184dd74909ddb6e3bb1e2ecee0ecc7bd3f4f -->

@@ -104,3 +104,5 @@ date: 2026-11-17
 - 決まりと用語の表は[文書を訳す](../../guides/translation.ja.md)にある。
 - [Vale](https://vale.sh/)・[Google developer documentation style guide](https://developers.google.com/style)・[textlint](https://textlint.org/)
 - 対訳を原文と比べるサブエージェントは、TPL-0020 のハーネスの一部である。
+
+<!-- i18n-source: TPL-0021-english-source-japanese-translation.md sha256:cb2e41e3372f62caf1fd87186388bd2e974d4f26a6db2d3b16ac1a624534e189 -->

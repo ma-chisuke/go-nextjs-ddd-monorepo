@@ -109,3 +109,5 @@ CI をどこで動かし、そのワークフローを手元のチェックと�
 - アクションとその固定の守りは TPL-0024 に、固定の更新は TPL-0025 にある。
 - [actionlint](https://github.com/rhysd/actionlint)・[zizmor](https://github.com/zizmorcore/zizmor)・[ghalint](https://github.com/suzuki-shunsuke/ghalint)・[pinact](https://github.com/suzuki-shunsuke/pinact)
 - [Configuring OpenID Connect in Amazon Web Services](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-aws)
+
+<!-- i18n-source: TPL-0018-github-actions-with-oidc.md sha256:c7cd549f0f26db4b7df7edc0a65010af0f8cfcd78663c729a51c8af034978717 -->

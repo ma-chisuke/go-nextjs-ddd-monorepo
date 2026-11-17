@@ -137,3 +137,5 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 
 - `make help` が主なターゲットを一覧にし、`make/<area>.mk` が領域ごとのターゲットを持つ。
 - これらのツールの固定は TPL-0022 に、Trivy をただ1つのスキャナーにする理由は TPL-0024 にある。
+
+<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:2c8de124df5072566e1c044136448ca854f3a6f288635d243323dd906d9288b4 -->

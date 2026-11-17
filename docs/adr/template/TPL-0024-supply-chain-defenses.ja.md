@@ -144,3 +144,5 @@ Trivy は、ロックファイルをもとに、既知の脆弱性と、禁止�
 - [pnpm の設定](https://pnpm.io/settings)・[uv の設定](https://docs.astral.sh/uv/reference/settings/)・[mise.lock](https://mise.jdx.dev/dev-tools/mise-lock.html)
 - [OpenSSF Scorecard](https://github.com/ossf/scorecard)
 - ツールの固定は TPL-0022 に、Trivy をただ1つのスキャナーにする理由は TPL-0023 に、更新は TPL-0025 にある。
+
+<!-- i18n-source: TPL-0024-supply-chain-defenses.md sha256:9297a1ac90c66a5c04ec988e8a3b4ef5d51b2defdb6305bb8305e63052e133b0 -->

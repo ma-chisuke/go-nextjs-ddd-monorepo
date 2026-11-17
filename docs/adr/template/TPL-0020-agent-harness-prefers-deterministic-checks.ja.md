@@ -98,3 +98,5 @@ ETH Zurich による2026年の「Evaluating AGENTS.md: Are Repository-Level Cont
 - 「Evaluating AGENTS.md: Are Repository-Level Context Files Helpful for Coding Agents?」ETH Zurich、2026年。
 - [AGENTS.md](https://agents.md/)
 - `make check` の背後にあるツールの選び方は TPL-0023 にある。
+
+<!-- i18n-source: TPL-0020-agent-harness-prefers-deterministic-checks.md sha256:56f38998ccb6f8898d97df590bf79dea20473f0ba35a5840503bd302fe7aaaf9 -->

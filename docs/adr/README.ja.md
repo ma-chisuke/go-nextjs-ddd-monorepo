@@ -20,5 +20,13 @@
 | [TPL-0006](template/TPL-0006-openapi-with-oapi-codegen-strict-server.ja.md) | HTTP の契約を OpenAPI 3.1 で書き、Go のサーバーを oapi-codegen の strict server で生成する | accepted | 2026-11-17 |
 | [TPL-0007](template/TPL-0007-layered-checks-for-api-conformance.ja.md) | OpenAPI の文書と実装の一致を、層に分けたチェックで保つ | accepted | 2026-11-17 |
 | [TPL-0008](template/TPL-0008-errors-as-rfc-9457-problem-details.ja.md) | エラーはすべて RFC 9457 の problem details で返す | accepted | 2026-11-17 |
+| [TPL-0018](template/TPL-0018-github-actions-with-oidc.ja.md) | CI/CD を GitHub Actions で動かし、AWS には OIDC で入る | accepted | 2026-11-17 |
+| [TPL-0019](template/TPL-0019-mit-0-license.ja.md) | テンプレートのライセンスを MIT-0 にする | accepted | 2026-11-17 |
+| [TPL-0020](template/TPL-0020-agent-harness-prefers-deterministic-checks.ja.md) | コーディングエージェントのハーネスでは決定的なチェックを優先し、指示は最小限から始める | accepted | 2026-11-17 |
+| [TPL-0021](template/TPL-0021-english-source-japanese-translation.ja.md) | 文書は英語で書き、どの文書にも日本語の対訳を隣に置く | accepted | 2026-11-17 |
+| [TPL-0022](template/TPL-0022-pin-tool-versions-with-mise.ja.md) | ツールの版はエコシステムごとに1か所で固定し、全体の土台に mise を置く | accepted | 2026-11-17 |
+| [TPL-0023](template/TPL-0023-one-tool-per-concern.ja.md) | 1つの関心事にツールを1つだけ使い、どのツールも make から動かし、`make check` に時間の上限を設ける | accepted | 2026-11-17 |
+| [TPL-0024](template/TPL-0024-supply-chain-defenses.ja.md) | サプライチェーンを層を重ねて守る | accepted | 2026-11-17 |
+| [TPL-0025](template/TPL-0025-dependency-updates-with-renovate.ja.md) | 依存とツールの更新を Renovate に任せる | accepted | 2026-11-17 |
 
-<!-- i18n-source: README.md sha256:988f2f47f8be881f9288aa4a9b08464058f40cfd67874997dad5051addfd6bc1 -->
+<!-- i18n-source: README.md sha256:d1b076a6f6f5f628a33ba66b9e37ed4df0438d64cc7fd2eac15571da64a488b4 -->

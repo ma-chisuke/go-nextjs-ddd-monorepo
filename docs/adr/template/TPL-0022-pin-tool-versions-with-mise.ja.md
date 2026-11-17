@@ -111,3 +111,5 @@ date: 2026-11-17
 
 - [mise](https://mise.jdx.dev/)・[mise.lock](https://mise.jdx.dev/dev-tools/mise-lock.html)
 - これらの固定の上に築くサプライチェーンの守りは TPL-0024 に、固定の更新は TPL-0025 にある。
+
+<!-- i18n-source: TPL-0022-pin-tool-versions-with-mise.md sha256:487227a834276341d7daafeda21b5f7c8346b376b50db292dc4b702dafb34e98 -->

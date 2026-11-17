@@ -89,3 +89,5 @@ date: 2026-11-17
 
 - [Renovate のドキュメント](https://docs.renovatebot.com/)
 - 固定については TPL-0022 に、3日の待ちについては TPL-0024 に書いてある。
+
+<!-- i18n-source: TPL-0025-dependency-updates-with-renovate.md sha256:eb683707b855a762813dce9056f0833a3e6c5cf29d255c2ea3fb39bde5245bfe -->
