@@ -103,3 +103,9 @@ Use these Japanese terms. The table grows when a new term appears; add the term 
 | dead-letter queue | デッドレターキュー |
 | ingress, entry (of requests) | 入口 |
 | unit (of Terragrunt) | ユニット |
+| ruleset (of a branch on GitHub) | ルールセット |
+| pull request | プルリクエスト |
+| workflow (GitHub Actions) | ワークフロー |
+| environment (GitHub or deployment) | 環境 |
+| push protection | プッシュ保護 |
+| squash merge | スカッシュマージ |

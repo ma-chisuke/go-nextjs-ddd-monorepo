@@ -103,5 +103,11 @@
 | dead-letter queue | デッドレターキュー |
 | ingress、entry（リクエストの） | 入口 |
 | unit（Terragrunt の） | ユニット |
+| ruleset（GitHub のブランチの） | ルールセット |
+| pull request | プルリクエスト |
+| workflow（GitHub Actions） | ワークフロー |
+| environment（GitHub やデプロイ先の） | 環境 |
+| push protection | プッシュ保護 |
+| squash merge | スカッシュマージ |
 
-<!-- i18n-source: translation.md sha256:174d048d28f026b0649f516be6f8c2b80b4be55c077ce4ffd28d6601611601e1 -->
+<!-- i18n-source: translation.md sha256:1e5c0579c4c6190b7eb363278cdd35f97c2d58bbf0b020ae7a701ec533f117af -->
