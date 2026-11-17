@@ -12,13 +12,21 @@ export TRIVY_SKIP_VERSION_CHECK := true
 # from asking a credential helper, which can block without a terminal.
 TRIVY_ENV := DOCKER_CONFIG=$(CURDIR)/.cache/trivy-docker-config
 TRIVY_REPORT := --quiet --exit-code 1 --format template --template @tools/trivy/findings.tpl
+# Directories that hold no source of this repository.
+TRIVY_SKIP := --skip-dirs .venv --skip-dirs .cache --skip-dirs .claude/worktrees --skip-dirs tmp
 
 # Dockerfile and Terraform misconfiguration, with the checks built into the
 # pinned Trivy binary: no network, and the same result everywhere.
 scan-config:
-	@$(TASK) $@ 'trivy config $(TRIVY_REPORT) --skip-check-update --misconfig-scanners dockerfile,terraform .'
+	@$(TASK) $@ 'trivy config $(TRIVY_REPORT) --skip-check-update --misconfig-scanners dockerfile,terraform $(TRIVY_SKIP) --skip-dirs node_modules --skip-dirs "**/node_modules" .'
 
-# Known vulnerabilities and forbidden licenses in every lockfile. Downloads the
-# vulnerability database, so it runs in check-all.
+# Dependencies in every lockfile. Downloads the vulnerability database, so it
+# runs in check-all.
+#   Vulnerabilities: every dependency, including development tools, because
+#     they run on laptops and in CI.
+#   Licenses: only what ships with the product. Trivy reads the license of an
+#     npm package from node_modules, so that directory is not skipped here.
 scan-deps:
-	@$(TASK) $@ 'mkdir -p .cache/trivy-docker-config && $(TRIVY_ENV) trivy fs $(TRIVY_REPORT) --scanners vuln,license .'
+	@$(TASK) $@ 'mkdir -p .cache/trivy-docker-config; \
+		$(TRIVY_ENV) trivy fs $(TRIVY_REPORT) --scanners vuln --include-dev-deps $(TRIVY_SKIP) .; \
+		$(TRIVY_ENV) trivy fs $(TRIVY_REPORT) --scanners license $(TRIVY_SKIP) .'

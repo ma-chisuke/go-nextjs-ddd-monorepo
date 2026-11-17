@@ -4,14 +4,6 @@ severity:
   - HIGH
   - CRITICAL
 
-scan:
-  skip-dirs:
-    - node_modules
-    - .venv
-    - .cache
-    - .claude/worktrees
-    - tmp
-
 # This template is distributed under MIT-0. A dependency under a strong
 # copyleft or a restrictive license must not become part of what users copy.
 license:
