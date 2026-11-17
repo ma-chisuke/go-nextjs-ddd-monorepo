@@ -1,9 +1,27 @@
 # The local environment: everything runs with Docker Compose alone, without
 # an AWS account (TPL-0017).
 #
+#   make up         start PostgreSQL, bring every schema up to date, then build
+#                   and start the service of every context
+#   make down       stop everything; the data of PostgreSQL stays
 #   make db-up      start PostgreSQL and bring every schema up to date
 #   make db-down    stop it and delete its data
+#
+# Start the system with `make up`, not with `docker compose up` alone: pgschema
+# from mise.toml applies the schemas from the host (tools/scripts/db.sh), and
+# the services expect them in place.
 name: go-nextjs-ddd-monorepo
+
+# What the service of every bounded context shares. Each one is built from
+# backend/Dockerfile, with the build argument CONTEXT naming its command, and
+# checks its own health with the HEALTHCHECK of the image.
+x-context-service: &context-service
+  pull_policy: build
+  read_only: true
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
 
 services:
   postgres:
@@ -26,6 +44,43 @@ services:
       interval: 2s
       timeout: 2s
       retries: 30
+
+  # The services connect as the runtime role of their context, whose password
+  # is public on purpose (db/local.sql), and listen on the loopback address only.
+  facility:
+    <<: *context-service
+    build:
+      context: backend
+      args:
+        CONTEXT: facility
+    image: go-nextjs-ddd-monorepo/facility:local
+    environment:
+      DATABASE_URL: postgres://facility_runtime:facility_runtime@postgres:5432/app?sslmode=disable
+    ports:
+      - 127.0.0.1:${FACILITY_PORT:-58081}:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  reservation:
+    <<: *context-service
+    build:
+      context: backend
+      args:
+        CONTEXT: reservation
+    image: go-nextjs-ddd-monorepo/reservation:local
+    environment:
+      DATABASE_URL: postgres://reservation_runtime:reservation_runtime@postgres:5432/app?sslmode=disable
+      # Facility through the network of Compose, as another context would reach
+      # it through the private network in AWS (TPL-0014).
+      FACILITY_API_URL: http://facility:8080
+    ports:
+      - 127.0.0.1:${RESERVATION_PORT:-58082}:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      facility:
+        condition: service_healthy
 
 volumes:
   postgres-data:

@@ -4,6 +4,15 @@ severity:
   - HIGH
   - CRITICAL
 
+# A finding must be something that can be acted on. A vulnerability that has
+# no fixed version yet cannot be fixed by an update, and it would fail every
+# pull request until its maintainers release one. So Trivy reports a
+# vulnerability from the day a fix exists; Renovate then opens the update at
+# once. Until then, Dependabot alerts on GitHub list it, and govulncheck
+# (`make vuln-go`) still fails when Go code that is called is affected.
+vulnerability:
+  ignore-unfixed: true
+
 # This template is distributed under MIT-0. A dependency under a strong
 # copyleft or a source-available license must not become part of a product
 # built from it, so the license scan fails on the licenses in `forbidden`

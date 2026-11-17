@@ -1,0 +1,28 @@
+# The API of the test of apitest: one operation.
+openapi: 3.1.0
+info:
+  title: Things
+  version: 0.1.0
+servers:
+  - url: /
+paths:
+  /things/{name}:
+    get:
+      operationId: getThing
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The thing.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [name]
+                properties:
+                  name:
+                    type: string

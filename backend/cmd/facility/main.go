@@ -5,15 +5,16 @@
 //	DATABASE_URL  the PostgreSQL URL of the runtime role of Facility (required)
 //	HTTP_ADDR     the address to listen on (default ":8080")
 //	LOG_LEVEL     debug, info, warn, or error (default "info")
+//
+// With the argument healthcheck, it asks the service that runs on this host
+// for its health (GET /healthz on HTTP_ADDR) and exits with 0 when the service
+// is healthy and 1 when it is not. The container image, which has no shell,
+// runs it as its health check.
 package main
 
 import (
 	"context"
-	"fmt"
 	"io"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	// The time zone database, so that the names of time zones resolve in a
@@ -28,19 +29,13 @@ import (
 )
 
 func main() {
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	err := run(ctx, os.Getenv, os.Stdout)
-	stop()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "facility:", err)
-		os.Exit(1)
-	}
+	httpserver.Main("facility", run)
 }
 
 func run(ctx context.Context, getenv func(string) string, stdout io.Writer) error {
 	env := config.NewReader(getenv)
 	databaseURL := env.Required("DATABASE_URL")
-	addr := env.Default("HTTP_ADDR", ":8080")
+	addr := env.Default(httpserver.AddrVariable, httpserver.DefaultAddr)
 	logLevel := env.Default("LOG_LEVEL", "info")
 	if err := env.Err(); err != nil {
 		return err

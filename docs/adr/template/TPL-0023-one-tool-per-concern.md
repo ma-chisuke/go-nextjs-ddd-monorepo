@@ -43,6 +43,7 @@ Inside `make`, each concern has one tool. Targets marked "check-all" run only in
 | Formatting of Go code | golangci-lint, with gofmt and goimports as formatters | `fmt-check-go` |
 | Linting of Go code, including `go vet` | golangci-lint | `lint-go` |
 | Go tests | `go test -race -shuffle=on` | `test-go` |
+| The local system end to end: one scenario across the services in Docker Compose, over HTTP, with every response checked against its API document | `go test -tags smoke`, with kin-openapi (`backend/test/smoke`) | `smoke` (check-all) |
 | Test coverage, reported without an external service | `go test -coverprofile` and octocov | `coverage` and `coverage-report` (CI) |
 | Known vulnerabilities in Go code that is actually called | govulncheck | `vuln-go` (check-all) |
 | Linting of the frontend, including the boundaries between features | ESLint, with eslint-config-next, typescript-eslint, and eslint-plugin-boundaries | `lint-frontend` |
@@ -55,6 +56,7 @@ Inside `make`, each concern has one tool. Targets marked "check-all" run only in
 | Formatting of shell scripts | shfmt | `fmt-check-shell` |
 | Linting of shell scripts | shellcheck | `lint-shell` |
 | Linting of Dockerfiles | hadolint | `lint-dockerfile` |
+| Pins of base images to digests (TPL-0024) | a pattern in `tools/scripts/image-pins.sh` | `lint-image-pins` |
 | Syntax of workflows | actionlint | `lint-actions` |
 | Security of workflows | zizmor | `lint-actions-security` |
 | Policy of workflows: permissions and timeouts | ghalint | `lint-actions-policy` |
@@ -83,6 +85,8 @@ Inside `make`, each concern has one tool. Targets marked "check-all" run only in
 | Secrets | gitleaks | `lint-secrets` |
 | Misconfiguration of Dockerfiles and Terraform | Trivy | `scan-config` |
 | Vulnerabilities and licenses of dependencies | Trivy | `scan-deps` (check-all) |
+| Vulnerabilities in the images of the services | Trivy | `scan-images` (check-all) |
+| SBOMs of the images of the services | Trivy | `sbom`, which the workflow that publishes the images runs |
 | The hooks for agents (TPL-0020) | sample events fed to each hook (`tools/tests/hooks_test.sh`) | `test-hooks` |
 | The script that checks commit messages | sample subjects, each tried in several locales (`tools/tests/commit_msg_test.sh`) | `test-commit-msg` |
 | The checks themselves: each fails on a known-bad input and passes on a known-good one | `tools/selftest/selftest.sh` | `selftest` (check-all) |

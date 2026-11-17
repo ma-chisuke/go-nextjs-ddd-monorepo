@@ -61,14 +61,19 @@ The rules are as follows.
 
 ### Confirmation
 
-M0 has no infrastructure code, so nothing enforces this decision yet.
+Since M1, each context has an image of its own, and nothing yet runs it on ECS.
+
+- `backend/Dockerfile` builds the image of the context that the build argument `CONTEXT` names, from `backend/cmd/<context>/`, so a new context needs no Dockerfile of its own and the Go module stays one.
+- `make smoke`, part of `make check-all`, runs the images of Facility and Reservation as separate containers in Docker Compose and books a room across them over HTTP. The contexts run as separate processes and reach each other only through their APIs.
+- The binary in each image checks its own health (`<command> healthcheck`), which is the command that the health check of an ECS task will run.
+
 The following checks arrive with the infrastructure milestone.
 
 - The Terraform module for a context service (`infra/modules/context-service`) accepts only the private access type, so a context API cannot be made public by changing a value.
 - tflint and Trivy check the Terraform code.
 - Review checks that only the module for Next.js (`infra/modules/web`) creates a public entry.
 
-Until then, review enforces the decision.
+Until then, review enforces the rest of the decision.
 
 ## Pros and Cons of the Options
 

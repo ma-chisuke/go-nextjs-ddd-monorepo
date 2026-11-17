@@ -3,6 +3,10 @@
 // the implementation and the document disagree in a way that Go types cannot
 // express: a format, a limit, a required property, an undocumented status
 // code, or the shape of a problem (TPL-0007, layer 4).
+//
+// A client sends its requests to a handler in memory (New), or over the
+// network to a server that runs elsewhere, such as a service in Docker Compose
+// (NewRemote). Both check the responses in the same way.
 package apitest
 
 import (
@@ -12,7 +16,9 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
@@ -22,22 +28,49 @@ import (
 	"github.com/ma-chisuke/go-nextjs-ddd-monorepo/backend/internal/platform/httpserver"
 )
 
-// Client sends requests to a handler in memory.
+// Client sends requests to a handler in memory, or to a server over the
+// network.
 type Client struct {
-	t       *testing.T
+	t      *testing.T
+	router routers.Router
+	// handler serves the requests in memory. Without one, the requests go to
+	// the server at base, through remote.
 	handler http.Handler
-	router  routers.Router
+	base    string
+	remote  *http.Client
 }
+
+// remoteTimeout bounds one request to a server over the network.
+const remoteTimeout = 10 * time.Second
 
 // New returns a client for handler, which serves the API that doc describes.
 func New(t *testing.T, doc *openapi3.T, handler http.Handler) *Client {
+	t.Helper()
+	c := newClient(t, doc)
+	c.handler = handler
+	return c
+}
+
+// NewRemote returns a client for the server at baseURL, such as
+// http://127.0.0.1:58081, which serves the API that doc describes. It sends
+// real requests over the network, for a test of a running system, and fails
+// the test when the server does not answer.
+func NewRemote(t *testing.T, doc *openapi3.T, baseURL string) *Client {
+	t.Helper()
+	c := newClient(t, doc)
+	c.base = strings.TrimSuffix(baseURL, "/")
+	c.remote = &http.Client{Timeout: remoteTimeout}
+	return c
+}
+
+func newClient(t *testing.T, doc *openapi3.T) *Client {
 	t.Helper()
 	httpserver.RegisterFormats()
 	router, err := gorillamux.NewRouter(doc)
 	if err != nil {
 		t.Fatalf("apitest: the API document has no usable routes: %v", err)
 	}
-	return &Client{t: t, handler: handler, router: router}
+	return &Client{t: t, router: router}
 }
 
 // Response is what the handler answered.
@@ -90,18 +123,48 @@ func (c *Client) Do(method, target string, body any, options ...Option) Response
 		}
 		reader = bytes.NewReader(raw)
 	}
-	req := httptest.NewRequestWithContext(context.Background(), method, target, reader)
+	req := c.newRequest(method, target, reader)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	for _, option := range options {
 		option(req)
 	}
-	rec := httptest.NewRecorder()
-	c.handler.ServeHTTP(rec, req)
-	res := Response{Status: rec.Code, Header: rec.Header(), Body: rec.Body.Bytes()}
+	res := c.send(req)
 	c.validate(req, res)
 	return res
+}
+
+func (c *Client) newRequest(method, target string, body io.Reader) *http.Request {
+	c.t.Helper()
+	if c.handler != nil {
+		return httptest.NewRequestWithContext(context.Background(), method, target, body)
+	}
+	req, err := http.NewRequestWithContext(c.t.Context(), method, c.base+target, body)
+	if err != nil {
+		c.t.Fatalf("apitest: cannot build the request %s %s: %v", method, target, err)
+	}
+	return req
+}
+
+// send passes the request to the handler, or sends it to the server.
+func (c *Client) send(req *http.Request) Response {
+	c.t.Helper()
+	if c.handler != nil {
+		rec := httptest.NewRecorder()
+		c.handler.ServeHTTP(rec, req)
+		return Response{Status: rec.Code, Header: rec.Header(), Body: rec.Body.Bytes()}
+	}
+	res, err := c.remote.Do(req)
+	if err != nil {
+		c.t.Fatalf("apitest: %s %s: no answer from the server: %v", req.Method, req.URL, err)
+	}
+	defer func() { _ = res.Body.Close() }()
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		c.t.Fatalf("apitest: %s %s: cannot read the answer: %v", req.Method, req.URL, err)
+	}
+	return Response{Status: res.StatusCode, Header: res.Header, Body: body}
 }
 
 // validate checks the response against the operation that the request

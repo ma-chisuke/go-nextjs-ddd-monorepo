@@ -62,9 +62,12 @@ date: 2026-11-17
 
 ### 確認の方法
 
-M0 にはまだ手元の環境がないので、この決定を守らせるものはまだない。
+M1 から、Docker Compose が PostgreSQL 18 と各文脈のサービスを動かし、`make up` がそれらを起動する。
+システムのプロセスは、すべて Compose の中で動く。スキーマだけはホストから適用する。適用するのは `tools/scripts/db.sh` で、使う pgschema は `mise.toml` が固定したものである。こうして pgschema の固定を1か所に保つ（TPL-0010）。
+`make check-all` に含まれる `make smoke` は、CI でも同じサービスを起動し、両方を使って会議室を予約する。そのため、手元の環境を壊す変更は CI で失敗する。
+AWS Emulator・Next.js・Mailpit は、それぞれを必要とするマイルストーンでシステムに加わる。
 イベントを扱うマイルストーンで、AWS Emulator のテスト（EventBridge から SQS への配信、デッドレターキュー、Secrets Manager）が CI で動き始める。テンプレートが頼る動きにエミュレーターのあるバージョンが対応していなければ、このテストが失敗する。
-それまでは、レビューでこの決定を守る。
+それまでは、決定の残りをレビューで守る。
 
 ## 選択肢の長所と短所
 
@@ -106,4 +109,4 @@ M0 にはまだ手元の環境がないので、この決定を守らせるも�
 
 まだ確かめていないこと：EventBridge から SQS への配信、デッドレターキュー、Secrets Manager、AWS Emulator への Terraform の適用。これらは、イベントを扱うマイルストーンで確かめる。
 
-<!-- i18n-source: TPL-0017-aws-emulator-for-local-development.md sha256:d56ac10c0e23f204e9c3c4b6609920ce36765abcd66fad7d8c1ea4e621170a61 -->
+<!-- i18n-source: TPL-0017-aws-emulator-for-local-development.md sha256:1091daeee39a62116bc9304fc41fe8572b748141ac4834e11b388654e45c48db -->

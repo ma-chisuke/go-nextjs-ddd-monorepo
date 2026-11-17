@@ -61,14 +61,19 @@ AWS でサービスごとに入口を作るよくある方法は、ロードバ�
 
 ### 確認の方法
 
-M0 にはインフラのコードがないので、この決定を守らせるものはまだない。
+M1 から文脈はそれぞれ自分のイメージを持つが、それを ECS で動かすものはまだない。
+
+- `backend/Dockerfile` は、ビルド引数 `CONTEXT` が指す文脈のイメージを `backend/cmd/<context>/` からビルドする。そのため、文脈を足しても専用の Dockerfile は要らず、Go のモジュールは1つのままである。
+- `make check-all` に含まれる `make smoke` は、Facility と Reservation のイメージを Docker Compose で別々のコンテナとして動かし、HTTP 越しに両方を使って会議室を予約する。文脈は別々のプロセスとして動き、互いの API を通してしか相手に届かない。
+- 各イメージのバイナリは、自分自身のヘルスチェックを行う（`<command> healthcheck`）。ECS のタスクのヘルスチェックも、このコマンドを実行する予定である。
+
 次のチェックは、インフラのマイルストーンで入る。
 
 - 文脈のサービス用の Terraform のモジュール（`infra/modules/context-service`）は、非公開のアクセスの種類しか受け付けない。値を変えるだけでは、文脈の API を公開できない。
 - tflint と Trivy が Terraform のコードを検査する。
 - 公開の入口を作るのが Next.js 用のモジュール（`infra/modules/web`）だけであることを、レビューで確かめる。
 
-それまでは、レビューでこの決定を守る。
+それまでは、決定の残りをレビューで守る。
 
 ## 選択肢の長所と短所
 
@@ -115,4 +120,4 @@ M0 にはインフラのコードがないので、この決定を守らせる�
 
 まだ確かめていないこと：Next.js の公開の入口に、ECS Gateway を通してチーム自身のドメイン名を付ける方法。これはインフラを作るときに確かめる。
 
-<!-- i18n-source: TPL-0014-deploy-each-context-to-ecs.md sha256:7bb9a1ed81ee17d43057ef13760c00cdee8b377a74f288081ff377a2f322655d -->
+<!-- i18n-source: TPL-0014-deploy-each-context-to-ecs.md sha256:78d2800225245a9c3c42cbceb2a2dcdb3ca4aa8d91d2a919ee4d532a737873f6 -->

@@ -24,6 +24,10 @@
 #   DB_OWNER_PASSWORD_<CONTEXT>   password of <context>_owner (default: its name)
 #   PGSCHEMA_PLAN_USER/PASSWORD   a role that may create schemas in the database
 #                                 where pgschema validates the desired state
+#
+# `up`, `init`, and `apply` take a lock on the database, so that two runs at
+# once, such as `make test-integration` and `make smoke` in `make check-all`,
+# do not apply a schema twice at the same time; the second one waits.
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
@@ -31,6 +35,31 @@ cd "$(git rev-parse --show-toplevel)"
 host="${PGHOST:-127.0.0.1}"
 port="${POSTGRES_PORT:-55432}"
 database="${PGDATABASE:-app}"
+
+# A lock per database, in a directory that every checkout on this machine
+# shares, because they share the database too. A lock whose process is gone
+# is taken over.
+lock() {
+  local dir="${TMPDIR:-/tmp}"
+  dir="${dir%/}/db.sh-$host-$port-$database.lock"
+  local tries=0 owner
+  until mkdir "$dir" 2> /dev/null; do
+    owner=$(cat "$dir/pid" 2> /dev/null || true)
+    if [ -n "$owner" ] && ! kill -0 "$owner" 2> /dev/null; then
+      rm -rf "$dir"
+      continue
+    fi
+    tries=$((tries + 1))
+    if [ "$tries" -gt 1500 ]; then
+      echo "db: another db.sh has held $dir for 5 minutes; remove the directory if none runs" >&2
+      exit 1
+    fi
+    sleep 0.2
+  done
+  echo "$$" > "$dir/pid"
+  # shellcheck disable=SC2064 # the path is fixed now
+  trap "rm -rf '$dir'" EXIT
+}
 
 contexts() {
   local file
@@ -118,6 +147,7 @@ init() {
 
 case "${1:-}" in
   up)
+    lock
     start
     init
     ;;
@@ -125,9 +155,11 @@ case "${1:-}" in
     ready || start
     ;;
   init)
+    lock
     init
     ;;
   apply)
+    lock
     apply
     ;;
   plan)

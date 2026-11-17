@@ -1,0 +1,10 @@
+# The build context of backend/Dockerfile: the Go module, without its tests.
+# Everything is left out except what is named here, so a new file never
+# enters an image unseen, and a change to a test does not rebuild the images.
+*
+!go.mod
+!go.sum
+!cmd/
+!internal/
+**/*_test.go
+**/testdata/

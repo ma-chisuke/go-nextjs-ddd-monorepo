@@ -33,11 +33,13 @@ func NewHandler(doc *openapi3.T, logger *slog.Logger, routes Routes) (http.Handl
 	// The health check is not an operation of the API: it belongs to the
 	// platform that runs the service. It answers without touching the
 	// database, so that it never keeps a paused database awake (TPL-0016).
-	root.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
+	// Docker Compose and ECS call it every few seconds, so it stays out of
+	// the access log.
+	root.HandleFunc("GET "+HealthPath, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})
-	root.Handle("/", validate(api))
-	return AccessLog(logger)(Recover(logger)(root)), nil
+	root.Handle("/", AccessLog(logger)(Recover(logger)(validate(api))))
+	return root, nil
 }
 
 // Server timeouts. A slow or stalled client must not hold a connection open.

@@ -227,6 +227,17 @@ EOF
   passes
 }
 
+# The Dockerfile of the backend is in scope, and passes as it is.
+case_lint_dockerfile__backend() {
+  local dockerfile
+  dockerfile=$(sed 's/^FROM gcr.io[^ ]*/FROM ubuntu:latest/' "$COPY/backend/Dockerfile")
+  put backend/Dockerfile "$dockerfile"
+  fails 'backend/Dockerfile'
+  prints 'DL3007'
+  run git checkout -- backend/Dockerfile
+  passes
+}
+
 case_lint_typos() {
   local word
   word=$(printf 't%s' 'eh')
@@ -785,6 +796,37 @@ EOF
   passes
 }
 
+# The Dockerfile of the backend, without its USER, runs as root.
+case_scan_config__backend() {
+  local dockerfile
+  dockerfile=$(grep -v '^USER ' "$COPY/backend/Dockerfile")
+  put backend/Dockerfile "$dockerfile"
+  fails 'DS-0002'
+  run git checkout -- backend/Dockerfile
+  passes
+}
+
+# Base images pinned by digest. The Dockerfile of the backend, with the
+# digests taken out, fails.
+case_lint_image_pins() {
+  local dockerfile
+  dockerfile=$(sed 's/@sha256:[0-9a-f]*//' "$COPY/backend/Dockerfile")
+  put backend/Dockerfile "$dockerfile"
+  fails '[image-pins] the base image docker.io/library/golang:'
+  prints '[image-pins] the base image gcr.io/distroless/'
+  run git checkout -- backend/Dockerfile
+  passes
+  # An earlier stage, scratch, and a build argument are not images to pin.
+  put Dockerfile << 'EOF'
+FROM alpine:3.22@sha256:0000000000000000000000000000000000000000000000000000000000000000 AS base
+FROM base AS build
+FROM scratch
+ARG IMAGE=base
+FROM ${IMAGE}
+EOF
+  passes
+}
+
 case_scan_config__terraform() {
   put infra/modules/sample/main.tf << 'EOF'
 resource "aws_security_group" "ssh" {
@@ -1339,6 +1381,47 @@ case_scan_deps__license() {
   fails 'somepkg is under GPL-3.0-only'
   npm_project_with_license LGPL-3.0-or-later
   passes
+}
+
+# The targets that build the images and start the services would replace the
+# containers of the repository itself, because every copy shares its Docker
+# daemon and its Compose project. So these cases put a stand-in for the Docker
+# CLI first on PATH: PostgreSQL is ready (db-server), and every other command
+# fails and names itself. A change outside the sources of the images skips the
+# target without a call to Docker; a change to them runs the target, which
+# then fails at its first call.
+fake_docker() {
+  mkdir -p "$COPY.bin" || die "cannot create $COPY.bin"
+  cat > "$COPY.bin/docker" << 'EOF'
+#!/usr/bin/env bash
+case "$*" in
+  *pg_isready*) exit 0 ;;
+esac
+echo "fake docker: $*" >&2
+exit 1
+EOF
+  chmod +x "$COPY.bin/docker"
+  printf 'PATH=%s:%s\n' "$COPY.bin" "$PATH"
+}
+
+case_smoke() {
+  local path
+  path=$(fake_docker)
+  put docs/notes.md '# Notes'
+  passes CHECK_SCOPE=changed CHECK_BASE=HEAD "$path"
+  omits 'fake docker'
+  put backend/notes.txt 'A change to the backend.'
+  fails 'fake docker: compose config' CHECK_SCOPE=changed CHECK_BASE=HEAD "$path"
+}
+
+case_scan_images() {
+  local path
+  path=$(fake_docker)
+  put docs/notes.md '# Notes'
+  passes CHECK_SCOPE=changed CHECK_BASE=HEAD "$path"
+  omits 'fake docker'
+  printf '# A change to the system.\n' >> "$COPY/compose.yaml"
+  fails 'fake docker: compose config' CHECK_SCOPE=changed CHECK_BASE=HEAD "$path"
 }
 
 # A staged change to a tool pin or to the checks puts every file in scope.

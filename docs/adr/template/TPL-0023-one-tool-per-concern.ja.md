@@ -43,6 +43,7 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 | Go のコードの整形 | golangci-lint（整形には gofmt と goimports を使う） | `fmt-check-go` |
 | Go のコードの lint（`go vet` を含む） | golangci-lint | `lint-go` |
 | Go のテスト | `go test -race -shuffle=on` | `test-go` |
+| 手元のシステムの端から端まで（Docker Compose のサービスをまたぐ1つのシナリオを HTTP で動かし、すべての応答をその API の文書と照らし合わせる） | `go test -tags smoke` と kin-openapi（`backend/test/smoke`） | `smoke`（check-all） |
 | テストのカバレッジ（外部のサービスを使わずに報告する） | `go test -coverprofile` と octocov | `coverage` と `coverage-report`（CI） |
 | 実際に呼ばれている Go のコードにある既知の脆弱性 | govulncheck | `vuln-go`（check-all） |
 | フロントエンドの lint（機能どうしの境界を含む） | ESLint（eslint-config-next・typescript-eslint・eslint-plugin-boundaries を使う） | `lint-frontend` |
@@ -55,6 +56,7 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 | シェルスクリプトの整形 | shfmt | `fmt-check-shell` |
 | シェルスクリプトの lint | shellcheck | `lint-shell` |
 | Dockerfile の lint | hadolint | `lint-dockerfile` |
+| ベースイメージのダイジェストによる固定（TPL-0024） | `tools/scripts/image-pins.sh` のパターン照合 | `lint-image-pins` |
 | ワークフローの構文 | actionlint | `lint-actions` |
 | ワークフローのセキュリティ | zizmor | `lint-actions-security` |
 | ワークフローの方針（権限とタイムアウト） | ghalint | `lint-actions-policy` |
@@ -83,6 +85,8 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 | 秘密情報 | gitleaks | `lint-secrets` |
 | Dockerfile と Terraform の設定ミス | Trivy | `scan-config` |
 | 依存の脆弱性とライセンス | Trivy | `scan-deps`（check-all） |
+| サービスのイメージの脆弱性 | Trivy | `scan-images`（check-all） |
+| サービスのイメージの SBOM | Trivy | `sbom`（イメージを公開するワークフローが実行する） |
 | エージェントのフック（TPL-0020） | 各フックに見本のイベントを与えるテスト（`tools/tests/hooks_test.sh`） | `test-hooks` |
 | コミットメッセージを検査するスクリプト | 見本の件名を、いくつかのロケールで試すテスト（`tools/tests/commit_msg_test.sh`） | `test-commit-msg` |
 | チェックそのもの（既知の悪い入力で失敗し、既知の良い入力で通るか） | `tools/selftest/selftest.sh` | `selftest`（check-all） |
@@ -166,4 +170,4 @@ Schemathesis は、それを加えるマイルストーンで加わる（TPL-000
 - `make help` が主なターゲットを一覧にし、`make/<area>.mk` が領域ごとのターゲットを持つ。
 - これらの道具の固定は TPL-0022 に、Trivy と GitHub の側のスキャナーを選んだ理由は TPL-0024 にある。
 
-<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:9986f71eb3c9f2df2e95c5a8cf620976a778643d5fb3135f2e0ef0090fa8ad85 -->
+<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:dff6fb9c45774c402cc7f8e8015ef50016aa4441410f2e49fb9668eb3e5b3704 -->
