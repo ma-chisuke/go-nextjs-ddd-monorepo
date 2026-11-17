@@ -16,7 +16,7 @@ lint-sql:
 # tree, linted with the rules for a running migration (.squawk.plan.toml,
 # TPL-0010). In a scratch database; see tools/scripts/db-check.sh.
 lint-sql-plan: | db-server
-	@$(TASK) $@ '$(FILES) "backend/internal/*/schema.sql" "db/*.sql" | $(DB_CHECK) plan'
+	@$(TASK) $@ '$(FILES) "backend/internal/*/schema.sql" "backend/internal/*/schema-changes.allow" "db/*.sql" | $(DB_CHECK) plan'
 
 # Every query prepared in a scratch database that holds the schema of its
 # context, and the rules of each sqlc.yaml (TPL-0011).
