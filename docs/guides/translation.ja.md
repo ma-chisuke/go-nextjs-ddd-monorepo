@@ -7,7 +7,7 @@
 
 - `foo.md` は英語である。`foo.ja.md` はその日本語の対訳で、同じディレクトリに置く。
 - 2つのファイルは同じコミットで変える。先に英語版を変える。
-- 対訳の最後の行に、英語版のどの版を訳したかを書く。
+- 対訳の最後の行に、英語版のどのバージョンを訳したかを書く。
 
   ```markdown
   <!-- i18n-source: foo.md sha256:<foo.md のハッシュ> -->
@@ -16,7 +16,7 @@
   `make i18n-stamp` が、すべての対訳にこの行を書く。実行するのは日本語の本文を直したあとであり、直す前には実行しない。
 - 対訳のない文書があるとき、または対訳に書かれたハッシュが英語版と違うとき、`make check` は失敗する。
 - コード・コメント・コミットメッセージ・OpenAPI の説明は英語だけで書く。
-- `.claude/` と `.github/` の下のファイルは道具への指示なので、英語だけで書く。
+- `.claude/` と `.github/` の下のファイルは道具への指示なので、英語だけで書く。例外は `.claude/skills/japanese-tech-writing/` の日本語の文章規範だけである。これは第三者のファイルで、元のまま置いている。
 
 ## 日本語の書き方
 
@@ -60,12 +60,12 @@
 | local environment | 手元の環境 |
 | supply chain | サプライチェーン |
 | provenance | 来歴 |
-| pin（版を） | 固定する |
+| pin（バージョンを） | 固定する |
 | harness（コーディングエージェントの） | ハーネス |
 | generated code | 生成コード |
 | monorepo | モノレポ |
 | contract（API やイベントの） | 契約 |
-| source（ほかのファイルを生成したり訳したりする元） | 正 |
+| source（生成したファイルの元になるファイル）、authority（2つの文面が食い違ったときに決め手になる文面） | 正 |
 | user（製品の） | ユーザー |
 | heuristic | 経験則 |
 | tactical design pattern | 戦術的なパターン |
@@ -86,7 +86,7 @@
 | source（対訳の） | 原文 |
 | deterministic check | 決定的なチェック |
 | finding（チェックの） | 指摘 |
-| concern（ツールが受け持つ） | 関心事 |
+| concern（道具が受け持つ） | 関心事 |
 | time budget（`make check` の） | 時間の上限 |
 | evaluation（ハーネスの） | 評価 |
 | lockfile | ロックファイル |
@@ -109,5 +109,12 @@
 | environment（GitHub やデプロイ先の） | 環境 |
 | push protection | プッシュ保護 |
 | squash merge | スカッシュマージ |
+| secret scanning（GitHub の） | シークレットスキャン |
+| tool | 道具 |
+| version | バージョン（「英語版」のように文書の言語を指すときは「版」） |
+| linter | リンター |
+| notice（動詞） | 気づく |
+| fake（テストの） | 偽物 |
+| self-test（`make selftest`） | 自己テスト |
 
-<!-- i18n-source: translation.md sha256:1e5c0579c4c6190b7eb363278cdd35f97c2d58bbf0b020ae7a701ec533f117af -->
+<!-- i18n-source: translation.md sha256:6fb588c3f68a2d86dcdac65987c5d0ee94884ebba5bd41aac06d39606377c92e -->

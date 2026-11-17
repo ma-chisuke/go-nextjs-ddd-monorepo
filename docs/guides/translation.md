@@ -16,7 +16,7 @@ This guide tells you how to keep the two in step.
   `make i18n-stamp` writes this line for every translation. Run it after you have brought the Japanese text up to date, never before.
 - `make check` fails when a document has no translation, or when the hash in a translation differs from the English file.
 - Code, comments, commit messages, and the descriptions in OpenAPI documents are in English only.
-- Files under `.claude/` and `.github/` are instructions for tools, and are in English only.
+- Files under `.claude/` and `.github/` are instructions for tools, and are in English only. The one exception is the Japanese writing norm in `.claude/skills/japanese-tech-writing/`, a third-party file kept as it is.
 
 ## How to write the Japanese text
 
@@ -65,7 +65,7 @@ Use these Japanese terms. The table grows when a new term appears; add the term 
 | generated code | 生成コード |
 | monorepo | モノレポ |
 | contract (of an API or an event) | 契約 |
-| source (the file that other files are generated or translated from) | 正 |
+| source (the file that generated files come from), authority (the text that decides when two texts disagree) | 正 |
 | user (of the product) | ユーザー |
 | heuristic | 経験則 |
 | tactical design pattern | 戦術的なパターン |
@@ -109,3 +109,10 @@ Use these Japanese terms. The table grows when a new term appears; add the term 
 | environment (GitHub or deployment) | 環境 |
 | push protection | プッシュ保護 |
 | squash merge | スカッシュマージ |
+| secret scanning (GitHub) | シークレットスキャン |
+| tool | 道具 |
+| version | バージョン（「英語版」のように文書の言語を指すときは「版」） |
+| linter | リンター |
+| notice (verb) | 気づく |
+| fake (in a test) | 偽物 |
+| self-test (`make selftest`) | 自己テスト |

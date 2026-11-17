@@ -10,7 +10,7 @@ Go の API と Next.js の画面を1つのリポジトリに置く製品のた�
 
 | マイルストーン | 中身 | 状態 |
 |---|---|---|
-| M0 | 品質の基盤：道具の版の固定、`make check`、整形と lint、セキュリティの検査、CI、Git フック、エージェントのフック、決定の記録 | 完了 |
+| M0 | 品質の基盤：道具のバージョンの固定、`make check`、整形と lint、セキュリティの検査、CI、Git フック、エージェントのフック、決定の記録 | 完了 |
 | M1 | 中核と補完の文脈を1つずつ。OpenAPI からユースケースとドメインを通って PostgreSQL まで | 予定 |
 | M2 | イベント：送信箱、EventBridge、SQS、手元の AWS エミュレーター | 予定 |
 | M3 | Next.js の画面と、端から端までのテスト | 予定 |
@@ -27,13 +27,13 @@ Go の API と Next.js の画面を1つのリポジトリに置く製品のた�
 - **契約。** OpenAPI を先に書く。Go のサーバーのコードと TypeScript の型を生成し、何層かのチェックで文書とコードの一致を保つ。エラーは RFC 9457 の problem details で返す。
 - **データ。** PostgreSQL 18 のデータベースを1つ使い、文脈ごとにスキーマとロールを分ける。スキーマは宣言的に管理し、クエリには型を付ける。
 - **AWS。** 文脈ごとの ECS、Aurora、EventBridge と SQS、Terraform と Terragrunt を使う。stg と prd はアカウントを分ける。手元の環境は AWS のアカウントなしで動く。
-- **品質。** 1つの関心事に道具を1つ割り当て、`make check` から実行する。道具の版はチェックサムとともに固定する。サプライチェーンを守る設定を入れ、CI では手元と同じコマンドを実行する。
+- **品質。** 1つの関心事に道具を1つ割り当て、`make check` から実行する。道具のバージョンはチェックサムとともに固定する。サプライチェーンを守る設定を入れ、CI では手元と同じコマンドを実行する。
 - **エージェント。** 決まりは、直し方を出力するチェックで守る。`AGENTS.md` は短く保つ。
 - **言語。** 英語を正とし、どの文書にも日本語の対訳を隣に置く。
 
 ## 始め方
 
-Git、GNU Make、[mise](https://mise.jdx.dev/installing-mise.html) が要る。ほかの道具はすべて、mise が `mise.toml` で固定した版を入れる。
+Git、GNU Make、[mise](https://mise.jdx.dev/installing-mise.html) が要る。ほかの道具はすべて、mise が `mise.toml` で固定したバージョンを入れる。
 
 ```sh
 make setup   # 道具、依存、Git フック
@@ -57,7 +57,7 @@ make check   # 速いチェック。数秒で終わる
 2. クローンして `make setup` を実行する。
 3. `make init MODULE=github.com/<owner>/<repository> NAME=<project>` を実行し、モジュールのパスとプロジェクト名を置き換える。
 4. [GitHub の設定のガイド](docs/guides/github-settings.ja.md)に沿って、リポジトリの設定を適用する。
-5. 自分たちの決定を `docs/adr/` に記録する。`docs/adr/template/` はそのままにしておく。そうすれば、自分たちのコピーをテンプレートの新しい版と比べられる。
+5. 自分たちの決定を `docs/adr/` に記録する。`docs/adr/template/` はそのままにしておく。そうすれば、自分たちのコピーをテンプレートの新しいバージョンと比べられる。
 
 ## `make check` が見るもの
 

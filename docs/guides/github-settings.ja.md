@@ -8,7 +8,7 @@ CI が `main` を守れるのはルールセットが CI のチェックを必�
 ## 設定を適用する
 
 リポジトリの管理者としてログインした `gh` が必要である。
-スクリプトは `make` から実行する。`make` が、固定した版の `gh` と `jq` を `PATH` に入れる。
+スクリプトは `make` から実行する。`make` が、固定したバージョンの `gh` と `jq` を `PATH` に入れる。
 
 ```sh
 make github-settings                        # ドライラン：違いを表示するだけで、何も変えない
@@ -77,7 +77,7 @@ make github-settings REPO=<owner>/<name>    # 今いるリポジトリ以外を�
 
 `.github/workflows/release.yml` は、`main` へのプッシュのたびに release-please を実行する。
 release-please は、`chore(main): release <version>` という題のリリース用プルリクエストを開いたままにする。
-このプルリクエストは `CHANGELOG.md` と、`.github/release-please-manifest.json` に書かれた版を更新する。
+このプルリクエストは `CHANGELOG.md` と、`.github/release-please-manifest.json` に書かれたバージョンを更新する。
 このプルリクエストをマージすると、リリースにタグ（`v0.1.0`）が付き、リリースノートが公開される。
 
 release-please は GitHub App のトークンで書き込む。理由は2つある。上の設定が GitHub Actions によるプルリクエストの作成を禁じていること、そして `GITHUB_TOKEN` で開いたプルリクエストでは CI が動かないことである。
@@ -97,11 +97,11 @@ App ができるまで、リリースのワークフローは実行されない�
 
 6. ダウンロードした鍵のファイルを削除する。
 
-次に `main` へプッシュすると、版 0.1.0 の最初のリリース用プルリクエストが開く。
-それ以降は、`main` 上のコミットメッセージが次の版を決める。
+次に `main` へプッシュすると、バージョン 0.1.0 の最初のリリース用プルリクエストが開く。
+それ以降は、`main` 上のコミットメッセージが次のバージョンを決める。
 
-- `feat` はマイナー版を上げる。`fix` とそれ以外の型はパッチ版を上げる。
-- 互換性を壊す変更（`feat!:` や `BREAKING CHANGE:` のフッター）は、版が 1.0.0 未満のあいだはマイナー版を、それ以降はメジャー版を上げる。
+- `feat` はマイナーバージョンを上げる。`fix` とそれ以外の型はパッチバージョンを上げる。
+- 互換性を壊す変更（`feat!:` や `BREAKING CHANGE:` のフッター）は、バージョンが 1.0.0 未満のあいだはマイナーバージョンを、それ以降はメジャーバージョンを上げる。
 - リリースノートに載るのは `feat`、`fix`、`perf`、`revert`、`build`、`ci`、`docs` である。`refactor`、`test`、`style`、`chore` は載らず、これらだけからなるリリースは作られない。
 
 ## Renovate を入れる
@@ -119,7 +119,7 @@ Renovate は `mise.toml` と一緒に `mise.lock` も更新する。
 Renovate のプルリクエストが `mise.toml` を変えて `mise.lock` を変えていないと、CI で `make setup` が失敗する。
 その場合は、そのプルリクエストのブランチをチェックアウトし、`make tools-lock` を実行して、結果をプッシュする。
 
-pnpm と uv は、リリースから3日たっていない版を拒む。今日リリースされたセキュリティの修正も例外ではない。
+pnpm と uv は、リリースから3日たっていないバージョンを拒む。今日リリースされたセキュリティの修正も例外ではない。
 そうした修正をすぐ取り込むには、そのパッケージを `pnpm-workspace.yaml`（`minimumReleaseAgeExclude`）か `pyproject.toml`（`exclude-newer-package`）で決まりから外す。
 リリースから3日たったら、その例外を消す。
 

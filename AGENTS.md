@@ -43,5 +43,5 @@ The app directories appear as the milestones in the README add them.
 - **Decision records.** Do not edit `docs/adr/template/`. Record a new or changed decision in `docs/adr/ADR-NNNN-<slug>.md`. (TPL-0001)
 - **Generated files and lockfiles.** Do not edit them by hand. Change the source and run `make gen`, or use the package manager.
 - **Commits.** Conventional Commits, one purpose per commit. Do not skip hooks.
-- **GitHub Actions.** A workflow calls `make` and nothing else. Actions are pinned to a commit SHA. (TPL-0018, TPL-0024)
+- **GitHub Actions.** After checkout and the setup of mise, a workflow step calls `make` and nothing else. Actions are pinned to a commit SHA. (TPL-0018, TPL-0024)
 - **Never** read `.env` files, force push, push to `main`, or apply infrastructure to prd.

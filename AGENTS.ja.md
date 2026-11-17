@@ -37,13 +37,13 @@
 
 ## 一般的な既定と違う決まり
 
-- **道具。** 道具をグローバルに入れない。`npx`・`go install`・`pip` で実行しない。`mise.toml`（そのあと `make tools-lock`）・`package.json`・`pyproject.toml`・`tools/go.mod` のどれかで版を固定し、`make` から実行する。（TPL-0022）
+- **道具。** 道具をグローバルに入れない。`npx`・`go install`・`pip` で実行しない。`mise.toml`（そのあと `make tools-lock`）・`package.json`・`pyproject.toml`・`tools/go.mod` のどれかでバージョンを固定し、`make` から実行する。（TPL-0022）
 - **1つの関心事に道具は1つ。** lint や整形の道具を足す前に、固定済みの道具がその関心事を扱っていないかを確かめる。（TPL-0023）
 - **文書。** `foo.md` は英語で、これを正とする。`foo.ja.md` はその日本語の対訳である。2つを同じコミットで変え、`make i18n-stamp` を実行する。コード・コメント・コミットメッセージは英語だけで書く。（TPL-0021、[ガイド](docs/guides/translation.ja.md)）
 - **決定の記録。** `docs/adr/template/` を書き換えない。新しい決定や決定の変更は `docs/adr/ADR-NNNN-<slug>.md` に書く。（TPL-0001）
 - **生成物とロックファイル。** 手で書き換えない。元を直して `make gen` を実行するか、パッケージマネージャーを使う。
 - **コミット。** Conventional Commits に従い、1つのコミットの目的は1つにする。フックを飛ばさない。
-- **GitHub Actions。** ワークフローは `make` だけを呼ぶ。Action はコミット SHA で固定する。（TPL-0018、TPL-0024）
+- **GitHub Actions。** ワークフローのステップは、チェックアウトと mise の準備のあとは `make` だけを呼ぶ。Action はコミット SHA で固定する。（TPL-0018、TPL-0024）
 - **禁止。** `.env` を読まない。force push をしない。`main` に push しない。prd にインフラを適用しない。
 
-<!-- i18n-source: AGENTS.md sha256:a2988957ff3db4ed46fde85c4d015dd1355ec099698a59fda55c44d257e6a59c -->
+<!-- i18n-source: AGENTS.md sha256:786760d9029bdfa80139728de0376d709180a124d80880a746b83671c1246ac3 -->
