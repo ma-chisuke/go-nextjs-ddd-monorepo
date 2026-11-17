@@ -23,14 +23,16 @@
 
 | パス | 中身 |
 |---|---|
-| `backend/` | Go の API。モジュールは1つ。区切られた文脈ごとに `internal/<context>/` を置く。 |
+| `backend/` | Go の API。モジュールは1つ。区切られた文脈ごとに `internal/<context>/` を置く。変える前に [backend/AGENTS.ja.md](backend/AGENTS.ja.md) を読む。 |
 | `frontend/` | Next.js。文脈ごとに `src/features/<context>/` を置く。 |
 | `contracts/` | OpenAPI の文書とイベントのスキーマ。生成コードの元になる。 |
 | `db/`、`infra/` | データベースの初期設定と、Terraform・Terragrunt。 |
 | `tools/` | このリポジトリのチェックと生成器（Go のモジュールとスクリプト）。 |
 | `make/` | make のターゲット。分野ごとに1ファイル。 |
 | `docs/adr/` | 決定の記録。`template/` はテンプレートのもの。 |
-| `docs/guides/` | 繰り返す作業のやり方。 |
+| `docs/contexts/` | 区切られた文脈ごとの README と用語集。 |
+| `docs/problems/` | API が返す problem の種類ごとのページ。 |
+| `docs/guides/` | エンドポイントを足す、スキーマを変える、といった繰り返す作業のやり方。`.claude/skills/` のスキルはこれに従う。 |
 | `.claude/` | Claude Code のフック・スキル・サブエージェント。 |
 
 アプリケーションのディレクトリは、README のマイルストーンが進むと増える。
@@ -41,9 +43,10 @@
 - **1つの関心事に道具は1つ。** lint や整形の道具を足す前に、固定済みの道具がその関心事を扱っていないかを確かめる。（TPL-0023）
 - **文書。** `foo.md` は英語で、これを正とする。`foo.ja.md` はその日本語の対訳である。2つを同じコミットで変え、`make i18n-stamp` を実行する。コード・コメント・コミットメッセージは英語だけで書く。（TPL-0021、[ガイド](docs/guides/translation.ja.md)）
 - **決定の記録。** `docs/adr/template/` を書き換えない。新しい決定や決定の変更は `docs/adr/ADR-NNNN-<slug>.md` に書く。（TPL-0001）
-- **生成物とロックファイル。** 手で書き換えない。元を直して `make gen` を実行するか、パッケージマネージャーを使う。
+- **生成物とロックファイル。** 手で書き換えない。元を直して `make gen` を実行するか、パッケージマネージャーを使う。`schema.sql` を変えたときは、`make gen-db-docs` も実行する（Docker が要る）。
+- **スキーマ。** 変えるのは文脈の `schema.sql` だけであり、マイグレーションのファイルはない。`schema-changes.allow` に自分の判断で行を足さない。危険な SQL 文を通すかどうかは、レビューで決めることである。（TPL-0010）
 - **コミット。** Conventional Commits に従い、1つのコミットの目的は1つにする。フックを飛ばさない。
 - **GitHub Actions。** ワークフローのステップは、チェックアウトと mise の準備のあとは `make` だけを呼ぶ。Action はコミット SHA で固定する。（TPL-0018、TPL-0024）
 - **禁止。** `.env` を読まない。force push をしない。`main` に push しない。prd にインフラを適用しない。
 
-<!-- i18n-source: AGENTS.md sha256:786760d9029bdfa80139728de0376d709180a124d80880a746b83671c1246ac3 -->
+<!-- i18n-source: AGENTS.md sha256:6cf430b804a7dd5e1672d1fb7aff73dc605307b58a2b9a4a1589e5ee2d510a0f -->

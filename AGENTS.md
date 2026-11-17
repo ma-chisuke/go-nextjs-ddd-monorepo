@@ -23,14 +23,16 @@ The reason for a rule is in the decision record that the rule cites ([docs/adr/]
 
 | Path | Content |
 |---|---|
-| `backend/` | Go API, one module. `internal/<context>/` per bounded context. |
+| `backend/` | Go API, one module. `internal/<context>/` per bounded context. Read [backend/AGENTS.md](backend/AGENTS.md) before you change it. |
 | `frontend/` | Next.js. `src/features/<context>/` per bounded context. |
 | `contracts/` | OpenAPI documents and event schemas. The source of generated code. |
 | `db/`, `infra/` | Database bootstrap; Terraform and Terragrunt. |
 | `tools/` | Checks and generators of this repository (Go module, scripts). |
 | `make/` | One file of make targets per area. |
 | `docs/adr/` | Decision records. `template/` belongs to the template. |
-| `docs/guides/` | How to do recurring work. |
+| `docs/contexts/` | The README and the glossary of each bounded context. |
+| `docs/problems/` | The page of each problem type that the APIs answer with. |
+| `docs/guides/` | How to do recurring work, such as adding an endpoint or changing a schema. The skills in `.claude/skills/` follow them. |
 | `.claude/` | Hooks, skills, and subagents for Claude Code. |
 
 The app directories appear as the milestones in the README add them.
@@ -41,7 +43,8 @@ The app directories appear as the milestones in the README add them.
 - **One tool per concern.** Before you add a linter or a formatter, check that no pinned tool covers the concern. (TPL-0023)
 - **Documents.** `foo.md` is English and is the source. `foo.ja.md` is its Japanese translation. Change both in one commit, then run `make i18n-stamp`. Code, comments, and commit messages are English only. (TPL-0021, [guide](docs/guides/translation.md))
 - **Decision records.** Do not edit `docs/adr/template/`. Record a new or changed decision in `docs/adr/ADR-NNNN-<slug>.md`. (TPL-0001)
-- **Generated files and lockfiles.** Do not edit them by hand. Change the source and run `make gen`, or use the package manager.
+- **Generated files and lockfiles.** Do not edit them by hand. Change the source and run `make gen`, or use the package manager. After a change to a `schema.sql`, also run `make gen-db-docs` (needs Docker).
+- **Schemas.** Change only the `schema.sql` of a context; there are no migration files. Never add a line to `schema-changes.allow` on your own: letting a dangerous statement through is a decision of review. (TPL-0010)
 - **Commits.** Conventional Commits, one purpose per commit. Do not skip hooks.
 - **GitHub Actions.** After checkout and the setup of mise, a workflow step calls `make` and nothing else. Actions are pinned to a commit SHA. (TPL-0018, TPL-0024)
 - **Never** read `.env` files, force push, push to `main`, or apply infrastructure to prd.
