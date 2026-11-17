@@ -107,12 +107,16 @@ func TestCommand(t *testing.T) {
 		wantCode int
 		wantErr  string
 		wantRun  bool
+		wantMode bool
 	}{
 		{name: "runs the service", wantCode: 0, wantRun: true},
 		{name: "reports the error of the service", run: failing, wantCode: 1, wantErr: "svc: the database is gone", wantRun: true},
 		{name: "checks the health of a healthy service", args: []string{"healthcheck"}, addr: healthy, wantCode: 0},
 		{name: "checks the health of a service that is down", args: []string{"healthcheck"}, addr: "127.0.0.1:1", wantCode: 1, wantErr: "svc: the health check failed"},
-		{name: "refuses another argument", args: []string{"serve"}, wantCode: 2, wantErr: "usage: svc [healthcheck]"},
+		{name: "runs a mode", args: []string{"relay"}, wantCode: 0, wantMode: true},
+		{name: "reports the error of a mode", args: []string{"relay"}, run: failing, wantCode: 1, wantErr: "svc: the database is gone", wantMode: true},
+		{name: "refuses another argument", args: []string{"serve"}, wantCode: 2, wantErr: "usage: svc [relay|healthcheck]"},
+		{name: "refuses a second argument", args: []string{"relay", "now"}, wantCode: 2, wantErr: "usage: svc [relay|healthcheck]"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -127,8 +131,13 @@ func TestCommand(t *testing.T) {
 				ran = true
 				return tt.run
 			}
+			ranMode := false
+			relay := Mode{Name: "relay", Run: func(context.Context, func(string) string, io.Writer) error {
+				ranMode = true
+				return tt.run
+			}}
 			var stderr bytes.Buffer
-			code := command(t.Context(), "svc", tt.args, getenv, io.Discard, &stderr, run)
+			code := command(t.Context(), "svc", tt.args, getenv, io.Discard, &stderr, run, relay)
 			if code != tt.wantCode {
 				t.Errorf("exit code = %d, want %d (stderr: %s)", code, tt.wantCode, stderr.String())
 			}
@@ -137,6 +146,9 @@ func TestCommand(t *testing.T) {
 			}
 			if ran != tt.wantRun {
 				t.Errorf("ran the service: %v, want %v", ran, tt.wantRun)
+			}
+			if ranMode != tt.wantMode {
+				t.Errorf("ran the mode: %v, want %v", ranMode, tt.wantMode)
 			}
 		})
 	}
