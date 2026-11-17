@@ -80,6 +80,10 @@ jobs:
   # or PostgreSQL, which make starts with the Docker Compose of the runner.
   # On a pull request it checks the files that the pull request changes; on
   # main it checks every file.
+  # The images of the services are built here too, with the BuildKit and the
+  # Compose of the runner, for the smoke test and the image scan. Their layers
+  # are not cached between runs: a cache would need another action to trust,
+  # and a cold build of both images takes one to two minutes.
   full:
     name: full
     runs-on: ubuntu-24.04
