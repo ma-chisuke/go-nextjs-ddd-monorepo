@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-17
+date: 2026-11-18
 ---
 
 # TPL-0009: Use one PostgreSQL 18 database, with a schema and roles for each context
@@ -41,11 +41,11 @@ The rules are as follows.
 
 - One PostgreSQL 18 database serves every context.
 - Each context owns one schema and two roles:
-  - an owner role, which owns the schema and is the only role that changes it (TPL-0010);
-  - a runtime role, which the context's services connect as. It can read and write the rows in its own schema, cannot change the schema, and has no privileges in any other schema.
+  - an owner role, `<context>_owner`, which owns the schema and is the only role that changes it (TPL-0010);
+  - a runtime role, `<context>_runtime`, which the context's services connect as. It can read and write the rows in its own schema, cannot change the schema, and has no privileges in any other schema.
 - No foreign key, view, or query crosses from one context's schema into another's. Data that another context needs travels through APIs and events (TPL-0005).
 - No transaction spans two contexts. A change that another context must learn about is published as an event (TPL-0013).
-- `db/bootstrap.sql` creates what the schema tool does not manage: the schemas, the roles, and the extensions. One extension is `btree_gist`, which the exclusion constraint of the sample needs.
+- `db/bootstrap.sql` creates what the schema tool does not manage: the schemas, the roles, and the extensions. The extensions live in a schema of their own, `extensions`, which is on the search path of every role, so that no context owns them. One extension is `btree_gist`, which the exclusion constraint of the sample needs.
 
 ### Consequences
 
@@ -59,15 +59,12 @@ The rules are as follows.
 
 ### Confirmation
 
-Nothing enforces this decision yet: M0 has no schema, no query, and no role.
-The following checks arrive with the first bounded context.
+The following checks enforce this decision.
 
 - sqlc is configured per context and reads only that context's `schema.sql`, so a query on another context's table fails at generation (TPL-0011).
 - The privileges of the roles make such a query fail at run time.
-- A check of each `schema.sql` fails on a reference to another schema, such as a foreign key.
-- An integration test connects as the runtime role of one context and asserts that reading the schema of another context fails.
-
-Until then, review enforces the decision.
+- `lint-arch`, with the rule `arch/schema-reference`, fails when the `schema.sql` or a query of a context names the schema of another context, as a foreign key across contexts would.
+- The integration tests of each context (`test-integration`, in `make check-all`) connect as its runtime role, and assert that it can neither read the schema of another context, nor change its own schema, nor create objects in `public`.
 
 ## Pros and Cons of the Options
 
@@ -100,5 +97,5 @@ Until then, review enforces the decision.
 ## More Information
 
 - [Schemas](https://www.postgresql.org/docs/18/ddl-schemas.html) and [privileges](https://www.postgresql.org/docs/18/ddl-priv.html) in the PostgreSQL 18 documentation
-- The exclusion constraint of the sample is `EXCLUDE USING gist (room_id WITH =, period WITH &&)`. A GiST index supports `=` on a column such as `room_id` only with the extension `btree_gist`.
+- The exclusion constraint of the sample is written over the expression `tstzrange(starts_at, ends_at, '[)')`, not over a column `period`: `EXCLUDE USING gist (room_id WITH =, tstzrange(starts_at, ends_at, '[)') WITH &&) WHERE (status = 'confirmed')`. A GiST index supports `=` on a column such as `room_id` only with the extension `btree_gist`.
 - The schema tool is pgschema (TPL-0010), the query generator is sqlc (TPL-0011), and the database on AWS is Aurora PostgreSQL (TPL-0016).

@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-17
+date: 2026-11-18
 ---
 
 # TPL-0012: Use UUIDv7 for primary keys
@@ -40,7 +40,8 @@ The rules are as follows.
 
 - Every primary key is a UUID of version 7 (RFC 9562), in a column of type `uuid`, never `text`.
 - In every context, the use case creates the id in Go, before it writes anything. In a core context, the use case gets the id from a port and passes it to the domain; the domain does not generate ids (TPL-0004), and tests give fixed ids. In a context that uses transaction scripts, the use case calls the same generator.
-- Each primary key column also declares `DEFAULT uuidv7()`, with the function built into PostgreSQL 18, for rows that are inserted outside the application, such as seed data or a manual repair.
+- The domain of a core context holds an id as a type of its own over 16 bytes, such as `ReservationID`, because the domain imports no third-party module (TPL-0004). The adapters convert it to and from the UUID type of the libraries that they use.
+- A primary key that the table itself creates also declares `DEFAULT uuidv7()`, with the function built into PostgreSQL 18, for rows that are inserted outside the application, such as seed data or a manual repair. A primary key that is also a foreign key takes its value from the row that it refers to, and has no default: for example, the idempotency keys of Reservation, whose key is the id of the reservation that the request booked.
 - In APIs and events, an id is the standard text form of a UUID.
 
 ### Consequences
@@ -55,9 +56,8 @@ The rules are as follows.
 
 ### Confirmation
 
-M0 has no schema and no domain code, so nothing enforces this decision yet.
-With the first bounded context, a check of each `schema.sql` fails when a primary key is not of type `uuid`.
-Review checks that every use case creates new ids in Go, that a core context takes them from a port, and that its domain does not generate them.
+No check enforces this decision yet: no check fails when a primary key is not of type `uuid`.
+Review checks the type of each primary key, that every use case creates new ids in Go, that a core context takes them from a port, and that its domain does not generate them.
 
 ## Pros and Cons of the Options
 
