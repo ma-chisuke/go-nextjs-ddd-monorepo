@@ -965,6 +965,17 @@ case_lint_sql_plan() {
   prints "$facility_postgres/schema.sql"
   rooms_schema 'capacity bigint NOT NULL'
   fails '[changing-column-type]' CHECK_BASE=HEAD
+  # A dangerous statement that a person reviewed is let through by a line in
+  # the allowance file of the context, and only while the plan holds it.
+  rooms_schema 'capacity integer NOT NULL' 'floor integer NOT NULL'
+  put "$facility_postgres/schema-changes.allow" 'adding-required-field | ALTER TABLE rooms ADD COLUMN floor integer NOT NULL | the table is empty in every environment'
+  passes CHECK_BASE=HEAD
+  put "$facility_postgres/schema-changes.allow" 'adding-required-field | ALTER TABLE rooms ADD COLUMN floor integer NOT NULL'
+  fails '[sql-plan/allowance-format]' CHECK_BASE=HEAD
+  rooms_schema 'capacity integer NOT NULL' 'floor integer'
+  put "$facility_postgres/schema-changes.allow" 'adding-required-field | ALTER TABLE rooms ADD COLUMN floor integer NOT NULL | the table is empty in every environment'
+  fails '[sql-plan/unused-allowance]' CHECK_BASE=HEAD
+  drop "$facility_postgres/schema-changes.allow"
   # Without a base (no origin/main in the copy), nothing is compared.
   passes
 }

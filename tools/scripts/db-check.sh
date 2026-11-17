@@ -159,7 +159,7 @@ line_of() {
 }
 
 plan() {
-  local list base short context schema plan status=0
+  local list base short context schema plan allow allow_file findings status=0
   list=$(selected)
   [ -n "$list" ] || return 0
   base=$(tools/scripts/merge-base.sh)
@@ -193,15 +193,25 @@ plan() {
       echo "$schema: no change since $short"
       continue
     fi
-    if squawk --config=.squawk.plan.toml --reporter=json "$plan" > "$tmp/squawk.json" 2> "$tmp/squawk.err"; then
-      echo "$schema: the plan passes; see $plan"
+    squawk --config=.squawk.plan.toml --reporter=json "$plan" > "$tmp/squawk.json" 2> "$tmp/squawk.err" || true
+    if ! jq -e 'type == "array"' "$tmp/squawk.json" > /dev/null 2>&1; then
+      cat "$tmp/squawk.json" "$tmp/squawk.err"
+      status=1
       continue
     fi
-    status=1
-    if jq -e 'type == "array" and length > 0' "$tmp/squawk.json" > /dev/null 2>&1; then
-      jq -r --arg schema "$schema" --rawfile sql "$plan" -f tools/squawk/plan-findings.jq "$tmp/squawk.json"
+    # The dangerous statements that a person reviewed for this change.
+    allow_file="$(dir_of "$context")/schema-changes.allow"
+    allow=""
+    if [ -f "$allow_file" ]; then
+      allow=$(cat "$allow_file")
+    fi
+    findings=$(jq -r --arg schema "$schema" --rawfile sql "$plan" --arg allow "$allow" --arg allowfile "$allow_file" \
+      -f tools/squawk/plan-findings.jq "$tmp/squawk.json")
+    if [ -z "$findings" ]; then
+      echo "$schema: the plan passes; see $plan"
     else
-      cat "$tmp/squawk.json" "$tmp/squawk.err"
+      printf '%s\n' "$findings"
+      status=1
     fi
   done
   return "$status"
