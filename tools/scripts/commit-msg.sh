@@ -31,14 +31,16 @@ case "$subject" in
   'Merge '* | 'Revert "'* | 'fixup! '* | 'squash! '* | 'amend! '*) exit 0 ;;
 esac
 
-pattern="^(${types})(\([a-z0-9][a-z0-9._/-]*\))?!?: [^ ].*$"
+# Character classes, not ranges: in most locales other than C, a range such as
+# [A-Z] also matches lower-case letters.
+pattern="^(${types})(\([[:lower:][:digit:]][[:lower:][:digit:]._/-]*\))?!?: [^ ].*$"
 if ! [[ $subject =~ $pattern ]]; then
   fail format "the subject is not '<type>[(<scope>)][!]: <description>'"
 fi
 
 description=${subject#*: }
 case "$description" in
-  [A-Z][a-z]*) fail case "the description starts with a capital letter" ;;
+  [[:upper:]][[:lower:]]*) fail case "the description starts with a capital letter" ;;
 esac
 case "$description" in
   *.) fail period "the description ends with a period" ;;

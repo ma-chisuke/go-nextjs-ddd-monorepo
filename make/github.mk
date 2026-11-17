@@ -3,6 +3,13 @@
 
 .PHONY: codeql-languages lint-pr-title github-settings
 
+CHECK_TARGETS += test-commit-msg
+
+# The script behind the commit-msg hook and lint-pr-title, tried on good and
+# bad subjects in several locales.
+test-commit-msg:
+	@$(TASK) $@ 'if [ -n "$$($(FILES) "tools/scripts/commit-msg.sh" "tools/tests/commit_msg_test.sh")" ]; then tools/tests/commit_msg_test.sh; fi'
+
 # The CodeQL languages that have source files, as the JSON matrix of codeql.yml.
 codeql-languages:
 	@tools/github/codeql-languages.sh

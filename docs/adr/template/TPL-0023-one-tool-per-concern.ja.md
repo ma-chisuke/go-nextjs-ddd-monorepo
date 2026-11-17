@@ -79,6 +79,7 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 | Dockerfile と Terraform の設定ミス | Trivy | `scan-config` |
 | 依存の脆弱性とライセンス | Trivy | `scan-deps`（check-all） |
 | エージェントのフック（TPL-0020） | 各フックに見本のイベントを与えるテスト（`tools/tests/hooks_test.sh`） | `test-hooks` |
+| コミットメッセージを検査するスクリプト | 見本の件名を、いくつかのロケールで試すテスト（`tools/tests/commit_msg_test.sh`） | `test-commit-msg` |
 | チェックそのもの（既知の悪い入力で失敗し、既知の良い入力で通るか） | `tools/selftest/selftest.sh` | `selftest`（check-all） |
 | コミットメッセージとプルリクエストの題（Conventional Commits） | `tools/scripts/commit-msg.sh` | lefthook の `commit-msg` フックと、`lint-pr-title`（CI） |
 
@@ -157,4 +158,4 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 - `make help` が主なターゲットを一覧にし、`make/<area>.mk` が領域ごとのターゲットを持つ。
 - これらの道具の固定は TPL-0022 に、Trivy と GitHub の側のスキャナーを選んだ理由は TPL-0024 にある。
 
-<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:a30f5f4e5739c19a2e59474a21b3f967979da87c54b4ba3087e79447e6469865 -->
+<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:c2cf0e20527f99927e4edc6b3f14becb9b4101c3d8104923c59827446990fb3b -->

@@ -42,8 +42,8 @@ f162bbe4b59de9c0c1f64b46685d7bffebac6d52c73374071cc7418fe6cb657a  TPL-0021-engli
 7ad6bb6eec82486ee93bd701460a281b5dc5561f6c889802728a9ced821126bb  TPL-0021-english-source-japanese-translation.md
 a67885614c5b88fa043d63f4d2e109ddb586cd9092d33da829f5a0ef25663e77  TPL-0022-pin-tool-versions-with-mise.ja.md
 a3b955199ef692e30a4cea7ad3822efc7628ed6e9e515817a62d37de601d0634  TPL-0022-pin-tool-versions-with-mise.md
-0755d638cd433baa1f16e72277a542563ac864febeda98ec2f4ce22a8a61b755  TPL-0023-one-tool-per-concern.ja.md
-a30f5f4e5739c19a2e59474a21b3f967979da87c54b4ba3087e79447e6469865  TPL-0023-one-tool-per-concern.md
+286cc180530f68dd9e15b2651e908a9b5fe1e5c0e93d82193be09597da4e7b58  TPL-0023-one-tool-per-concern.ja.md
+c2cf0e20527f99927e4edc6b3f14becb9b4101c3d8104923c59827446990fb3b  TPL-0023-one-tool-per-concern.md
 f26ff038c1b522429185a3a83c2bfb28167093ae2f332e7a6d801ba6895ae560  TPL-0024-supply-chain-defenses.ja.md
 8f6c5e5a5f028d36090671a525ecc9251ffe9fe4ef80a4508d36d50d5bed263d  TPL-0024-supply-chain-defenses.md
 a834de1084de3e578500b8604a76df2efa0a878f353a21189cba8795e17f66d8  TPL-0025-dependency-updates-with-renovate.ja.md
