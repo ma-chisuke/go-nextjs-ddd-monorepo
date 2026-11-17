@@ -46,7 +46,7 @@ include make/*.mk
 
 .PHONY: help
 help: ## Show the main targets
-	@grep -hE '^[a-z][a-z0-9-]*:.*## ' $(MAKEFILE_LIST) | sort | awk -F ':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
+	@grep -hE '^[a-z][a-z0-9-]*:.*## ' $(MAKEFILE_LIST) | sort | awk -F ':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
 
 .PHONY: setup
 setup: ## Install the pinned tools and dependencies, and the Git hooks
