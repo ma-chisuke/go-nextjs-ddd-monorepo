@@ -25,8 +25,10 @@ scan-config:
 #   Vulnerabilities: every dependency, including development tools, because
 #     they run on laptops and in CI.
 #   Licenses: only what ships with the product. Trivy reads the license of an
-#     npm package from node_modules, so that directory is not skipped here.
+#     npm package from node_modules and that of a Go module from the module
+#     cache, so node_modules is not skipped and the Go modules are downloaded.
 scan-deps:
 	@$(TASK) $@ 'mkdir -p .cache/trivy-docker-config; \
+		for m in $(GO_MODULES); do (cd "$$m" && go mod download); done; \
 		$(TRIVY_ENV) trivy fs $(TRIVY_REPORT) --scanners vuln --include-dev-deps $(TRIVY_SKIP) .; \
 		$(TRIVY_ENV) trivy fs $(TRIVY_REPORT) --scanners license $(TRIVY_SKIP) .'
