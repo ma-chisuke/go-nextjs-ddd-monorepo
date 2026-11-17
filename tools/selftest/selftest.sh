@@ -1383,27 +1383,45 @@ case_scan_deps__license() {
   passes
 }
 
-# The targets that build the images and start the system share the Docker
-# daemon and the Compose project of the repository with every copy, so a
-# case never lets them reach the daemon: DOCKER_HOST names a socket that does
-# not exist. A change outside the sources of the images skips the target, and
-# a change to them runs it, which fails without a daemon.
-no_docker() {
-  printf 'DOCKER_HOST=unix://%s/no-docker.sock\n' "$COPY"
+# The targets that build the images and start the services would replace the
+# containers of the repository itself, because every copy shares its Docker
+# daemon and its Compose project. So these cases put a stand-in for the Docker
+# CLI first on PATH: PostgreSQL is ready (db-server), and every other command
+# fails and names itself. A change outside the sources of the images skips the
+# target without a call to Docker; a change to them runs the target, which
+# then fails at its first call.
+fake_docker() {
+  mkdir -p "$COPY.bin" || die "cannot create $COPY.bin"
+  cat > "$COPY.bin/docker" << 'EOF'
+#!/usr/bin/env bash
+case "$*" in
+  *pg_isready*) exit 0 ;;
+esac
+echo "fake docker: $*" >&2
+exit 1
+EOF
+  chmod +x "$COPY.bin/docker"
+  printf 'PATH=%s:%s\n' "$COPY.bin" "$PATH"
 }
 
 case_smoke() {
+  local path
+  path=$(fake_docker)
   put docs/notes.md '# Notes'
-  passes CHECK_SCOPE=changed CHECK_BASE=HEAD "$(no_docker)"
+  passes CHECK_SCOPE=changed CHECK_BASE=HEAD "$path"
+  omits 'fake docker'
   put backend/notes.txt 'A change to the backend.'
-  fails 'Cannot connect to the Docker daemon' CHECK_SCOPE=changed CHECK_BASE=HEAD "$(no_docker)"
+  fails 'fake docker: compose config' CHECK_SCOPE=changed CHECK_BASE=HEAD "$path"
 }
 
 case_scan_images() {
+  local path
+  path=$(fake_docker)
   put docs/notes.md '# Notes'
-  passes CHECK_SCOPE=changed CHECK_BASE=HEAD "$(no_docker)"
+  passes CHECK_SCOPE=changed CHECK_BASE=HEAD "$path"
+  omits 'fake docker'
   printf '# A change to the system.\n' >> "$COPY/compose.yaml"
-  fails 'Cannot connect to the Docker daemon' CHECK_SCOPE=changed CHECK_BASE=HEAD "$(no_docker)"
+  fails 'fake docker: compose config' CHECK_SCOPE=changed CHECK_BASE=HEAD "$path"
 }
 
 # A staged change to a tool pin or to the checks puts every file in scope.
