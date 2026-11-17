@@ -8,7 +8,7 @@
 // not in those of the Facility context that owns rooms.
 package domain
 
-import "encoding/hex"
+import "fmt"
 
 // ReservationID identifies a reservation. It is a UUID version 7, made by the
 // use case before the reservation exists (TPL-0012).
@@ -30,15 +30,5 @@ func (id RoomID) String() string {
 
 // uuidText writes 16 bytes as xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (RFC 9562).
 func uuidText(b [16]byte) string {
-	var s [36]byte
-	hex.Encode(s[0:8], b[0:4])
-	s[8] = '-'
-	hex.Encode(s[9:13], b[4:6])
-	s[13] = '-'
-	hex.Encode(s[14:18], b[6:8])
-	s[18] = '-'
-	hex.Encode(s[19:23], b[8:10])
-	s[23] = '-'
-	hex.Encode(s[24:36], b[10:16])
-	return string(s[:])
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
 }
