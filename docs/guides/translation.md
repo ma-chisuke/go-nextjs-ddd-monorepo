@@ -118,7 +118,16 @@ Use these Japanese terms. The table grows when a new term appears; add the term 
 | self-test (`make selftest`) | 自己テスト |
 | room | 会議室 |
 | capacity (of a room) | 定員 |
-| opening hours | 使える時間帯 |
+| opening hours | 利用時間 |
 | time zone | タイムゾーン |
 | time of day | 時刻 |
 | exported (Go) | エクスポートされた |
+| reservation | 予約 |
+| book (a room) | 予約する |
+| reschedule | 変更する |
+| cancel (a reservation) | 取り消す |
+| period (of a reservation) | 時間帯 |
+| attendees | 参加人数 |
+| organizer | 主催者 |
+| confirmed (reservation) | 確定 |
+| idempotency key | 冪等キー |

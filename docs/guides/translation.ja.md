@@ -118,9 +118,18 @@
 | self-test（`make selftest`） | 自己テスト |
 | room | 会議室 |
 | capacity（会議室の） | 定員 |
-| opening hours | 使える時間帯 |
+| opening hours | 利用時間 |
 | time zone | タイムゾーン |
 | time of day | 時刻 |
 | exported（Go の） | エクスポートされた |
+| reservation | 予約 |
+| book（会議室を） | 予約する |
+| reschedule | 変更する |
+| cancel（予約を） | 取り消す |
+| period（予約の） | 時間帯 |
+| attendees | 参加人数 |
+| organizer | 主催者 |
+| confirmed（予約が） | 確定 |
+| idempotency key | 冪等キー |
 
-<!-- i18n-source: translation.md sha256:1c918e45b04af3bbc351759c51a78c6207a55e789c1d5ba2c5ec431be003f38e -->
+<!-- i18n-source: translation.md sha256:587a434c294b513d6683ef168775fcd4f70ffd0899083b085c768145b65588be -->
