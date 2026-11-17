@@ -1383,6 +1383,29 @@ case_scan_deps__license() {
   passes
 }
 
+# The targets that build the images and start the system share the Docker
+# daemon and the Compose project of the repository with every copy, so a
+# case never lets them reach the daemon: DOCKER_HOST names a socket that does
+# not exist. A change outside the sources of the images skips the target, and
+# a change to them runs it, which fails without a daemon.
+no_docker() {
+  printf 'DOCKER_HOST=unix://%s/no-docker.sock\n' "$COPY"
+}
+
+case_smoke() {
+  put docs/notes.md '# Notes'
+  passes CHECK_SCOPE=changed CHECK_BASE=HEAD "$(no_docker)"
+  put backend/notes.txt 'A change to the backend.'
+  fails 'Cannot connect to the Docker daemon' CHECK_SCOPE=changed CHECK_BASE=HEAD "$(no_docker)"
+}
+
+case_scan_images() {
+  put docs/notes.md '# Notes'
+  passes CHECK_SCOPE=changed CHECK_BASE=HEAD "$(no_docker)"
+  printf '# A change to the system.\n' >> "$COPY/compose.yaml"
+  fails 'Cannot connect to the Docker daemon' CHECK_SCOPE=changed CHECK_BASE=HEAD "$(no_docker)"
+}
+
 # A staged change to a tool pin or to the checks puts every file in scope.
 case_scope__pins() {
   TARGET=lint-shell
