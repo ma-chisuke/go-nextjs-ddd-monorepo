@@ -35,7 +35,9 @@ func AssertDocumented(t *testing.T, kinds ...problem.Type) {
 }
 
 // repositoryRoot walks up from the working directory of the test to the
-// directory that holds AGENTS.md.
+// directory that holds docs/problems/. It looks for that directory itself,
+// because other files of the root, such as AGENTS.md, also exist in
+// subdirectories (backend/AGENTS.md).
 func repositoryRoot(t *testing.T) string {
 	t.Helper()
 	dir, err := os.Getwd()
@@ -43,12 +45,12 @@ func repositoryRoot(t *testing.T) string {
 		t.Fatal(err)
 	}
 	for {
-		if _, err := os.Stat(filepath.Join(dir, "AGENTS.md")); err == nil {
+		if info, err := os.Stat(filepath.Join(dir, "docs", "problems")); err == nil && info.IsDir() {
 			return dir
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			t.Fatal("problemtest: no AGENTS.md above the working directory, so the repository root is unknown")
+			t.Fatal("problemtest: no docs/problems/ above the working directory, so the repository root is unknown")
 		}
 		dir = parent
 	}
