@@ -999,6 +999,83 @@ case_lint_contracts__openapi() {
   passes
 }
 
+# A small API document. $1: info.version. $2: the request property floor, as
+# "optional", "required", or nothing. $3: "no-name" leaves the response
+# property name out.
+sample_openapi() {
+  local floor='' required='[name]' returned='[id, name]' name="
+                  name:
+                    type: string"
+  case "${2:-}" in
+    optional | required)
+      floor="
+                floor:
+                  type: integer"
+      ;;
+  esac
+  if [ "${2:-}" = required ]; then
+    required='[name, floor]'
+  fi
+  if [ "${3:-}" = no-name ]; then
+    returned='[id]'
+    name=''
+  fi
+  put contracts/http/sample.openapi.yaml << EOF
+openapi: 3.1.0
+info:
+  title: Sample API
+  version: $1
+paths:
+  /rooms:
+    post:
+      operationId: registerRoom
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: $required
+              properties:
+                name:
+                  type: string$floor
+      responses:
+        "201":
+          description: The room.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: $returned
+                properties:
+                  id:
+                    type: string$name
+EOF
+}
+
+case_lint_contracts_breaking() {
+  sample_openapi 0.1.0
+  # A document that is new since the base has nothing to compare with.
+  passes CHECK_BASE=HEAD
+  run git add contracts/http/sample.openapi.yaml
+  commit 'add the sample API'
+  sample_openapi 0.1.0 '' no-name
+  fails 'contracts/http/sample.openapi.yaml:1: [response-required-property-removed] POST /rooms:' CHECK_BASE=HEAD
+  sample_openapi 0.1.0 required
+  fails 'contracts/http/sample.openapi.yaml:19: [new-required-request-property] POST /rooms:' CHECK_BASE=HEAD
+  prints 'docs/guides/api-changes.md'
+  # A patch version does not allow a breaking change; below 1.0, a minor one does.
+  sample_openapi 0.1.1 required
+  fails 'new-required-request-property' CHECK_BASE=HEAD
+  sample_openapi 0.2.0 required
+  passes CHECK_BASE=HEAD
+  sample_openapi 0.1.0 optional
+  passes CHECK_BASE=HEAD
+  # Without a base (no origin/main in the copy), nothing is compared.
+  sample_openapi 0.1.0 required
+  passes
+}
+
 good_asyncapi() {
   put contracts/events/reservation.asyncapi.yaml << 'EOF'
 asyncapi: 3.0.0
