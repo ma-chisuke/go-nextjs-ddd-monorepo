@@ -61,23 +61,26 @@ Chosen option: "Layered checks, each catching what the one before cannot", becau
 - Good, because the tests check the shape of every error, along with every other response, without a separate review.
 - Bad, because the template pins and updates several tools for API conformance, one for each kind of drift: kin-openapi, Schemathesis, oasdiff, and Redocly CLI, next to the generators.
 - Bad, because layer 4 covers only the requests that tests send. Layer 5 narrows the gap, but no layer proves that every response of every operation matches the document.
-- Bad, because a deliberate breaking change fails layer 6. How a team accepts such a change is decided when the check is written.
+- Bad, because a deliberate breaking change fails layer 6, unless the same change raises the version of the document.
 - Bad, because layer 5 needs the API and a database to run, which makes `make check-all` slower and harder to run on a laptop.
 
 ### Confirmation
 
-No layer checks anything yet: the repository has no OpenAPI document and no Go code.
-The targets of two layers exist already and act when their input arrives: `lint-contracts` (layer 7) lints the first contract, and `lint-frontend-types` (the TypeScript half of layer 1) checks the first TypeScript file.
-The other layers arrive with the first bounded context (milestone M1), except layer 5, which arrives with the milestone that adds Schemathesis.
+Layers 1 to 4, 6, and 7 check the Go side now.
+Layer 1 compiles each operation against the strict server interface (`lint-go`, `test-go`), and layer 2 is `gen-check-api`, with `gen-check-sqlc` next to it for the code that sqlc generates.
+Layer 3 is the rule `arch/route-registration` of `lint-arch`.
+Layer 4 is the client of the API tests, `backend/internal/platform/apitest`, which validates every response with kin-openapi, together with the request validation of `platform/httpserver`, which every request of a test passes through.
+Layer 6 is `lint-contracts-breaking`, and layer 7 is `lint-contracts`.
+Still to come: layer 5, with the milestone that adds Schemathesis, and the TypeScript side of layers 1 and 2, with the Next.js app. `lint-frontend-types` exists already, and checks the first TypeScript file when it arrives.
 
 The table names the target that runs each layer. A target marked "planned" does not exist yet, and its name may change when it is written.
 
 | Layer | Make target | Run by |
 |---|---|---|
 | 1. Compile time | `lint-go` and `test-go` for Go; `lint-frontend-types` for `tsc --noEmit` | `make check` |
-| 2. Freshness | `gen-check` (planned): runs `make gen`, then fails on a diff | `make check` |
+| 2. Freshness | `gen-check-api`: runs oapi-codegen again, and fails when the result differs from the committed code | `make check` |
 | 3. No entry point outside the document | `lint-arch`, with the rule `arch/route-registration` | `make check` |
-| 4. Validation in tests | `test-go` | `make check` |
+| 4. Validation in tests | `test-go`, through the client of `platform/apitest` | `make check` |
 | 5. Generated inputs | `test-api` (planned) | `make check-all` |
 | 6. Compatibility | `lint-contracts-breaking`: oasdiff, against the same document at the merge base with `origin/main`, or with `CHECK_BASE`, which CI sets to the base branch | `make check` |
 | 7. The document itself | `lint-contracts` | `make check` |

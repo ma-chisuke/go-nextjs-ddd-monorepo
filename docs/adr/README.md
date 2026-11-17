@@ -17,9 +17,9 @@ None yet.
 | [TPL-0003](template/TPL-0003-split-by-bounded-context.md) | Split the code by bounded context, and let the kind of subdomain set the weight of the implementation | accepted | 2026-11-17 |
 | [TPL-0004](template/TPL-0004-clean-architecture-with-io-free-domain.md) | Use a clean architecture, with a domain layer that does no I/O | accepted | 2026-11-17 |
 | [TPL-0005](template/TPL-0005-contexts-integrate-through-apis-and-events.md) | Bounded contexts do not depend on each other, and integrate through HTTP APIs and events | accepted | 2026-11-17 |
-| [TPL-0006](template/TPL-0006-openapi-with-oapi-codegen-strict-server.md) | Write each HTTP contract in OpenAPI 3.1, and generate the Go server with the oapi-codegen strict server | accepted | 2026-11-17 |
+| [TPL-0006](template/TPL-0006-openapi-with-oapi-codegen-strict-server.md) | Write each HTTP contract in OpenAPI 3.1, and generate the Go server with the oapi-codegen strict server | accepted | 2026-11-18 |
 | [TPL-0007](template/TPL-0007-layered-checks-for-api-conformance.md) | Keep the OpenAPI documents and the implementation in agreement with layered checks | accepted | 2026-11-17 |
-| [TPL-0008](template/TPL-0008-errors-as-rfc-9457-problem-details.md) | Return every error as RFC 9457 problem details | accepted | 2026-11-17 |
+| [TPL-0008](template/TPL-0008-errors-as-rfc-9457-problem-details.md) | Return every error as RFC 9457 problem details | accepted | 2026-11-18 |
 | [TPL-0009](template/TPL-0009-one-postgresql-database-with-schema-per-context.md) | Use one PostgreSQL 18 database, with a schema and roles for each context | accepted | 2026-11-17 |
 | [TPL-0010](template/TPL-0010-declarative-schema-with-pgschema.md) | Manage the schema declaratively with pgschema | accepted | 2026-11-17 |
 | [TPL-0011](template/TPL-0011-database-access-with-sqlc.md) | Access the database with sqlc | accepted | 2026-11-17 |
