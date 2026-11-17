@@ -79,6 +79,7 @@ Inside `make`, each concern has one tool. Targets marked "check-all" run only in
 | Misconfiguration of Dockerfiles and Terraform | Trivy | `scan-config` |
 | Vulnerabilities and licenses of dependencies | Trivy | `scan-deps` (check-all) |
 | The hooks for agents (TPL-0020) | sample events fed to each hook (`tools/tests/hooks_test.sh`) | `test-hooks` |
+| The script that checks commit messages | sample subjects, each tried in several locales (`tools/tests/commit_msg_test.sh`) | `test-commit-msg` |
 | The checks themselves: each fails on a known-bad input and passes on a known-good one | `tools/selftest/selftest.sh` | `selftest` (check-all) |
 | Commit messages and pull request titles (Conventional Commits) | `tools/scripts/commit-msg.sh` | the `commit-msg` hook of lefthook, and `lint-pr-title` (CI) |
 
