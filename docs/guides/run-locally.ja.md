@@ -97,8 +97,24 @@ mise exec -- go run ./cmd/reservation
 
 ## サービスをコンテナで動かす
 
-<!-- The main session fills this section when the container images, the Compose services, `make up`, and the smoke test are merged. -->
+次のコマンド1つで、すべてのサービスのイメージをビルドし、システム全体を Docker Compose で起動する。起動するのは、すべてのスキーマを適用した PostgreSQL・Facility・Reservation である。
 
-まだ書いていない。サービスのコンテナイメージ・その Compose のサービス・`make up`・スモークテストは作業中である。それらが揃うまでは、ここまでの節のとおりにサービスを動かす。
+```sh
+make up
+```
 
-<!-- i18n-source: run-locally.md sha256:ec8f3e861f23d25b2ac6b3d17d68ac14b29ddef1c8cbab3b6d5c8ed4f4a0889b -->
+- Facility は `http://127.0.0.1:58081`、Reservation は `http://127.0.0.1:58082` で待ち受ける。別のポートを使うときは、`FACILITY_PORT` か `RESERVATION_PORT` を設定する。
+- 各サービスは実行時のロールで PostgreSQL に接続する。Reservation は Compose のネットワークを通して Facility を呼ぶ。
+- 起動には `make up` を使い、`docker compose up` だけでは起動しない。`make up` は、mise が固定した pgschema でスキーマを先に適用する。
+
+前の節の呼び出しは、これらのポートに対してもそのまま使える。
+
+`make smoke` は、サービスが動いていなければ起動し、HTTP で2つのサービスをまたぐ予約を1件通して、すべての応答を2つの API の文書と突き合わせる。`make check-all` がこれを実行する。
+
+```sh
+make smoke
+```
+
+`make down` はサービスと PostgreSQL を止め、データは残す。データを消すのは `make db-down` である。
+
+<!-- i18n-source: run-locally.md sha256:768b17a880006ff744c6b9f96a988cc7a87d6230efa71a6174f6159cc54d59a0 -->

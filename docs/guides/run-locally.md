@@ -97,6 +97,22 @@ Stop the services with Ctrl+C.
 
 ## Run the services in containers
 
-<!-- The main session fills this section when the container images, the Compose services, `make up`, and the smoke test are merged. -->
+One command builds the image of every service and starts the whole system in Docker Compose: PostgreSQL with every schema, Facility, and Reservation.
 
-Not written yet: the container images of the services, their Compose services, `make up`, and a smoke test are in progress. Until they arrive, run the services as the preceding sections describe.
+```sh
+make up
+```
+
+- Facility listens on `http://127.0.0.1:58081`, and Reservation on `http://127.0.0.1:58082`. Set `FACILITY_PORT` or `RESERVATION_PORT` to use other ports.
+- The services connect to PostgreSQL as their runtime roles, and Reservation reaches Facility over the network of Compose.
+- Start the system with `make up`, not with `docker compose up` alone: `make up` applies the schemas first, with the pgschema that mise pins.
+
+The calls of the preceding section work against these ports as well.
+
+`make smoke` starts the services if they are not running, runs one booking across both of them over HTTP, and checks every response against the two API documents. `make check-all` runs it.
+
+```sh
+make smoke
+```
+
+`make down` stops the services and PostgreSQL, and keeps the data. `make db-down` deletes the data.
