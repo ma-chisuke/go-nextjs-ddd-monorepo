@@ -22,7 +22,7 @@ Report a vulnerability privately through GitHub, never in a public issue, pull r
 3. Describe the problem: what an attacker can do, the files or workflows involved, and the steps to reproduce it.
 
 GitHub keeps the report visible only to you and to the maintainers.
-The maintainers answer in the report within seven days, agree on a fix and a date for disclosure with you, and credit you in the published advisory unless you ask otherwise.
+One person maintains this template in their spare time. The maintainer aims to answer in the report within two weeks, agrees on a fix and a date for disclosure with you, and credits you in the published advisory unless you ask otherwise.
 GitHub explains the steps in [Privately reporting a security vulnerability](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability).
 
 ## Scope

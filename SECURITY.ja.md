@@ -22,7 +22,7 @@
 3. 問題を説明する。攻撃者に何ができるか、関係するファイルやワークフロー、再現の手順を書く。
 
 報告を読めるのは、報告者とメンテナーだけである。
-メンテナーは7日以内に報告の中で返答し、修正の方法と公開の日程を報告者と決める。
+このテンプレートは、1人が空いた時間で保守している。メンテナーは2週間以内を目安に報告の中で返答し、修正の方法と公開の日程を報告者と決める。
 公開するアドバイザリーには、報告者が断らない限り報告者の名前を載せる。
 手順は GitHub の [Privately reporting a security vulnerability](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability) に説明がある。
 
@@ -33,4 +33,4 @@
 - テンプレートから作ったプロジェクトの脆弱性は、そのプロジェクトのチームが扱う。
 - 道具や依存パッケージの脆弱性は、その開発元が扱う。テンプレートが影響を受けるバージョンを使っているなら、ここにも報告してほしい。報告があれば、テンプレートを修正済みのバージョンに移せる。
 
-<!-- i18n-source: SECURITY.md sha256:c19538f6fb844073df1d6e0dcfa6f2606e72a03a7b70b3c7f092032a4234e94e -->
+<!-- i18n-source: SECURITY.md sha256:a5148a90d758465d3a2c503248c068b4e508300c694d38ed82de5f0f4cf51ea0 -->
