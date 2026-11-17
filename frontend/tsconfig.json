@@ -1,5 +1,5 @@
 // TypeScript settings of the frontend: the defaults of Next.js, made stricter.
-// `make check` runs `tsc --noEmit` with them, because `next build` is not a gate.
+// `make check` runs `tsc --noEmit` with them, without a build.
 // https://nextjs.org/docs/app/api-reference/config/typescript
 {
   "compilerOptions": {
