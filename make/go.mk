@@ -2,6 +2,7 @@
 # golangci-lint runs the formatters (gofmt, goimports) and the linters,
 # including go vet, so each concern has one tool. See .golangci.yml.
 
+SETUP_TARGETS += setup-go
 FMT_TARGETS += fmt-go
 CHECK_TARGETS += fmt-check-go lint-go test-go
 CHECK_ALL_TARGETS += vuln-go
@@ -12,6 +13,11 @@ GOLANGCI := golangci-lint --config $(CURDIR)/.golangci.yml
 
 # Run a command in every Go module that has Go files, when Go files are in scope.
 go-each = if [ -n "$$($(FILES) $(GO_GLOBS))" ]; then for m in $(GO_MODULES); do if [ -n "$$(find "$$m" -name "*.go" -print -quit)" ]; then (cd "$$m" && $(1)); fi; done; fi
+
+# Download the modules and compile once, so that `make check` needs no network
+# and its first run is as fast as the next ones.
+setup-go:
+	@for m in $(GO_MODULES); do (cd "$$m" && go mod download && go build ./... && go test -race -run "^$$" ./... > /dev/null); done
 
 fmt-go:
 	@$(call go-each,$(GOLANGCI) fmt ./...)
