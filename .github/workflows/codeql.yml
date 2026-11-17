@@ -43,9 +43,12 @@ jobs:
           version: ${{ env.MISE_VERSION }}
           install: false
           cache: false
+      # The assignment fails the step when make fails; an argument of echo would not.
       - name: make codeql-languages
         id: languages
-        run: echo "matrix=$(make --no-print-directory codeql-languages)" >> "$GITHUB_OUTPUT"
+        run: |
+          matrix="$(make --no-print-directory codeql-languages)"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
   analyze:
     name: analyze (${{ matrix.language }})
