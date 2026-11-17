@@ -95,5 +95,14 @@
 | secret（GitHub に保存したもの） | シークレット |
 | required status check | 必須チェック |
 | trust policy（IAM ロールの） | 信頼ポリシー |
+| desired state（スキーマの） | あるべき状態 |
+| publisher（イベントの） | 発行側 |
+| consumer（イベントの） | 受け取る側 |
+| subscribe（イベントを） | 購読する |
+| at-least-once delivery | 少なくとも1回の配信 |
+| idempotent | 冪等 |
+| dead-letter queue | デッドレターキュー |
+| ingress、entry（リクエストの） | 入口 |
+| unit（Terragrunt の） | ユニット |
 
-<!-- i18n-source: translation.md sha256:b701e1dd218a943400bf6c371c462e9525802cec5304027ba3b7bd51df4a4ee0 -->
+<!-- i18n-source: translation.md sha256:654b60882f2c1ca4be37745c279c92b9961c35d7c7d37fe91c42b1ba1014ac79 -->

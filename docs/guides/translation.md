@@ -95,3 +95,12 @@ Use these Japanese terms. The table grows when a new term appears; add the term 
 | secret (stored on GitHub) | シークレット |
 | required status check | 必須チェック |
 | trust policy (of an IAM role) | 信頼ポリシー |
+| desired state (of a schema) | あるべき状態 |
+| publisher (of an event) | 発行側 |
+| consumer (of an event) | 受け取る側 |
+| subscribe (to an event) | 購読する |
+| at-least-once delivery | 少なくとも1回の配信 |
+| idempotent | 冪等 |
+| dead-letter queue | デッドレターキュー |
+| ingress, entry (of requests) | 入口 |
+| unit (of Terragrunt) | ユニット |
