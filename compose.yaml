@@ -20,7 +20,9 @@ services:
       - ./db/bootstrap.sql:/docker-entrypoint-initdb.d/10-bootstrap.sql:ro
       - ./db/local.sql:/docker-entrypoint-initdb.d/20-local.sql:ro
     healthcheck:
-      test: [CMD-SHELL, pg_isready --username postgres --dbname app]
+      # Over TCP: the socket also answers while the image still runs the
+      # bootstrap on its temporary server.
+      test: [CMD-SHELL, pg_isready --host 127.0.0.1 --username postgres --dbname app]
       interval: 2s
       timeout: 2s
       retries: 30
