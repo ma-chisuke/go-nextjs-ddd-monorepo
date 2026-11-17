@@ -50,7 +50,7 @@ var sampleContexts []string
 
 const (
 	changelogPath    = "CHANGELOG.md"
-	manifestPath     = ".release-please-manifest.json"
+	manifestPath     = ".github/release-please-manifest.json"
 	initialChangelog = "# Changelog\n"
 	initialRelease   = "0.0.0"
 )

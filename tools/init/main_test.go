@@ -20,10 +20,10 @@ var templateFiles = map[string]string{
 	".gitattributes":   "vendor/** linguist-vendored\n",
 	"vendor/style.yml": "source: go-nextjs-ddd-monorepo\n",
 	"docs/adr/template/TPL-0001-record-decisions-as-adrs.md": "# TPL-0001: in go-nextjs-ddd-monorepo\n",
-	"tools/init/main.go":            "const templateModule = \"github.com/ma-chisuke/go-nextjs-ddd-monorepo\"\n",
-	"CHANGELOG.md":                  "# Changelog\n\n## 1.2.3\n\n- go-nextjs-ddd-monorepo grew.\n",
-	".release-please-manifest.json": "{\n  \".\": \"1.2.3\"\n}\n",
-	"image.bin":                     "go-nextjs-ddd-monorepo\x00binary",
+	"tools/init/main.go":                   "const templateModule = \"github.com/ma-chisuke/go-nextjs-ddd-monorepo\"\n",
+	"CHANGELOG.md":                         "# Changelog\n\n## 1.2.3\n\n- go-nextjs-ddd-monorepo grew.\n",
+	".github/release-please-manifest.json": "{\n  \".\": \"1.2.3\"\n}\n",
+	"image.bin":                            "go-nextjs-ddd-monorepo\x00binary",
 }
 
 func newTemplate(t *testing.T) string {
@@ -94,9 +94,9 @@ func TestInitRenamesTheProject(t *testing.T) {
 		"CHANGELOG.md":     "# Changelog\n",
 		"vendor/style.yml": templateFiles["vendor/style.yml"],
 		"docs/adr/template/TPL-0001-record-decisions-as-adrs.md": templateFiles["docs/adr/template/TPL-0001-record-decisions-as-adrs.md"],
-		"tools/init/main.go":            templateFiles["tools/init/main.go"],
-		".release-please-manifest.json": "{\n  \".\": \"0.0.0\"\n}\n",
-		"image.bin":                     templateFiles["image.bin"],
+		"tools/init/main.go":                   templateFiles["tools/init/main.go"],
+		".github/release-please-manifest.json": "{\n  \".\": \"0.0.0\"\n}\n",
+		"image.bin":                            templateFiles["image.bin"],
 	}
 	for name, content := range want {
 		if got := read(t, dir, name); got != content {
