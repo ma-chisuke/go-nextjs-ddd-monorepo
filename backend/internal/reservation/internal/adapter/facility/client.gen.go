@@ -615,6 +615,8 @@ type RegisterRoomResponse struct {
 	ApplicationproblemJSON400 *Problem
 	// ApplicationproblemJSON409 the response for an HTTP 409 `application/problem+json` response
 	ApplicationproblemJSON409 *Problem
+	// ApplicationproblemJSON415 the response for an HTTP 415 `application/problem+json` response
+	ApplicationproblemJSON415 *Problem
 	// ApplicationproblemJSON422 the response for an HTTP 422 `application/problem+json` response
 	ApplicationproblemJSON422 *Problem
 	// ApplicationproblemJSON500 the response for an HTTP 500 `application/problem+json` response
@@ -636,6 +638,11 @@ func (r RegisterRoomResponse) GetApplicationproblemJSON400() *Problem {
 // GetApplicationproblemJSON409 returns the response for an HTTP 409 `application/problem+json` response
 func (r RegisterRoomResponse) GetApplicationproblemJSON409() *Problem {
 	return r.ApplicationproblemJSON409
+}
+
+// GetApplicationproblemJSON415 returns the response for an HTTP 415 `application/problem+json` response
+func (r RegisterRoomResponse) GetApplicationproblemJSON415() *Problem {
+	return r.ApplicationproblemJSON415
 }
 
 // GetApplicationproblemJSON422 returns the response for an HTTP 422 `application/problem+json` response
@@ -887,6 +894,13 @@ func ParseRegisterRoomResponse(rsp *http.Response) (*RegisterRoomResponse, error
 			return nil, err
 		}
 		response.ApplicationproblemJSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 415:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON415 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest Problem
