@@ -1,7 +1,11 @@
 # GitHub: the inputs that the workflows in .github/workflows need, and the
 # settings of the repository itself (docs/guides/github-settings.md).
 
-.PHONY: lint-pr-title
+.PHONY: codeql-languages lint-pr-title
+
+# The CodeQL languages that have source files, as the JSON matrix of codeql.yml.
+codeql-languages:
+	@tools/github/codeql-languages.sh
 
 # A pull request is squash-merged with its title as the commit message, and
 # release-please reads that message on main. CI passes the title in PR_TITLE:
