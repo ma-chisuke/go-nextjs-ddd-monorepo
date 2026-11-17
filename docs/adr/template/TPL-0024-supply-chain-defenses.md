@@ -113,7 +113,9 @@ Two parts of this decision differ from the first plan, on purpose.
 - `make check-all` runs `scan-deps` and `vuln-go`.
 - Review confirms that no workflow uses `trivy-action` or `setup-trivy`. No check enforces it.
 - CodeQL and Scorecard run as workflows. Secret scanning, push protection, private vulnerability reporting, and Dependabot alerts are settings of the repository: `make github-settings` turns them on, and reports any that differ from `docs/guides/github-settings.md`.
-- The defenses for containers arrive with the first image.
+- For containers, `make check` runs `lint-image-pins`, which fails on a base image without a digest, and `scan-config`, whose Trivy checks fail a Dockerfile whose image runs as root. The images of the services (`backend/Dockerfile`) run as the user `nonroot` of distroless static.
+- `make check-all` runs `scan-images`, which scans the image of every service with Trivy for known vulnerabilities. `make sbom` writes a CycloneDX SBOM of each image to `dist/sbom/`.
+- Provenance through GitHub artifact attestations arrives with the workflow that publishes the images, in the infrastructure milestone. That workflow attests the SBOMs of `make sbom` too.
 
 ## Pros and Cons of the Options
 

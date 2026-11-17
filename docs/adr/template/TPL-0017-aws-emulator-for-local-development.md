@@ -62,9 +62,12 @@ The rules are as follows.
 
 ### Confirmation
 
-M0 has no local environment yet, so nothing enforces this decision yet.
+Since M1, Docker Compose runs PostgreSQL 18 and the service of each context, and `make up` starts them.
+Every process of the system runs in Compose. Only the schemas are applied from the host, by `tools/scripts/db.sh` with the pgschema that `mise.toml` pins, so that pgschema is pinned in one place (TPL-0010).
+`make smoke`, part of `make check-all`, starts the same services in CI and books a room across them, so a change that breaks the local environment fails there.
+AWS Emulator, Next.js, and Mailpit join the system with the milestones that need them.
 With the events milestone, the tests of AWS Emulator (EventBridge to SQS, dead-letter queues, and Secrets Manager) run in CI. They fail when a version of the emulator does not support a behavior that the template relies on.
-Until then, review enforces the decision.
+Until then, review enforces the rest of the decision.
 
 ## Pros and Cons of the Options
 

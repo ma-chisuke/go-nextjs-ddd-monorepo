@@ -113,7 +113,9 @@ Trivy は、ロックファイルをもとに、既知の脆弱性と、禁止�
 - `make check-all` は `scan-deps` と `vuln-go` を実行する。
 - `trivy-action` と `setup-trivy` を使うワークフローがないことは、レビューで確かめる。これを守らせるチェックはない。
 - CodeQL と Scorecard は、ワークフローとして動く。シークレットスキャン・プッシュ保護・private vulnerability reporting・Dependabot alerts は、リポジトリの設定である。`make github-settings` がこれらを有効にし、`docs/guides/github-settings.md` と違うものがあれば報告する。
-- コンテナの守りは、最初のイメージと一緒に入る。
+- コンテナについては、`make check` が `lint-image-pins` と `scan-config` を実行する。`lint-image-pins` はダイジェストのないベースイメージで失敗し、`scan-config` の Trivy のチェックは root で動くイメージの Dockerfile で失敗する。サービスのイメージ（`backend/Dockerfile`）は、distroless static のユーザー `nonroot` で動く。
+- `make check-all` は `scan-images` を実行し、すべてのサービスのイメージに既知の脆弱性がないかを Trivy でスキャンする。`make sbom` は、イメージごとに CycloneDX の SBOM を `dist/sbom/` に書く。
+- GitHub の artifact attestations による来歴は、イメージを公開するワークフローと一緒に、インフラのマイルストーンで入る。そのワークフローは、`make sbom` の SBOM にも attestation を付ける。
 
 ## 選択肢の長所と短所
 
@@ -145,4 +147,4 @@ Trivy は、ロックファイルをもとに、既知の脆弱性と、禁止�
 - [OpenSSF Scorecard](https://github.com/ossf/scorecard)
 - 道具の固定は TPL-0022 に、1つの関心事に道具を1つだけ使う決まりは TPL-0023 に、更新は TPL-0025 にある。
 
-<!-- i18n-source: TPL-0024-supply-chain-defenses.md sha256:8f6c5e5a5f028d36090671a525ecc9251ffe9fe4ef80a4508d36d50d5bed263d -->
+<!-- i18n-source: TPL-0024-supply-chain-defenses.md sha256:86823a2229479987965f2be152014d43cdcccaf0c3178741543acb3a01d952f4 -->
