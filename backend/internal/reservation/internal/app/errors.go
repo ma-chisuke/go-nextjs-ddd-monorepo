@@ -48,7 +48,7 @@ type Error struct {
 
 func (e *Error) Error() string {
 	if e.Err != nil {
-		return e.Detail + ": " + e.Err.Error()
+		return e.Detail + " (cause: " + e.Err.Error() + ")"
 	}
 	return e.Detail
 }
