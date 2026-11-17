@@ -12,6 +12,10 @@
 #                 changed: files that differ from CHECK_BASE (default
 #                          origin/main), plus untracked files
 #
+# A change to a tool pin or to the checks themselves can change the result for
+# any file, so when one of those files is staged or changed, every file is in
+# scope.
+#
 # Paths matched by .lintignore are never printed. That file is the single
 # place where vendored and generated files are excluded from every check.
 set -euo pipefail
@@ -36,19 +40,45 @@ list_all() {
   git ls-files --cached --others --exclude-standard -- "${pathspecs[@]}"
 }
 
+# Tool pins, and the files that define the checks.
+global_pathspecs=(
+  mise.toml mise.lock
+  package.json pnpm-lock.yaml pnpm-workspace.yaml
+  pyproject.toml uv.lock
+  tools/go.mod tools/go.sum
+  Makefile make tools/scripts
+  .lintignore .editorconfig
+  ':(glob).*.json' ':(glob).*.jsonc' ':(glob).*.yaml' ':(glob).*.yml' ':(glob).*.toml' ':(glob).*.hcl' ':(glob).*.ini'
+  ':(glob)*.toml' ':(glob)*.yaml'
+  .vale
+)
+
+# Succeeds when the given `git diff` arguments report a change to one of them.
+touches_global() {
+  [ -n "$(git diff --name-only --diff-filter=ACMRD "$@" -- "${global_pathspecs[@]}" | head -n 1)" ]
+}
+
 list_scope() {
   case "${CHECK_SCOPE:-all}" in
     all)
       list_all
       ;;
     staged)
-      git diff --cached --name-only --diff-filter=ACMR -- "${pathspecs[@]}"
+      if touches_global --cached; then
+        list_all
+      else
+        git diff --cached --name-only --diff-filter=ACMR -- "${pathspecs[@]}"
+      fi
       ;;
     changed)
       base="${CHECK_BASE:-origin/main}"
       if merge_base=$(git merge-base "$base" HEAD 2> /dev/null); then
-        git diff --name-only --diff-filter=ACMR "$merge_base" -- "${pathspecs[@]}"
-        git ls-files --others --exclude-standard -- "${pathspecs[@]}"
+        if touches_global "$merge_base"; then
+          list_all
+        else
+          git diff --name-only --diff-filter=ACMR "$merge_base" -- "${pathspecs[@]}"
+          git ls-files --others --exclude-standard -- "${pathspecs[@]}"
+        fi
       else
         # No base to compare with (for example, a fresh clone): check everything.
         list_all
