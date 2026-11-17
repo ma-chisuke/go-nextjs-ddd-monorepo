@@ -28,3 +28,15 @@ test-go:
 # Known vulnerabilities in code that the module actually calls.
 vuln-go:
 	@$(TASK) $@ '$(call go-each,go tool -modfile=$(CURDIR)/tools/go.mod govulncheck ./...)'
+
+# Coverage: one profile per module in coverage/go/, merged into coverage/go.out,
+# which .octocov.yml reads. `make coverage` runs this target (make/coverage.mk).
+COVERAGE_TARGETS += coverage-go
+.PHONY: coverage-go
+
+coverage-go:
+	@rm -rf coverage/go coverage/go.out && mkdir -p coverage/go
+	@$(call go-each,go test -race -shuffle=on -covermode=atomic -coverprofile="$(CURDIR)/coverage/go/$$m.out" ./...)
+	@if [ -n "$$(find coverage/go -name '*.out' -print -quit)" ]; then \
+		{ echo "mode: atomic"; for f in coverage/go/*.out; do tail -n +2 "$$f"; done; } > coverage/go.out; \
+	fi
