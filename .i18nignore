@@ -1,0 +1,11 @@
+# Paths whose Markdown files are in English only and need no Japanese
+# translation (TPL-0021). One entry per line: an entry that ends in "/" is a
+# directory, any other entry is a pattern for the whole path (Go path.Match).
+
+# Instructions for tools.
+.claude/
+.github/
+.vale/
+
+# Generated.
+CHANGELOG.md
