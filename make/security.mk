@@ -1,8 +1,9 @@
 # Trivy: misconfiguration, vulnerable dependencies, and dependency licenses.
 # Settings live in trivy.yaml. mise installs Trivy itself with a pinned version
-# and checksum; see docs/adr/template/TPL-0024.
+# and checksum; see docs/adr/template/TPL-0024. Also the pins of base images
+# to digests.
 
-CHECK_TARGETS += scan-config
+CHECK_TARGETS += scan-config lint-image-pins
 CHECK_ALL_TARGETS += scan-deps
 
 export TRIVY_DISABLE_TELEMETRY := true
@@ -35,3 +36,8 @@ scan-deps:
 		for m in $(GO_MODULES); do (cd "$$m" && go mod download); done; \
 		$(TRIVY_ENV) trivy fs $(TRIVY_REPORT) --scanners vuln --include-dev-deps $(TRIVY_SKIP) .; \
 		$(TRIVY_ENV) trivy fs $(TRIVY_REPORT) --scanners license --severity CRITICAL $(TRIVY_SKIP) --skip-dirs tools .'
+
+# Base images pinned by digest (TPL-0024), so a moved tag changes no image.
+# Neither hadolint nor Trivy has this rule.
+lint-image-pins:
+	@$(TASK) $@ '$(FILES) $(DOCKERFILE_GLOBS) | xargs -r tools/scripts/image-pins.sh'

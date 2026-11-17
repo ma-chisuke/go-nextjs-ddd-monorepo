@@ -227,6 +227,17 @@ EOF
   passes
 }
 
+# The Dockerfile of the backend is in scope, and passes as it is.
+case_lint_dockerfile__backend() {
+  local dockerfile
+  dockerfile=$(sed 's/^FROM gcr.io[^ ]*/FROM ubuntu:latest/' "$COPY/backend/Dockerfile")
+  put backend/Dockerfile "$dockerfile"
+  fails 'backend/Dockerfile'
+  prints 'DL3007'
+  run git checkout -- backend/Dockerfile
+  passes
+}
+
 case_lint_typos() {
   local word
   word=$(printf 't%s' 'eh')
@@ -781,6 +792,37 @@ case_scan_config__dockerfile() {
   put Dockerfile << 'EOF'
 FROM alpine:3.22
 USER 65534
+EOF
+  passes
+}
+
+# The Dockerfile of the backend, without its USER, runs as root.
+case_scan_config__backend() {
+  local dockerfile
+  dockerfile=$(grep -v '^USER ' "$COPY/backend/Dockerfile")
+  put backend/Dockerfile "$dockerfile"
+  fails 'DS-0002'
+  run git checkout -- backend/Dockerfile
+  passes
+}
+
+# Base images pinned by digest. The Dockerfile of the backend, with the
+# digests taken out, fails.
+case_lint_image_pins() {
+  local dockerfile
+  dockerfile=$(sed 's/@sha256:[0-9a-f]*//' "$COPY/backend/Dockerfile")
+  put backend/Dockerfile "$dockerfile"
+  fails '[image-pins] the base image docker.io/library/golang:'
+  prints '[image-pins] the base image gcr.io/distroless/'
+  run git checkout -- backend/Dockerfile
+  passes
+  # An earlier stage, scratch, and a build argument are not images to pin.
+  put Dockerfile << 'EOF'
+FROM alpine:3.22@sha256:0000000000000000000000000000000000000000000000000000000000000000 AS base
+FROM base AS build
+FROM scratch
+ARG IMAGE=base
+FROM ${IMAGE}
 EOF
   passes
 }
