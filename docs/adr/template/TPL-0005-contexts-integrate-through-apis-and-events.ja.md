@@ -82,6 +82,9 @@ Reservation は、予約の確定と取り消しをイベントで Notification 
 文脈の最上位のパッケージは `backend/internal/` の直下にあるので、`backend/` の下のどのパッケージからも import できてしまう。
 その穴を、`lint-arch` がふさぐ。
 
+Reservation が Facility を呼ぶアダプター `internal/adapter/facility/` は、Facility の API の偽物を相手にテストする。偽物は、アダプターの各リクエストと偽物自身の各答えを、`contracts/http/facility.openapi.yaml` に照らして検証する。この文書は、Facility の Go のパッケージとしてではなく、ファイルとして読む。
+そのため、アダプターが追従していない変更がその文書に入ると Reservation のテストが失敗し、偽物が代わりを務める API からずれることもない。
+
 ## 選択肢の長所と短所
 
 ### HTTP の API と統合イベントで連携し、直接には依存しない
@@ -113,4 +116,4 @@ Reservation は、予約の確定と取り消しをイベントで Notification 
 
 - Vlad Khononov『ドメイン駆動設計をはじめよう』（オライリー・ジャパン）の4章：共有カーネル、モデル変換装置、共用サービス、公開された言語。原書の "Integrating Bounded Contexts" の章である。
 
-<!-- i18n-source: TPL-0005-contexts-integrate-through-apis-and-events.md sha256:7821e31154d4ac98a94f211a229720b4a6901251011caeebac197ec5f1ce7df9 -->
+<!-- i18n-source: TPL-0005-contexts-integrate-through-apis-and-events.md sha256:0fab5709c5a4938c7e1de75989ac5ef5967307092791e34204cef2765061cc32 -->

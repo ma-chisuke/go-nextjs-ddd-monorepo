@@ -86,12 +86,13 @@ The sample business is the booking of meeting rooms.
 Review enforces the classification, because no program can tell a core subdomain from a supporting one.
 A reviewer compares a change with the README of each context that the change modifies.
 
-No check of the split in the Go code exists yet.
-These checks arrive with the first bounded context (milestone M1):
+These checks keep the split in the Go code:
 
-- The Go `internal` directories and the import rules of TPL-0004 and TPL-0005 keep the code of each context apart.
+- The Go `internal` directories and the import rules of `lint-arch` (TPL-0004, TPL-0005) keep the code of each context apart.
 - sqlc, configured for each context, and the runtime role of each context, which has privileges on its own schema only (TPL-0009), keep each context inside its own schema (TPL-0005).
-- A check fails when a directory under `backend/internal/`, other than `platform/`, has no README under `docs/contexts/`.
+- `lint-arch`, with the rule `arch/glossary`, fails when a context has no glossary in English and in Japanese under `docs/contexts/<context>/`, when the glossary lacks an exported type of the `domain` package of the context, or of `app` in a context without one, and when it names an identifier that the package does not export.
+
+The check that fails when a directory under `backend/internal/`, other than `platform/`, has no README under `docs/contexts/` is not built yet. Until it is, review enforces it.
 
 The screens follow the same split. eslint-plugin-boundaries, which `lint-frontend` runs, keeps the features under `frontend/src/features/` apart: a feature never imports another feature. Its rules are in `frontend/eslint.config.mjs` already, and they act on the first screen.
 

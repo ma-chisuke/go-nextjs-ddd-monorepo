@@ -87,12 +87,13 @@ date: 2026-11-17
 業務領域の分類はレビューで守る。中核の業務領域と補完の業務領域を見分けられるプログラムはないからである。
 レビューする人は、変更を、その変更が手を入れる各文脈の README と照らし合わせる。
 
-Go のコードの分け方を守るチェックは、まだない。
-次のチェックが、最初の文脈とともに加わる（マイルストーン M1）。
+次のチェックが、Go のコードの分け方を守る。
 
-- Go の `internal` ディレクトリと、TPL-0004・TPL-0005 の import のルールが、ある文脈のコードを別の文脈から使えないようにする。
+- Go の `internal` ディレクトリと、`lint-arch` の import のルール（TPL-0004、TPL-0005）が、ある文脈のコードを別の文脈から使えないようにする。
 - 文脈ごとに設定した sqlc と、自分のスキーマにだけ権限を持つ文脈ごとの実行時のロール（TPL-0009）が、各文脈を自分のスキーマの中にとどめる（TPL-0005）。
-- `backend/internal/` の下のディレクトリ（`platform/` を除く）に対応する README が `docs/contexts/` の下にないとき、チェックが失敗する。
+- `lint-arch` のルール `arch/glossary` は、文脈の英語と日本語の用語集が `docs/contexts/<context>/` になければ失敗する。エクスポートされた型の欠けた用語集や、パッケージのエクスポートしていない識別子を挙げる用語集でも失敗する。対象のパッケージは文脈の `domain` であり、それがない文脈では `app` である。
+
+`backend/internal/` の下のディレクトリ（`platform/` を除く）のうち、`docs/contexts/` の下に README のないものがあると失敗するチェックは、まだ作っていない。作るまでは、レビューで守る。
 
 画面も同じ単位で分ける。`lint-frontend` が実行する eslint-plugin-boundaries が、`frontend/src/features/` の下の機能どうしを分けておく。ある機能が別の機能を import することはない。ルールはすでに `frontend/eslint.config.mjs` にあり、最初の画面ができた時点で働き始める。
 
@@ -127,4 +128,4 @@ Go のコードの分け方を守るチェックは、まだない。
 - Vlad Khononov『ドメイン駆動設計をはじめよう』（オライリー・ジャパン）の10章：業務領域の種類ごとに実装のパターンを選ぶ経験則。原書は "Learning Domain-Driven Design"（O'Reilly、2021）の "Design Heuristics" の章である。
 - 同書の1章：中核・補完・一般の業務領域。
 
-<!-- i18n-source: TPL-0003-split-by-bounded-context.md sha256:7c89ba21d753d5d388bf62429ab7abf97e0371968f33a409d56e318349260c85 -->
+<!-- i18n-source: TPL-0003-split-by-bounded-context.md sha256:e8fd14e447aff61979a9839398fd3fee052244c15c168979ce8a748c4498db63 -->
