@@ -379,6 +379,17 @@ EOF
   passes
 }
 
+case_test_commit_msg() {
+  # A script that accepts every subject must fail its tests.
+  put tools/scripts/commit-msg.sh << 'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+  fails 'commit-msg/test'
+  run git checkout -q -- tools/scripts/commit-msg.sh
+  passes
+}
+
 case_lint_links() {
   put notes.md << 'EOF'
 # Notes
