@@ -1,8 +1,9 @@
 # golangci-lint v2 runs the Go formatters and linters, including go vet.
 # https://golangci-lint.run/docs/configuration/file/
 #
-# Rules that depend on the architecture (which layer may import what, and what
-# the domain layer must not call) are added with the first bounded context.
+# The rules of the architecture (which context and which layer may import
+# what, and what the domain layer must not call) are not here: `make lint-arch`
+# checks them (tools/cmd/arch), because they follow from the directory layout.
 version: "2"
 
 run:
