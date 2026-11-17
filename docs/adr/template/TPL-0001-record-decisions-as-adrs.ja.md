@@ -91,3 +91,5 @@ date: 2026-11-17
 
 - [MADR 4.0.0](https://adr.github.io/madr/)
 - 記録を書くときは、`.claude/skills/write-adr/` のスキルを使う。
+
+<!-- i18n-source: TPL-0001-record-decisions-as-adrs.md sha256:d716041139255d82f3f41d6a255fa54690fbeff0f1fbe48b10dd0781dd445242 -->

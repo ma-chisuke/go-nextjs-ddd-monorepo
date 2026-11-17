@@ -63,3 +63,5 @@
 | pin（版を） | 固定する |
 | harness（コーディングエージェントの） | ハーネス |
 | generated code | 生成コード |
+
+<!-- i18n-source: translation.md sha256:deb3b3780ebe1722a81aaaa68bf3ea0208d57b29505303e9c65e40c30c280082 -->

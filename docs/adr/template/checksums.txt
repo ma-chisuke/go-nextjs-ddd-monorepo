@@ -1,0 +1,2 @@
+0cd9ab0cdfc5ecc3b37e29d022d5d7d93289e973aac1cac484fc4a4d97a7b072  TPL-0001-record-decisions-as-adrs.ja.md
+d716041139255d82f3f41d6a255fa54690fbeff0f1fbe48b10dd0781dd445242  TPL-0001-record-decisions-as-adrs.md
