@@ -1,0 +1,11 @@
+# typos finds misspellings in every file. Which files are checked is decided
+# by the Makefile (tools/scripts/files.sh).
+[default]
+locale = "en-us"
+extend-ignore-re = [
+  # Hashes and other long hexadecimal strings.
+  "\\b[0-9a-f]{32,}\\b",
+]
+
+[default.extend-words]
+ND = "ND"

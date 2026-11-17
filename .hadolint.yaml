@@ -1,0 +1,8 @@
+# hadolint checks Dockerfiles, and checks each RUN instruction with shellcheck.
+failure-threshold: style
+trustedRegistries:
+  - docker.io
+  - gcr.io
+  - ghcr.io
+  - mcr.microsoft.com
+  - public.ecr.aws
