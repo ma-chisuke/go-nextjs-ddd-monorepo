@@ -45,6 +45,27 @@ services:
       timeout: 2s
       retries: 30
 
+  # AWS Emulator: EventBridge, SQS, and the other AWS services that the
+  # contexts use (TPL-0017). It keeps its state in memory, so what a start of
+  # the system creates in it is gone with the container. The volume holds the
+  # CA of its endpoint, which the emulator makes at every start: the services
+  # that call AWS mount it, and tools/scripts/aws.sh copies it to the host.
+  aws:
+    build:
+      context: infra/local/aws-emulator
+    image: go-nextjs-ddd-monorepo/aws-emulator:local
+    pull_policy: build
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      # Loopback only: the emulator checks no signature.
+      - 127.0.0.1:${AWS_PORT:-59297}:9297
+    volumes:
+      - aws-emulator:/home/emulator/.aws/emulator
+
   # The services connect as the runtime role of their context, whose password
   # is public on purpose (db/local.sql), and listen on the loopback address only.
   facility:
@@ -84,3 +105,4 @@ services:
 
 volumes:
   postgres-data:
+  aws-emulator:
