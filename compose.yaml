@@ -15,9 +15,10 @@
 # expect them in place.
 name: go-nextjs-ddd-monorepo
 
-# What the service of every bounded context shares. Each one is built from
-# backend/Dockerfile, with the build argument CONTEXT naming its command, and
-# checks its own health with the HEALTHCHECK of the image.
+# What every service of the product shares: the services of the bounded
+# contexts, each built from backend/Dockerfile with the build argument CONTEXT
+# naming its command, and the frontend, built from frontend/Dockerfile. Each
+# one checks its own health with the HEALTHCHECK of its image.
 x-context-service: &context-service
   pull_policy: build
   read_only: true
@@ -174,6 +175,30 @@ services:
       aws:
         condition: service_healthy
       mailpit:
+        condition: service_healthy
+
+  # The frontend: the only service that a browser reaches, at
+  # http://127.0.0.1:13000. It calls the APIs of the contexts through the
+  # network of Compose, as it reaches them through the private network in AWS
+  # (TPL-0014).
+  web:
+    <<: *context-service
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    image: go-nextjs-ddd-monorepo/web:local
+    environment:
+      FACILITY_API_URL: http://facility:8080
+      RESERVATION_API_URL: http://reservation:8080
+    ports:
+      # Below the range from which the system hands out ports by itself, so
+      # that no other process holds it by chance. 3000 is left to the
+      # development server (make frontend-dev).
+      - 127.0.0.1:${WEB_PORT:-13000}:3000
+    depends_on:
+      facility:
+        condition: service_healthy
+      reservation:
         condition: service_healthy
 
   # Mailpit catches the mail that Notification sends, and shows it at

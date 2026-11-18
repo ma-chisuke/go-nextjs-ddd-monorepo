@@ -9,7 +9,9 @@ CHECK_ALL_TARGETS += lint-schema-remote
 
 PRETTIER_GLOBS := "*.yaml" "*.yml" "*.json" "*.jsonc" "*.json5" "*.js" "*.jsx" "*.mjs" "*.cjs" "*.ts" "*.tsx" "*.css"
 SHELL_GLOBS := "*.sh"
-DOCKERFILE_GLOBS := "*Dockerfile" "*Dockerfile.*" "*.Dockerfile"
+# <Dockerfile>.dockerignore names the build context of that Dockerfile; it is
+# not a Dockerfile.
+DOCKERFILE_GLOBS := "*Dockerfile" "*Dockerfile.*" "*.Dockerfile" ":(exclude)*.dockerignore"
 
 fmt-prettier:
 	@$(FILES) $(PRETTIER_GLOBS) | xargs -r prettier --write --log-level warn

@@ -1589,6 +1589,16 @@ case_smoke() {
   fails 'fake docker: compose config' CHECK_SCOPE=changed CHECK_BASE=HEAD "$path"
 }
 
+case_e2e() {
+  local path
+  path=$(fake_docker)
+  put docs/notes.md '# Notes'
+  passes CHECK_SCOPE=changed CHECK_BASE=HEAD "$path"
+  omits 'fake docker'
+  put frontend/notes.txt 'A change to the frontend.'
+  fails 'fake docker: compose config' CHECK_SCOPE=changed CHECK_BASE=HEAD "$path"
+}
+
 case_scan_images() {
   local path
   path=$(fake_docker)

@@ -1,0 +1,19 @@
+# The build context of frontend/Dockerfile, which is the root of the
+# repository. Everything is left out except what is named here, so a new file
+# never enters the image unseen, and a change to the backend or to a document
+# does not rebuild the image.
+*
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!frontend/
+frontend/node_modules/
+frontend/.next/
+frontend/next-env.d.ts
+frontend/e2e/
+frontend/playwright.config.ts
+frontend/test-results/
+frontend/playwright-report/
+frontend/**/*.test.ts
+frontend/Dockerfile
+frontend/Dockerfile.dockerignore
