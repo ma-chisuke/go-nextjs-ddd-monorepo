@@ -96,18 +96,20 @@ apply() {
   fi
 
   eval "$(environment)"
+  # The working data of this apply, apart from that of validate-terraform,
+  # which initializes the same directory without a backend at the same time
+  # in `make check-all`.
+  export TF_DATA_DIR="$PWD/.cache/terraform/apply/infra/local"
   export TF_PLUGIN_CACHE_DIR="$PWD/.cache/terraform/plugins"
-  export TF_DATA_DIR="$PWD/.cache/terraform/data/infra/local"
   export TF_IN_AUTOMATION=1
   export TF_INPUT=0
-  mkdir -p "$TF_PLUGIN_CACHE_DIR"
 
   log=$(mktemp)
   # The providers are the ones that infra/local/.terraform.lock.hcl names. A
   # second apply at the same time, from `make check-all` in another checkout,
   # waits for the lock of the state.
   if ! {
-    terraform -chdir=infra/local init -no-color -lockfile=readonly -reconfigure \
+    tools/scripts/terraform-init.sh infra/local -lockfile=readonly -reconfigure \
       -backend-config="path=$state" \
       && terraform -chdir=infra/local apply -no-color -auto-approve -lock-timeout=300s \
         -var "endpoint=$AWS_ENDPOINT_URL" -var "ca_bundle=$AWS_CA_BUNDLE"
