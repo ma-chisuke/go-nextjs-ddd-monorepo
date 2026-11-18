@@ -44,11 +44,16 @@ Chosen option: "An ECS service on Fargate for each context, behind ECS Gateway",
 
 The rules are as follows.
 
-- Each context runs its API as an ECS service on Fargate. A context that has a worker runs it as a second ECS service, from the same image with a different command. The two services scale and deploy separately, and the worker attaches to no gateway, so it has no entry for requests.
+- Each context runs its API, if it has one, as an ECS service on Fargate. A worker, a process that serves no requests, such as the relay of an outbox or the consumer of a queue (TPL-0013), runs as an ECS service of its own, from the image of its context. The services of one context scale and deploy separately, and a worker attaches to no gateway, so it has no entry for requests.
+- A worker is a mode of the command of its context, which the same binary runs when the name of the mode is its argument, such as `reservation relay`. A context without an API, such as Notification, runs its worker as the command itself (`notification`).
+- Every process serves `GET /healthz`, a worker too (`httpserver.RunWorker`), so the health check command of the image, `<command> healthcheck`, watches every process the same way. The health check of a worker says only that the process runs. A worker that cannot reach its database or its broker stays healthy and tries again, because a restart would not bring them back.
+- A service reads its configuration from environment variables, its secrets included, such as the password in `DATABASE_URL` (`platform/config`). In AWS, the task definition fills the secrets from Secrets Manager, so the code calls no AWS API to read them.
 - Each context has its own container image, built from `backend/cmd/<context>/`. The Go module stays one.
 - Next.js runs on ECS on Fargate as well.
 - Requests enter through Amazon ECS Gateway. The APIs of the contexts attach to a private gateway, and the Terraform code writes the access type `PRIVATE` explicitly instead of relying on a default. Only Next.js is public.
 - Services use the network mode `awsvpc`, which ECS Gateway requires. They do not use ECS Express Mode, because services in Express Mode cannot connect to ECS Gateway.
+
+This differs from the first plan in one point: the first plan gave every context an API, with a worker next to it. Notification has no API, so its command is its worker.
 
 ### Consequences
 
@@ -64,8 +69,8 @@ The rules are as follows.
 Since M1, each context has an image of its own, and nothing yet runs it on ECS.
 
 - `backend/Dockerfile` builds the image of the context that the build argument `CONTEXT` names, from `backend/cmd/<context>/`, so a new context needs no Dockerfile of its own and the Go module stays one.
-- `make smoke`, part of `make check-all`, runs the images of Facility and Reservation as separate containers in Docker Compose and books a room across them over HTTP. The contexts run as separate processes and reach each other only through their APIs.
-- The binary in each image checks its own health (`<command> healthcheck`), which is the command that the health check of an ECS task will run.
+- `make smoke`, part of `make check-all`, runs every process of every context as a separate container in Docker Compose: the APIs of Facility and Reservation, the relay of Reservation (`reservation relay`, from the image of Reservation), and the worker of Notification. It books a room across the APIs over HTTP, and waits for the mails that the events of the booking cause. The contexts run as separate processes and reach each other only through their APIs and their events.
+- The binary in each image checks its own health (`<command> healthcheck`), for an API and for a worker alike, which is the command that the health check of an ECS task will run. The tests of `httpserver.RunWorker` check that a worker answers the health check while it runs.
 
 The following checks arrive with the infrastructure milestone.
 

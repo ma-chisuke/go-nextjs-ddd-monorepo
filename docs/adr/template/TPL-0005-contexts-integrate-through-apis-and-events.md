@@ -85,6 +85,11 @@ The root package of a context sits directly in `backend/internal/`, so any packa
 The adapter of Reservation for Facility, `internal/adapter/facility/`, is tested against a fake of the Facility API that validates each request of the adapter, and each answer of the fake, against `contracts/http/facility.openapi.yaml`, read as a file rather than as a Go package of Facility.
 A change to that document that the adapter does not follow therefore fails the tests of Reservation, and the fake cannot drift from the API that it stands in for.
 
+Events are checked the same way, from both sides of the contract, the JSON Schema of each event in `contracts/events/` (TPL-0013).
+The tests of Reservation validate every event that it publishes against the schema of its type.
+Notification reads the events in its anticorruption layer, `internal/app/events.go`, and its tests turn every example of the schemas, read as files, into a mail.
+A change to a schema that either side does not follow fails the tests of that side, and `lint-events-breaking` fails on a change that the consumers of a version could not read.
+
 ## Pros and Cons of the Options
 
 ### HTTP APIs and integration events, with no direct dependency

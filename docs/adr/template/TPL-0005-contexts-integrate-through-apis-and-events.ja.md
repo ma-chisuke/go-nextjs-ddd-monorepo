@@ -85,6 +85,11 @@ Reservation は、予約の確定と取り消しをイベントで Notification 
 Reservation が Facility を呼ぶアダプター `internal/adapter/facility/` は、Facility の API の偽物を相手にテストする。偽物は、アダプターの各リクエストと偽物自身の各答えを、`contracts/http/facility.openapi.yaml` に照らして検証する。この文書は、Facility の Go のパッケージとしてではなく、ファイルとして読む。
 そのため、アダプターが追従していない変更がその文書に入ると Reservation のテストが失敗し、偽物が代わりを務める API からずれることもない。
 
+イベントも同じように、契約の両側から確かめる。契約は、`contracts/events/` にある各イベントの JSON Schema である（TPL-0013）。
+Reservation のテストは、発行するすべてのイベントを、その型のスキーマで検証する。
+Notification は、モデル変換装置 `internal/app/events.go` でイベントを読む。そのテストは、ファイルとして読んだスキーマのすべての例をメールにする。
+どちらかの側が追従していない変更がスキーマに入ると、その側のテストが失敗する。あるバージョンを受け取る側が読めなくなる変更では、`lint-events-breaking` が失敗する。
+
 ## 選択肢の長所と短所
 
 ### HTTP の API と統合イベントで連携し、直接には依存しない
@@ -116,4 +121,4 @@ Reservation が Facility を呼ぶアダプター `internal/adapter/facility/` �
 
 - Vlad Khononov『ドメイン駆動設計をはじめよう』（オライリー・ジャパン）の4章：共有カーネル、モデル変換装置、共用サービス、公開された言語。原書の "Integrating Bounded Contexts" の章である。
 
-<!-- i18n-source: TPL-0005-contexts-integrate-through-apis-and-events.md sha256:0fab5709c5a4938c7e1de75989ac5ef5967307092791e34204cef2765061cc32 -->
+<!-- i18n-source: TPL-0005-contexts-integrate-through-apis-and-events.md sha256:826bf5dba10182ee819b958eb5cfa9de56d49d2c10df65ae3824ad6a42ef4311 -->

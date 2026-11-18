@@ -42,6 +42,7 @@ date: 2026-11-17
 決まりは次のとおりである。
 
 - Terraform のモジュールは `infra/modules/` に置く。`network`・`database`・`platform`（ECS のクラスタ、ECS Gateway、EventBridge のバス）・`context-service`・`web` の5つである。
+- `platform` と `context-service` のうち、手元の環境と AWS が共有する部分は、2つの小さなモジュールにする。`platform` の EventBridge のバスである `event-bus` と、受け取る文脈1つのキュー・デッドレターキュー・ルールである `event-subscription` である（TPL-0013）。ルート `infra/local/` が、これらを AWS Emulator に適用する（TPL-0017）。`infra/local/` はユニットではない。手元のマシンの上のエンドポイントしか受け付けない。その state はリポジトリの外に置き、エミュレーターが再起動すれば捨てる。
 - Terragrunt のツリー `infra/live/{stg,prd}/` が、モジュールを組み立てる。モジュールを使うディレクトリはそれぞれユニットであり、自分の state を持つ。ユニットは `network`・`database`・`platform`・`web` と、`contexts/<context>/` の下の文脈ごとのユニットである。
 - `infra/live/root.hcl` が、すべてのユニットの state の保存先と provider の設定を作る。
 - state は S3 に置き、S3 のネイティブのロック（`use_lockfile`）を使う。state はユニットごとに1つである。
@@ -66,9 +67,11 @@ date: 2026-11-17
 - `make check` は5つのチェックを実行する。`fmt-check-terraform` は、Terraform の言語のファイルに `terraform fmt` をかける。`fmt-check-terragrunt` は、それ以外の HCL のファイル（`root.hcl` や `terragrunt.hcl` など）に `terragrunt hcl fmt` をかける。`lint-terraform` は、AWS のルールセットを使う tflint を動かす。`lint-terraform-docs` は、terraform-docs が書くモジュールの README が最新かどうかを調べる。`scan-config` は、Trivy で設定ミスを検査する。
 - `.tflint.hcl` が固定する tflint のプラグインは `make setup` が入れるので、これらのチェックはネットワークを使わない。
 - `make check-all` は、さらに `validate-terraform`（`terraform validate`）を実行する。これは `terraform init` を実行し、provider をダウンロードする。
-- これらの道具は `mise.toml` で固定してある（TPL-0022）。M0 には `.tf` のファイルがないので、これらのチェックが検査するものはまだない。最初の `.tf` のファイルが入った時点で働き始める。
+- これらの道具は `mise.toml` で固定してある（TPL-0022）。イベントを扱うマイルストーンから、これらのチェックは `infra/modules/event-bus`・`infra/modules/event-subscription`・`infra/local/` を検査する。
+- `infra/local/.terraform.lock.hcl` は、AWS の provider を4つのプラットフォームのハッシュとともに固定する。`tools/scripts/aws.sh` は `-lockfile=readonly` で初期化するので、ロックにない provider は入らない。
+- `make check-all` に含まれる `make smoke` は、`infra/local/` を AWS Emulator に適用し、それが作るバスとキューにイベントを流す。そのため、適用できないモジュールや、イベントを届けないモジュールは、そこで失敗する（TPL-0017）。
 
-インフラのマイルストーンでは、`infra/` を変えるプルリクエストごとに、CI がすべてのユニットを plan する（`terragrunt run --all plan`）。
+ほかのモジュールと `infra/live/` の Terragrunt のユニットは、インフラのマイルストーンで加わる。それ以降は、`infra/` を変えるプルリクエストごとに、CI がすべてのユニットを plan する（`terragrunt run --all plan`）。
 
 ## 選択肢の長所と短所
 
@@ -107,4 +110,4 @@ date: 2026-11-17
 - [Terragrunt のドキュメント](https://terragrunt.com/)
 - `use_lockfile` を含む、[Terraform の S3 のバックエンド](https://developer.hashicorp.com/terraform/language/backend/s3)の説明
 
-<!-- i18n-source: TPL-0015-terraform-and-terragrunt.md sha256:688ecd0e8bce1114460f4ca1092a3952b0de6254e9ba8993c45d3f7f06a6583c -->
+<!-- i18n-source: TPL-0015-terraform-and-terragrunt.md sha256:9ef9277b9c464ba9578299da515dbcee9df6942323a71159ffcc40a0eba04ff8 -->

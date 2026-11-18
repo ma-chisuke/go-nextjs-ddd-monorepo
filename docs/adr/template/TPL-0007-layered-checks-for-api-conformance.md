@@ -87,6 +87,8 @@ The table names the target that runs each layer. A target marked "planned" does 
 
 Layer 6 accepts a breaking change when the same change raises `info.version` of the document: below 1.0 the minor version, from 1.0 on the major version. [Change an API](../../guides/api-changes.md) describes this for the people who meet the finding.
 
+The layers apply to the OpenAPI documents. The contracts of events, their JSON Schemas and AsyncAPI documents, have checks of the same kinds, which TPL-0013 lists: `lint-contracts` on the documents, `lint-events` on the schemas, `lint-events-breaking` for compatibility, and tests that validate every event against its schema.
+
 ## Pros and Cons of the Options
 
 ### Layered checks, each catching what the one before cannot

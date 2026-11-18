@@ -66,6 +66,8 @@ date: 2026-11-18
 - `lint-arch` のルール `arch/schema-reference` は、文脈の `schema.sql` やクエリがほかの文脈のスキーマの名前を書くと失敗する。文脈をまたぐ外部キーは、その名前を書くことになる。
 - 各文脈の結合テスト（`make check-all` の `test-integration`）は、その文脈の実行時のロールで接続する。そして、ほかの文脈のスキーマを読むことも、自分のスキーマを変えることも、`public` にオブジェクトを作ることもできないと確かめる。
 
+結合テストは、手元のサーバーにある専用のデータベース `app_test` で動く。`tools/scripts/db.sh init` が、すべてのスキーマとともにこれを作る。手元のシステム（`make up`、`make smoke`）は、データベース `app` を使う。そのため、テストが動いているシステムの行に出会うことはなく、システムの中継がテストの書いた送信箱のイベントを取ることもない。
+
 ## 選択肢の長所と短所
 
 ### PostgreSQL 18 のデータベースを1つにし、文脈ごとにスキーマとロールを分ける
@@ -100,4 +102,4 @@ date: 2026-11-18
 - 見本の排他制約は、列 `period` ではなく式 `tstzrange(starts_at, ends_at, '[)')` について書く。`EXCLUDE USING gist (room_id WITH =, tstzrange(starts_at, ends_at, '[)') WITH &&) WHERE (status = 'confirmed')` である。GiST のインデックスで `room_id` のような列に `=` を使えるのは、`btree_gist` 拡張を入れた場合だけである。
 - スキーマの管理には pgschema（TPL-0010）を、クエリの生成には sqlc（TPL-0011）を使う。AWS 上のデータベースは Aurora PostgreSQL である（TPL-0016）。
 
-<!-- i18n-source: TPL-0009-one-postgresql-database-with-schema-per-context.md sha256:5723dc3554628f79c739774cd3942f010972369df6673dd5e2fd43d44ac275c2 -->
+<!-- i18n-source: TPL-0009-one-postgresql-database-with-schema-per-context.md sha256:65441eb8f48ec7ff70bccbae1b5a5a2ea8d254ceee3e8578908e11266759c112 -->

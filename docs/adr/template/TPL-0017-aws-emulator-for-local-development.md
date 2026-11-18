@@ -43,31 +43,43 @@ Chosen option: "AWS Emulator", because it is the only option that provides the A
 The rules are as follows.
 
 - Docker Compose runs the whole system: PostgreSQL 18, AWS Emulator, each context, Next.js, and Mailpit for mail.
-- AWS publishes AWS Emulator as a Linux package and a Dockerfile, but not as a container image, so the template builds an image from the published Dockerfile, at a pinned version.
-- AWS Emulator sends telemetry by default. The template sets `EMULATOR_TELEMETRY=off`.
-- AWS Emulator keeps its data in memory only, so the local environment creates its queues, rules, and secrets each time it starts.
-- The list of supported services was not published when this decision was made. The behaviors that the template relies on (EventBridge to SQS, dead-letter queues, and Secrets Manager) each get a small test that runs in CI.
-- If those tests fail, the fallback is that the relay of the outbox reads a table of subscriptions and sends events to the SQS queues itself, without EventBridge (TPL-0013).
-- If Terraform can be applied to AWS Emulator, the local environment applies the same Terraform definitions to it, so the queues and rules come from the same code as in AWS (TPL-0015).
+- AWS publishes AWS Emulator as RPM and deb packages, and no container image. The template builds the image from a Dockerfile of its own, `infra/local/aws-emulator/Dockerfile`: on Amazon Linux 2023 minimal, pinned by digest, it installs the RPM package of a pinned version. Before it installs the package, it checks the SHA-256 of the package for each architecture, and `rpm` checks the signature of the package against the public key of AWS, committed as `signing-key.asc` (TPL-0024).
+- AWS Emulator sends telemetry by default. The image sets `EMULATOR_TELEMETRY=off`.
+- AWS Emulator keeps its data in memory only, so the local environment creates its event bus, queues, and rules each time the emulator starts.
+- The local environment applies the Terraform modules that AWS will use, `infra/modules/event-bus` and `infra/modules/event-subscription`, to the emulator, so the local bus, queues, and rules come from the same code as in AWS (TPL-0015). The root that applies them, `infra/local/`, accepts only an endpoint on this machine. `tools/scripts/aws.sh apply` (`make aws-apply`, which `make up` and `make smoke` run) keeps the state of Terraform outside the repository, and throws it away when the emulator has restarted.
+- The emulator serves HTTPS on port 9297. It makes its certificate at every start, for the names `localhost` and `127.0.0.1` only, and signs it with a CA that it writes to its state directory. The host gets that CA from `tools/scripts/aws.sh server` (`.cache/aws-emulator/ca.pem`). The containers of the services mount the volume that holds it, and `AWS_ENDPOINT_SERVER_NAME=localhost` tells them the name that the certificate carries, which they check rather than skip (`platform/awsconfig`, which refuses the variable without `AWS_ENDPOINT_URL`). The emulator runs as the user 65532, as the services do, because it makes the CA file readable by its owner only.
+- The emulator checks no signature of requests (`--auth off`), because it makes new credentials at every start. Its port is published on the loopback address only.
+- The behaviors that the template relies on each have a test that runs in CI, and the tests fail when a version of the emulator stops doing them (Confirmation).
+- Nothing in the local system calls Secrets Manager or SES. The services read their secrets from environment variables, which ECS fills in AWS (TPL-0014), and Notification sends its mail to Mailpit. So the local environment creates no secrets, and no test of Secrets Manager or SES is kept.
+
+Three parts of this decision differ from the first plan.
+
+- The first plan was to build the image from the Dockerfile that AWS publishes. The template writes its own, so that the base image is pinned by digest and the package is checked before it is installed (TPL-0024).
+- The first plan had a fallback in case the emulator could not deliver from EventBridge to SQS. It delivers, so the fallback was not built (TPL-0013).
+- The first plan named Secrets Manager among the behaviors to test. It works in the emulator, but nothing in the local system uses it, so no test is kept for it.
 
 ### Consequences
 
 - Good, because anyone can run the whole system, including the flow of events, without an account or a token, and CI runs it the same way.
 - Good, because AWS Emulator comes from AWS itself and is released under CC0, so it puts no license terms on a team that copies the template.
-- Good, because, if Terraform applies to it, local queues and rules come from the definitions that AWS uses.
-- Bad, because the product was released on November 11, 2026, and is unproven. Its coverage of the services and behaviors that the template needs is unknown until the tests run, and it may change quickly.
-- Bad, because its state is lost when it restarts, so the local environment must recreate the AWS resources every time.
+- Good, because the local bus, queues, and rules come from the modules that AWS will use.
+- Bad, because the product was released on November 11, 2026, and may change quickly. The tests cover only the behaviors that the template relies on, and one difference from AWS is known already: the emulator accepts an event for a bus that does not exist, and drops it. The relay therefore checks at start that its bus exists (`Publisher.Ready`, TPL-0013).
+- Bad, because its state is lost when it restarts, so the local environment must recreate the AWS resources every time. The first apply after a start takes about a minute, because the AWS provider waits about 25 seconds after it creates each SQS queue, and a subscription has two. The module `event-subscription` sets the policy of the queue as an argument of the queue, because a separate policy resource would wait once more.
+- Bad, because the CA changes at every start of the emulator. After the emulator restarts, the services that call it must restart too, and the host must copy the CA again.
 - Bad, because the image is built locally from the Dockerfile, which adds a step and some build time to the first start on every machine.
+- Bad, because no Renovate rule updates the version of the emulator yet. An update changes the version and the two checksums in the Dockerfile by hand (TPL-0025).
 - Bad, because an emulator is not AWS. Permissions, quotas, and latency can differ, so stg remains the first place where the real services run.
 
 ### Confirmation
 
-Since M1, Docker Compose runs PostgreSQL 18 and the service of each context, and `make up` starts them.
-Every process of the system runs in Compose. Only the schemas are applied from the host, by `tools/scripts/db.sh` with the pgschema that `mise.toml` pins, so that pgschema is pinned in one place (TPL-0010).
-`make smoke`, part of `make check-all`, starts the same services in CI and books a room across them, so a change that breaks the local environment fails there.
-AWS Emulator, Next.js, and Mailpit join the system with the milestones that need them.
-With the events milestone, the tests of AWS Emulator (EventBridge to SQS, dead-letter queues, and Secrets Manager) run in CI. They fail when a version of the emulator does not support a behavior that the template relies on.
-Until then, review enforces the rest of the decision.
+Docker Compose runs PostgreSQL 18, AWS Emulator, Mailpit, and the processes of each context: the APIs of Facility and Reservation, the relay of Reservation, and the worker of Notification. `make up` starts them.
+Every process of the system runs in Compose. Only the schemas and the AWS resources are applied from the host, by `tools/scripts/db.sh` and `tools/scripts/aws.sh`, with the pgschema and the Terraform that `mise.toml` pins, so that each is pinned in one place (TPL-0010, TPL-0022).
+Next.js joins the system with its milestone.
+
+These tests keep the behaviors of the emulator verified. Both run in `make check-all`, and so in CI.
+
+- The integration tests of `platform/awsevents` (`awsevents_integration_test.go`, in `make test-integration`) run the publisher and the consumer against the emulator. A rule on a custom bus delivers the `detail` of an event to an SQS queue whose policy allows `events.amazonaws.com`. An event whose handler keeps failing, and a message that is no event, move to the dead-letter queue after `maxReceiveCount` receives. `PutEvents` answers 200 with a failed entry for a source that AWS reserves, and the publisher reports it as an error. `Publisher.Ready` tells whether a bus exists.
+- `make smoke` applies `infra/local/` with Terraform, starts the system, books, reschedules, and cancels a reservation, and waits for the three mails in Mailpit.
 
 ## Pros and Cons of the Options
 
@@ -107,4 +119,13 @@ Facts about AWS Emulator, as of November 2026, from [the announcement](https://a
 - It sends telemetry by default; `EMULATOR_TELEMETRY=off` turns it off.
 - The list of supported services was not published.
 
-Not yet verified: delivery from EventBridge to SQS, dead-letter queues, Secrets Manager, and applying Terraform to AWS Emulator. These are checked with the events milestone.
+Facts verified with version 1.0.498, on November 18, 2026:
+
+- The packages are RPM and deb files at `downloads.aws.com`, signed with a key of AWS. The comment at the top of the Dockerfile names the list of versions. There is no container image.
+- The endpoint is HTTPS on port 9297, with a certificate for `localhost` and `127.0.0.1` that the emulator makes at every start, signed by a CA that it writes to its state directory.
+- The emulator makes new credentials at every start. `--auth off` turns off the check of signatures.
+- A rule on a custom bus delivers to an SQS queue only when the policy of the queue allows `events.amazonaws.com`, as in AWS. The input path `$.detail` works, and SQS moves a message to the dead-letter queue after `maxReceiveCount` receives.
+- `PutEvents` answers 200 with a failed entry for a source that AWS reserves (one that starts with `aws.`).
+- An event for a bus that does not exist is accepted and dropped. AWS refuses it.
+- Terraform, with the AWS provider 6.73.0, applies `infra/local/` to the emulator. The provider waits about 25 seconds after it creates each SQS queue.
+- Secrets Manager (creating and reading a secret) and `SendEmail` of SES v2 worked in a check by hand.

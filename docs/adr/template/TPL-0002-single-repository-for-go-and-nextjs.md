@@ -74,10 +74,12 @@ These parts exist now:
 - `make check` and `make check-all` run every check of the repository. `lefthook.yml` calls the same targets, narrowed to the staged files before a commit (`CHECK_SCOPE=staged`), so a hook and a manual run with the same scope give the same result.
 - `pnpm-workspace.yaml` lists `frontend` as the only package of the workspace. So far, `frontend/` holds the configuration of its checks only.
 - The CI workflows (TPL-0018) call the same targets. The job that runs `make check` checks every file; the job that adds the slow checks of `make check-all` narrows them to the changed files on a pull request (`CHECK_SCOPE=changed`).
+- `backend/` and `contracts/` hold the bounded contexts and their contracts, since the first bounded context.
+- `infra/` holds the Terraform modules that the local environment shares with AWS, and `infra/local/`, which applies them to AWS Emulator (TPL-0015, TPL-0017), since the events milestone.
 
 These parts arrive later:
 
-- `backend/` and `contracts/` arrive with the first bounded context, the Next.js app in `frontend/` with its milestone, and `infra/` with the deployment.
+- The Next.js app in `frontend/` arrives with its milestone, and the other Terraform modules and the Terragrunt configurations in `infra/` with the deployment.
 
 ## Pros and Cons of the Options
 

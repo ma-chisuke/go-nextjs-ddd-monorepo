@@ -72,6 +72,8 @@ Inside `make`, each concern has one tool. Targets marked "check-all" run only in
 | Comments on tables and columns, and the schema documents | tbls | `lint-db-docs` (check-all) |
 | OpenAPI and AsyncAPI documents | Redocly CLI (`@redocly/cli`) | `lint-contracts` |
 | Breaking changes to OpenAPI documents | oasdiff | `lint-contracts-breaking` |
+| The JSON Schemas of events: their form, their examples, and the message of the AsyncAPI document that refers to each (TPL-0013) | the events command of this repository (`tools/cmd/events`) | `lint-events` |
+| Breaking changes to the JSON Schemas of events | the events command of this repository | `lint-events-breaking` |
 | Formatting and structure of Markdown | markdownlint-cli2 | `lint-md` |
 | English prose | Vale, with the Google style | `lint-prose-en` |
 | Japanese prose | textlint | `lint-prose-ja` |

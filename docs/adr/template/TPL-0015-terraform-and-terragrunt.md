@@ -42,6 +42,7 @@ Chosen option: "Terraform modules instantiated by Terragrunt, with one AWS accou
 The rules are as follows.
 
 - Terraform modules live in `infra/modules/`: `network`, `database`, `platform` (the ECS cluster, ECS Gateway, and the EventBridge bus), `context-service`, and `web`.
+- Two smaller modules hold the parts of `platform` and `context-service` that the local environment shares with AWS: `event-bus`, the EventBridge bus of `platform`, and `event-subscription`, the queue, the dead-letter queue, and the rule of one consuming context (TPL-0013). The root `infra/local/` applies them to AWS Emulator (TPL-0017). It is not a unit: it accepts only an endpoint on the local machine, and its state lives outside the repository and is thrown away when the emulator restarts.
 - A Terragrunt tree, `infra/live/{stg,prd}/`, instantiates the modules. Each directory that instantiates a module is a unit with its own state: `network`, `database`, `platform`, `web`, and one unit for each context under `contexts/<context>/`.
 - `infra/live/root.hcl` generates the configuration of the state backend and of the providers for every unit.
 - State is stored in S3 with the native locking of S3 (`use_lockfile`), one state for each unit.
@@ -66,9 +67,11 @@ The rules are as follows.
 - `make check` runs `fmt-check-terraform` (`terraform fmt` on the files of the Terraform language), `fmt-check-terragrunt` (`terragrunt hcl fmt` on every other HCL file, such as `root.hcl` and `terragrunt.hcl`), `lint-terraform` (tflint with the AWS ruleset), `lint-terraform-docs` (whether the module READMEs that terraform-docs writes are up to date), and `scan-config` (Trivy, for misconfiguration).
 - `make setup` installs the tflint plugin that `.tflint.hcl` pins, so these checks need no network.
 - `make check-all` adds `validate-terraform` (`terraform validate`), which runs `terraform init` and downloads the providers.
-- The tools are pinned in `mise.toml` (TPL-0022). M0 has no `.tf` file, so these checks have nothing to check yet; they act when the first `.tf` file arrives.
+- The tools are pinned in `mise.toml` (TPL-0022). Since the events milestone, these checks cover `infra/modules/event-bus`, `infra/modules/event-subscription`, and `infra/local/`.
+- `infra/local/.terraform.lock.hcl` locks the AWS provider with its hashes for four platforms, and `tools/scripts/aws.sh` initializes with `-lockfile=readonly`, so a provider that the lock does not name fails to install.
+- `make smoke`, part of `make check-all`, applies `infra/local/` to AWS Emulator and sends events through the bus and the queue that it creates, so a module that does not apply, or that does not deliver, fails there (TPL-0017).
 
-With the infrastructure milestone, CI plans every unit (`terragrunt run --all plan`) on each pull request that changes `infra/`.
+The other modules and the Terragrunt units in `infra/live/` arrive with the infrastructure milestone. From then on, CI plans every unit (`terragrunt run --all plan`) on each pull request that changes `infra/`.
 
 ## Pros and Cons of the Options
 

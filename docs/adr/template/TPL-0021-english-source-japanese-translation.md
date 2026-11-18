@@ -41,7 +41,8 @@ The rules are those of the [translation guide](../../guides/translation.md).
 - `foo.md` is English and is the source. `foo.ja.md` is its Japanese translation and sits in the same directory.
 - Both files change in the same commit.
 - The last line of a translation records the SHA-256 hash of the English file that it translates. `make i18n-stamp` writes that line.
-- Code, comments, commit messages, and the descriptions in OpenAPI documents are in English only.
+- Code, comments, commit messages, and the descriptions in the contracts (OpenAPI and AsyncAPI documents, and the JSON Schemas of events) are in English only.
+- The README of a Terraform module in `infra/modules/` has a translation of its prose only. terraform-docs writes the lists of inputs, outputs, and resources from the descriptions in the code, which are in English, so those lists are in the English file only.
 - Files under `.claude/` and `.github/` are instructions for tools, and are in English only. Third-party files keep the language in which they were published, such as the Japanese writing norm.
 - Vale checks English prose against the Google developer documentation style, and textlint checks Japanese prose. The Japanese writing norm is kept in the repository (`.claude/skills/japanese-tech-writing/`), and translations follow it.
 
@@ -61,7 +62,7 @@ The rules are those of the [translation guide](../../guides/translation.md).
 - `make check` runs the target `lint-i18n`, which fails when a document has no translation, or when the hash in a translation differs from the hash of the English file.
 - `make check` runs Vale on English Markdown (`lint-prose-en`) and textlint on Japanese Markdown (`lint-prose-ja`).
 - The subagent `translation-reviewer` compares the meaning of a translation with its source, and review covers what it misses.
-- Review confirms that code, comments, commit messages, and OpenAPI descriptions are in English. No check enforces the language.
+- Review confirms that code, comments, commit messages, and the descriptions in the contracts are in English. No check enforces the language.
 
 ## Pros and Cons of the Options
 

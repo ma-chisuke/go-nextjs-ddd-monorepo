@@ -55,6 +55,7 @@ date: 2026-11-17
 - 悪い点：自動のマージは、チェックと同じ程度にしか安全でない。テストがカバーしていない振る舞いを壊す patch のリリースは、人を通さずにマージされる。
 - 悪い点：Renovate のアプリは、ブランチをプッシュしてプルリクエストを開くために、リポジトリへの書き込みの権限を必要とする。信頼する相手が1つ増える。
 - 悪い点：設定を誤ると、ある種類の固定の更新が知らないうちに止まることがある。スキーマではそれを見分けられない。
+- 悪い点：Renovate のどのマネージャーも読まない固定は、更新されない。`infra/local/aws-emulator/Dockerfile` のビルド引数にある、AWS Emulator のバージョンとそのパッケージのチェックサムがそれにあたり、人が手で更新する（TPL-0017）。
 
 ### 確認の方法
 
@@ -91,4 +92,4 @@ date: 2026-11-17
 - [Renovate のドキュメント](https://docs.renovatebot.com/)
 - 固定については TPL-0022 に、3日の待ちについては TPL-0024 に書いてある。
 
-<!-- i18n-source: TPL-0025-dependency-updates-with-renovate.md sha256:c8f828134ec9c874de92b53a22b29c74d4575b55b31b8d82a385083de59bd585 -->
+<!-- i18n-source: TPL-0025-dependency-updates-with-renovate.md sha256:efd4dd420129274fb63a79402dd0ec906ac1424a101c52740b67312bc792a80b -->

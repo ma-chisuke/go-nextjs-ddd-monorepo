@@ -74,10 +74,12 @@ API と画面が別のリポジトリにあると、エージェントは片側�
 - `make check` と `make check-all` が、リポジトリのすべてのチェックを実行する。`lefthook.yml` も同じターゲットを呼び、コミットの前にはステージしたファイルに範囲を絞る（`CHECK_SCOPE=staged`）。そのため、範囲が同じなら、フックで実行しても手で実行しても結果は同じになる。
 - `pnpm-workspace.yaml` は、ワークスペースのパッケージとして `frontend` だけを挙げている。いまのところ、`frontend/` にあるのはチェックの設定だけである。
 - CI のワークフロー（TPL-0018）も同じターゲットを呼ぶ。`make check` を実行するジョブはすべてのファイルを検査し、`make check-all` の遅いチェックを加えるジョブは、プルリクエストでは変更のあったファイルに範囲を絞る（`CHECK_SCOPE=changed`）。
+- `backend/` と `contracts/` は、最初の文脈から、区切られた文脈とその契約を収める。
+- `infra/` は、イベントを扱うマイルストーンから、手元の環境と AWS が共有する Terraform のモジュールを収める。それらを AWS Emulator に適用する `infra/local/` もここにある（TPL-0015、TPL-0017）。
 
 あとから加わるものは次のとおりである。
 
-- `backend/` と `contracts/` は最初の文脈とともに、`frontend/` の Next.js の Web アプリはそのマイルストーンで、`infra/` はデプロイとともに加わる。
+- `frontend/` の Next.js の Web アプリはそのマイルストーンで、`infra/` のほかの Terraform のモジュールと Terragrunt の設定はデプロイとともに加わる。
 
 ## 選択肢の長所と短所
 
@@ -110,4 +112,4 @@ API と画面が別のリポジトリにあると、エージェントは片側�
 - [Go モジュールのリファレンス](https://go.dev/ref/mod)
 - `backend/` と `frontend/` の中を文脈ごとにどう分けるかは、TPL-0003 で決める。
 
-<!-- i18n-source: TPL-0002-single-repository-for-go-and-nextjs.md sha256:0c47265888fcbffd10d47e458f781aba375895a50e2a8efa22c10169f72dec75 -->
+<!-- i18n-source: TPL-0002-single-repository-for-go-and-nextjs.md sha256:897d9189f11dee7906fe99679d8b2c026ef36a4a4777cc5a67757513431f249d -->
