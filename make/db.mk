@@ -33,8 +33,15 @@ test-integration selftest gen-db-docs: | db-server
 # and the privileges of the roles, against a real PostgreSQL (TPL-0009), and
 # the adapters for EventBridge and SQS against AWS Emulator (TPL-0017), which
 # make/aws.mk starts.
+#
+# The tests have a database of their own on the local server, which db.sh
+# creates. The local system (`make up`, `make smoke`) uses another one, so a
+# test never meets the rows of the system, and the relay of the system never
+# takes an event that a test put into an outbox.
+TEST_DATABASE := app_test
+
 test-integration:
-	@$(TASK) $@ 'if [ -n "$$($(FILES) $(GO_GLOBS) "*.sql" "compose.yaml" $(AWS_SOURCES))" ]; then $(DB) init > /dev/null && eval "$$($(AWS) env)" && for m in $(GO_MODULES); do (cd "$$m" && go test -tags integration -race -shuffle=on ./...) || exit 1; done; fi'
+	@$(TASK) $@ 'if [ -n "$$($(FILES) $(GO_GLOBS) "*.sql" "compose.yaml" $(AWS_SOURCES))" ]; then export PGDATABASE=$(TEST_DATABASE) && $(DB) init > /dev/null && eval "$$($(AWS) env)" && for m in $(GO_MODULES); do (cd "$$m" && go test -tags integration -race -shuffle=on ./...) || exit 1; done; fi'
 
 # The schema documents of each context in docs/generated/db/<context>/,
 # written by tbls from a scratch database. Not part of `make gen`, which needs

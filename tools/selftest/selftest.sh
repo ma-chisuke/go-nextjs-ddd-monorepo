@@ -1525,8 +1525,8 @@ case_scan_deps__license() {
 # The targets that build the images and start the services would replace the
 # containers of the repository itself, because every copy shares its Docker
 # daemon and its Compose project. So these cases put a stand-in for the Docker
-# CLI first on PATH: PostgreSQL is ready (db-server), and every other command
-# fails and names itself. A change outside the sources of the images skips the
+# CLI first on PATH: PostgreSQL is ready (db-server), AWS Emulator runs
+# (aws-server), and every other command fails and names itself. A change outside the sources of the images skips the
 # target without a call to Docker; a change to them runs the target, which
 # then fails at its first call.
 fake_docker() {
@@ -1535,6 +1535,14 @@ fake_docker() {
 #!/usr/bin/env bash
 case "$*" in
   *pg_isready*) exit 0 ;;
+  # AWS Emulator runs already and hands out its CA, as PostgreSQL runs
+  # already (tools/scripts/aws.sh server).
+  "compose up "*" aws") exit 0 ;;
+  "compose cp aws:"*)
+    for last in "$@"; do :; done
+    : > "$last"
+    exit 0
+    ;;
 esac
 echo "fake docker: $*" >&2
 exit 1
