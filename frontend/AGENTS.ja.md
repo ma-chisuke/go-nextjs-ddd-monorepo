@@ -4,7 +4,7 @@
 
 ## 最初に、インストールされた Next.js の文書を読む
 
-このアプリは、Next.js 16 の App Router、React 19、TypeScript 6 で動く（`package.json`）。Next.js 16 は既知の Next.js と違い、このアプリは Cache Components、partial prefetching、型付きのルートを使う（`next.config.ts`）。
+このアプリは、Next.js 16 の App Router、React 19、TypeScript 6 で動く（`package.json`）。Next.js 16 は読み手の知っている Next.js と違うことがあり、このアプリは Cache Components、partial prefetching、型付きのルートを使う（`next.config.ts`）。
 コードを書く前に、このディレクトリの `node_modules/next/dist/docs/01-app/` から該当するガイドを読む。これはインストールされたバージョンの文書である。`next dev` はそう指示するブロックをこのファイルに書き込むが、`next.config.ts` がそれを止めている（`agentRules: false`）。
 
 ## コマンド
@@ -45,9 +45,9 @@
 
 ## レビューが守らせる決まり
 
-- 画面は、problem を `problemKind` で見分け、不正な部分を `fieldErrors` で項目に対応づける。title や detail を解析しない。（TPL-0008）
+- 画面は、problem を `problemKind` で見分け、不正な部分を `problemFieldErrors` で項目に対応づける。title や detail を解析しない。（TPL-0008）
 - サーバー関数は、`FormData` の各値を `lib/input.ts` で絞り込み、想定内の失敗では例外を投げずに状態を返す。
 - 予約はフォームの冪等キーを送り、変更はページが表示したバージョンを `If-Match` で送る。`features/reservation/booking.ts` と `changes.ts` の先頭のコメントを読む。
 - CSS は `app/globals.css` の素の CSS で書き、コンポーネントライブラリも日付のライブラリも使わない。既知の制限は、ガイド[画面を足す](../docs/guides/add-a-screen.ja.md#既知の制限)にある。
 
-<!-- i18n-source: AGENTS.md sha256:71fb8b2a025d0b54692634085f64d2f3dced2f96f715ad25d7e33b52877cd5fb -->
+<!-- i18n-source: AGENTS.md sha256:5d8744f7bd99cb53b2cc63e71ac723ff958c11433573013f206ca9655532d3f9 -->

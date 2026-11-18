@@ -4,7 +4,7 @@
 手順では、`frontend/src/` の下にある文脈 `<context>` のファイルを名指しする。各置き場所が何を持つかは [ARCHITECTURE.ja.md](../../ARCHITECTURE.ja.md#フロントエンド) にある。
 小さい例は facility の機能（`features/facility/`）で、一覧・ページ・会議室を登録するフォームからなる。大きい例は reservation の機能で、冪等キーを持つフォームと、バージョンを送るフォームがある。
 
-Next.js 16 は既知の Next.js と違う。ある部分を書く前に、`frontend/node_modules/next/dist/docs/01-app/` からそのガイドを読む。
+Next.js 16 は、読み手の知っている Next.js と違うことがある。ある部分を書く前に、`frontend/node_modules/next/dist/docs/01-app/` からそのガイドを読む。
 
 ## 手順
 

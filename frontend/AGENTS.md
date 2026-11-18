@@ -45,7 +45,7 @@ A module with unit tests imports nothing of Next.js, and imports other modules b
 
 ## Rules that review enforces
 
-- A screen tells problems apart by `problemKind` and maps invalid parts to fields with `fieldErrors`; it never parses a title or a detail. (TPL-0008)
+- A screen tells problems apart by `problemKind` and maps invalid parts to fields with `problemFieldErrors`; it never parses a title or a detail. (TPL-0008)
 - A Server Function narrows each value of its `FormData` with `lib/input.ts`, and returns a state for an expected failure instead of throwing.
 - A booking sends the Idempotency-Key of its form, and a change sends the version that the page showed in `If-Match`: read the comments at the top of `features/reservation/booking.ts` and `changes.ts`.
 - Plain CSS in `app/globals.css`, no component library, no date library. Known limits are in the guide [add a screen](../docs/guides/add-a-screen.md#known-limits).
