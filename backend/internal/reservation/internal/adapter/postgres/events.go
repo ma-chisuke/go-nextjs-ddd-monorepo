@@ -1,6 +1,8 @@
 package postgres
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -68,4 +70,39 @@ func integrationEvent(id uuid.UUID, e domain.Event) (event.Envelope, error) {
 			})
 	}
 	return event.Envelope{}, fmt.Errorf("store reservation: the domain event %T has no integration event", e)
+}
+
+// outboxEvents returns the rows of the outbox that publish the domain events
+// of a change stored at the instant. Each event gets a new id, a UUID version
+// 7, so the relay publishes the events about in the order of their changes.
+// The rows are made before the transaction that stores them, so a domain
+// event without a mapping stores nothing at all.
+func outboxEvents(events []domain.Event, at time.Time) ([]InsertOutboxEventParams, error) {
+	rows := make([]InsertOutboxEventParams, 0, len(events))
+	for _, e := range events {
+		id, err := uuid.NewV7()
+		if err != nil {
+			return nil, fmt.Errorf("store reservation: the id of an event: %w", err)
+		}
+		envelope, err := integrationEvent(id, e)
+		if err != nil {
+			return nil, err
+		}
+		payload, err := json.Marshal(envelope)
+		if err != nil {
+			return nil, fmt.Errorf("store reservation: event %s: %w", envelope.Type, err)
+		}
+		rows = append(rows, InsertOutboxEventParams{ID: id, EventType: envelope.Type, Payload: payload, CreatedAt: at})
+	}
+	return rows, nil
+}
+
+// insertEvents writes rows into the outbox, in the transaction of q.
+func insertEvents(ctx context.Context, q *Queries, rows []InsertOutboxEventParams) error {
+	for _, row := range rows {
+		if err := q.InsertOutboxEvent(ctx, row); err != nil {
+			return err
+		}
+	}
+	return nil
 }

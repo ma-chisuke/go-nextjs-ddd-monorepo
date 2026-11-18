@@ -29,10 +29,12 @@ type BookRoomInput struct {
 
 // BookRoom books a room. The domain applies the rules of a booking to the
 // room as Facility describes it, and the store refuses a period that another
-// confirmed reservation of the room overlaps.
+// confirmed reservation of the room overlaps. The new reservation is stored
+// with the event ReservationConfirmed.
 //
 // A request whose idempotency key was stored before gets the reservation of
-// that key, provided that it is the same request; nothing new is booked.
+// that key, provided that it is the same request; nothing new is booked, and
+// no event is stored.
 func (s *Reservations) BookRoom(ctx context.Context, in BookRoomInput) (Versioned, error) {
 	fingerprint, err := in.fingerprint()
 	if err != nil {
@@ -50,9 +52,7 @@ func (s *Reservations) BookRoom(ctx context.Context, in BookRoomInput) (Versione
 		return Versioned{}, fmt.Errorf("book room: new id: %w", err)
 	}
 	now := s.clock.Now()
-	// The events reach the outbox from the milestone that adds events
-	// (TPL-0013). Until then nothing publishes them.
-	r, _, err := domain.Book(id, room, in.Period, in.Attendees, in.Organizer, now)
+	r, events, err := domain.Book(id, room, in.Period, in.Attendees, in.Organizer, now)
 	if err != nil {
 		return Versioned{}, err
 	}
@@ -60,7 +60,7 @@ func (s *Reservations) BookRoom(ctx context.Context, in BookRoomInput) (Versione
 		return Versioned{}, err
 	}
 	key := IdempotencyKey{Key: in.IdempotencyKey, Fingerprint: fingerprint, Reservation: id}
-	version, err := s.store.Add(ctx, r, key, now)
+	version, err := s.store.Add(ctx, r, events, key, now)
 	if errors.Is(err, ErrOverlap) || errors.Is(err, ErrKeyTaken) {
 		// Another request was stored between the checks above and this one.
 		// If it came with the same key, this request repeats it.

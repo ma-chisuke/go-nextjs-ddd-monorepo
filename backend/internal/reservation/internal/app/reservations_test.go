@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
@@ -64,6 +65,25 @@ func (f fixture) book(t *testing.T, key string, period domain.Period) app.Versio
 	return v
 }
 
+// confirmedEvent returns the event ReservationConfirmed of a reservation of
+// room A by the organizer of booking, at now.
+func confirmedEvent(id domain.ReservationID, period domain.Period, attendees int) domain.Event {
+	return domain.ReservationConfirmed{
+		Reservation: id, Room: roomA.ID, Period: period, Attendees: attendees,
+		Organizer: "organizer@example.com", OccurredAt: now,
+	}
+}
+
+// wantEvents fails the test unless the store keeps exactly the events, in
+// the order of their changes: those of the changes that it accepted, and none
+// of those that it refused or that a use case never tried.
+func wantEvents(t *testing.T, store *apptest.Store, want ...domain.Event) {
+	t.Helper()
+	if got := store.Events(); !slices.Equal(got, want) {
+		t.Errorf("the store keeps the events\n%+v\nwant\n%+v", got, want)
+	}
+}
+
 func wantAppKind(t *testing.T, err error, kind app.Kind) {
 	t.Helper()
 	var business *app.Error
@@ -95,6 +115,7 @@ func TestBookRoom(t *testing.T) {
 	if got != booked {
 		t.Errorf("got %+v, want the booked reservation %+v", got, booked)
 	}
+	wantEvents(t, f.store, confirmedEvent(apptest.ID(1), on(10, 11), 4))
 }
 
 func TestBookRoomAppliesTheRulesOfTheDomain(t *testing.T) {
@@ -104,6 +125,7 @@ func TestBookRoomAppliesTheRulesOfTheDomain(t *testing.T) {
 	in.Attendees = 9
 	_, err := f.uc.BookRoom(t.Context(), in)
 	wantDomainKind(t, err, domain.KindOverCapacity)
+	wantEvents(t, f.store)
 }
 
 func TestBookRoomIdempotently(t *testing.T) {
@@ -139,15 +161,25 @@ func TestBookRoomIdempotently(t *testing.T) {
 	// Another request with the same key is refused.
 	_, err = f.uc.BookRoom(t.Context(), booking("k1", on(12, 13)))
 	wantAppKind(t, err, app.KindIdempotencyKeyReused)
+
+	// Only the booking and the cancellation are events: a repeat changes
+	// nothing.
+	wantEvents(t, f.store,
+		confirmedEvent(first.Reservation.ID(), on(10, 11), 4),
+		domain.ReservationCancelled{
+			Reservation: first.Reservation.ID(), Room: roomA.ID, Period: on(10, 11),
+			Organizer: "organizer@example.com", OccurredAt: now,
+		})
 }
 
 func TestBookRoomThatIsBooked(t *testing.T) {
 	t.Parallel()
 	f := newFixture(t)
-	f.book(t, "k1", on(10, 12))
+	first := f.book(t, "k1", on(10, 12))
 
 	_, err := f.uc.BookRoom(t.Context(), booking("k2", on(11, 13)))
 	wantAppKind(t, err, app.KindRoomAlreadyBooked)
+	wantEvents(t, f.store, confirmedEvent(first.Reservation.ID(), on(10, 12), 4))
 	// One may end when the next starts.
 	f.book(t, "k3", on(12, 13))
 	f.book(t, "k4", on(9, 10))
@@ -192,6 +224,7 @@ func TestBookRoomInARace(t *testing.T) {
 	racing := app.New(&racingStore{Store: store}, apptest.NewRooms(roomA), apptest.NewClock(now), ids)
 	_, err = racing.BookRoom(t.Context(), booking("k2", on(10, 11)))
 	wantAppKind(t, err, app.KindRoomAlreadyBooked)
+	wantEvents(t, store, confirmedEvent(winner.Reservation.ID(), on(10, 11), 4))
 
 	// A repeat of the winner that lost the race gets the reservation of the
 	// winner.
@@ -203,6 +236,7 @@ func TestBookRoomInARace(t *testing.T) {
 	if got != winner {
 		t.Errorf("got %+v, want the reservation of the request that won, %+v", got, winner)
 	}
+	wantEvents(t, store, confirmedEvent(winner.Reservation.ID(), on(10, 11), 4))
 }
 
 func TestBookRoomWhenFacilitySaysNo(t *testing.T) {
@@ -228,6 +262,7 @@ func TestBookRoomWhenFacilitySaysNo(t *testing.T) {
 	if err == nil || errors.As(err, &business) {
 		t.Errorf("got %v, want an error that is not a business error", err)
 	}
+	wantEvents(t, f.store)
 }
 
 func TestGetReservationThatDoesNotExist(t *testing.T) {
@@ -241,7 +276,7 @@ func TestRescheduleReservation(t *testing.T) {
 	t.Parallel()
 	f := newFixture(t)
 	booked := f.book(t, "k1", on(10, 11))
-	f.book(t, "k2", on(14, 15))
+	other := f.book(t, "k2", on(14, 15))
 	id := booked.Reservation.ID()
 	start, end, attendees := at(20, 12, 0), at(20, 14, 0), 6
 
@@ -285,13 +320,21 @@ func TestRescheduleReservation(t *testing.T) {
 	f.rooms.Fail(app.ErrRoomsUnavailable)
 	_, err = f.uc.RescheduleReservation(t.Context(), app.RescheduleReservationInput{Reservation: id, Read: 3, Attendees: &attendees})
 	wantAppKind(t, err, app.KindFacilityUnavailable)
+
+	// Each rescheduling confirms the reservation again, with its new period
+	// and attendees; a refused one is no event.
+	wantEvents(t, f.store,
+		confirmedEvent(id, on(10, 11), 4),
+		confirmedEvent(other.Reservation.ID(), on(14, 15), 4),
+		confirmedEvent(id, on(10, 12), 4),
+		confirmedEvent(id, on(12, 14), 6))
 }
 
 // conflictingStore stands for a store in which another request changes the
 // reservation between the read of the use case and its write.
 type conflictingStore struct{ *apptest.Store }
 
-func (s conflictingStore) Update(context.Context, domain.Reservation, app.Version, time.Time) (app.Version, error) {
+func (s conflictingStore) Update(context.Context, domain.Reservation, []domain.Event, app.Version, time.Time) (app.Version, error) {
 	return 0, app.ErrVersionConflict
 }
 
@@ -309,6 +352,7 @@ func TestChangeInARace(t *testing.T) {
 	attendees := 2
 	_, err = racing.RescheduleReservation(t.Context(), app.RescheduleReservationInput{Reservation: booked.Reservation.ID(), Read: 1, Attendees: &attendees})
 	wantAppKind(t, err, app.KindVersionMismatch)
+	wantEvents(t, store, confirmedEvent(booked.Reservation.ID(), on(10, 11), 4))
 }
 
 func TestCancelReservation(t *testing.T) {
@@ -337,6 +381,14 @@ func TestCancelReservation(t *testing.T) {
 	wantDomainKind(t, err, domain.KindReservationCancelled)
 	_, err = f.uc.CancelReservation(t.Context(), apptest.ID(42), 1)
 	wantAppKind(t, err, app.KindReservationNotFound)
+
+	wantEvents(t, f.store,
+		confirmedEvent(id, on(10, 11), 4),
+		domain.ReservationCancelled{
+			Reservation: id, Room: roomA.ID, Period: on(10, 11),
+			Organizer: "organizer@example.com", OccurredAt: now,
+		},
+		confirmedEvent(apptest.ID(2), on(10, 11), 4))
 }
 
 func TestCancelReservationTooLate(t *testing.T) {
@@ -346,6 +398,7 @@ func TestCancelReservationTooLate(t *testing.T) {
 	f.clock.Set(at(20, 9, 31))
 	_, err := f.uc.CancelReservation(t.Context(), booked.Reservation.ID(), 1)
 	wantDomainKind(t, err, domain.KindCancellationTooLate)
+	wantEvents(t, f.store, confirmedEvent(booked.Reservation.ID(), on(10, 11), 4))
 }
 
 func TestListReservations(t *testing.T) {

@@ -20,7 +20,9 @@ type RescheduleReservationInput struct {
 
 // RescheduleReservation changes the period or the number of attendees of a
 // confirmed reservation, under the same rules as a booking, provided that the
-// reservation did not change since the client read it.
+// reservation did not change since the client read it. The change is stored
+// with the event ReservationConfirmed, which carries the new period and
+// attendees.
 func (s *Reservations) RescheduleReservation(ctx context.Context, in RescheduleReservationInput) (Versioned, error) {
 	current, err := s.load(ctx, in.Reservation, in.Read)
 	if err != nil {
@@ -43,14 +45,12 @@ func (s *Reservations) RescheduleReservation(ctx context.Context, in RescheduleR
 		return Versioned{}, err
 	}
 	now := s.clock.Now()
-	// The events reach the outbox from the milestone that adds events
-	// (TPL-0013). Until then nothing publishes them.
-	changed, _, err := r.Reschedule(room, period, attendees, now)
+	changed, events, err := r.Reschedule(room, period, attendees, now)
 	if err != nil {
 		return Versioned{}, err
 	}
 	if err := s.checkFree(ctx, changed); err != nil {
 		return Versioned{}, err
 	}
-	return s.update(ctx, changed, in.Read, now)
+	return s.update(ctx, changed, events, in.Read, now)
 }

@@ -3,7 +3,9 @@
 // Facility API. The store keeps the rules of the database that the use cases
 // rely on: versions, the exclusion of overlapping confirmed reservations,
 // unique idempotency keys, and the order of a listing. The tests against a
-// real database (build tag integration) check the database itself.
+// real database (build tag integration) check the database itself. The store
+// also keeps the events of each change that it accepted, so that a test can
+// see which events a use case stored.
 package apptest
 
 import (
@@ -20,9 +22,10 @@ import (
 
 // Store implements app.Store in memory. The zero value is an empty store.
 type Store struct {
-	mu   sync.Mutex
-	rows []row
-	keys map[string]app.IdempotencyKey
+	mu     sync.Mutex
+	rows   []row
+	keys   map[string]app.IdempotencyKey
+	events []domain.Event
 }
 
 type row struct {
@@ -32,9 +35,9 @@ type row struct {
 
 var _ app.Store = (*Store)(nil)
 
-// Add stores a new reservation at version 1 with its idempotency key, and
-// refuses it as the database would.
-func (s *Store) Add(_ context.Context, r domain.Reservation, key app.IdempotencyKey, _ time.Time) (app.Version, error) {
+// Add stores a new reservation at version 1 with its events and its
+// idempotency key, and refuses it as the database would.
+func (s *Store) Add(_ context.Context, r domain.Reservation, events []domain.Event, key app.IdempotencyKey, _ time.Time) (app.Version, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.overlaps(r.Room(), r.Period(), r.ID()) && r.Status() == domain.StatusConfirmed {
@@ -48,6 +51,7 @@ func (s *Store) Add(_ context.Context, r domain.Reservation, key app.Idempotency
 	}
 	s.keys[key.Key] = key
 	s.rows = append(s.rows, row{reservation: r, version: 1})
+	s.events = append(s.events, events...)
 	return 1, nil
 }
 
@@ -63,9 +67,9 @@ func (s *Store) Get(_ context.Context, id domain.ReservationID) (app.Versioned, 
 	return app.Versioned{}, app.ErrNotFound
 }
 
-// Update replaces the reservation at version read, and refuses it as the
-// database would.
-func (s *Store) Update(_ context.Context, r domain.Reservation, read app.Version, _ time.Time) (app.Version, error) {
+// Update replaces the reservation at version read and stores the events of
+// the change, and refuses it as the database would.
+func (s *Store) Update(_ context.Context, r domain.Reservation, events []domain.Event, read app.Version, _ time.Time) (app.Version, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for i, stored := range s.rows {
@@ -79,9 +83,18 @@ func (s *Store) Update(_ context.Context, r domain.Reservation, read app.Version
 			return 0, app.ErrOverlap
 		}
 		s.rows[i] = row{reservation: r, version: read + 1}
+		s.events = append(s.events, events...)
 		return read + 1, nil
 	}
 	return 0, app.ErrVersionConflict
+}
+
+// Events returns the events that the store keeps, in the order in which the
+// changes that they report were stored.
+func (s *Store) Events() []domain.Event {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return slices.Clone(s.events)
 }
 
 // Overlaps reports whether a confirmed reservation of the room, other than
