@@ -1,0 +1,18 @@
+asyncapi: 3.0.0
+info:
+  title: Facility events
+  version: 0.1.0
+components:
+  messages:
+    roomCleaned:
+      name: facility.RoomCleaned.v1
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/envelope"
+          - type: object
+            properties:
+              data:
+                $ref: ./facility/RoomCleaned.v1.json
+  schemas:
+    envelope:
+      type: object

@@ -1,0 +1,6 @@
+a:
+  - x
+  - b: &anchor
+      c: found
+d: *anchor
+e/f~g: found too
