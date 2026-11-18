@@ -86,7 +86,7 @@ Trivy は、ロックファイルをもとに、既知の脆弱性と、禁止�
 コンテナは、次の決まりに従う。
 
 - ベースイメージは最小限のものを選び、ダイジェストで固定する。
-- コンテナは root 以外のユーザーで動かす。
+- コンテナは root 以外のユーザーで動かす。Docker Compose では、フロントエンドを含む製品のサービスに、さらに3つの制限をかける（`compose.yaml` の `x-context-service`）。ファイルシステムは読み取り専用で、ケーパビリティはなく、新しい特権も得られない。
 - Trivy がすべてのイメージをスキャンし、その SBOM を書く。
 - ビルドには、GitHub の artifact attestations で来歴を付ける。
 - フロントエンドのイメージ（`frontend/Dockerfile`）は、ダイジェストで固定した Node の公式イメージの上でビルドする。Node はもう Corepack を同梱しないので、ビルドは npm のレジストリにある pnpm のパッケージから pnpm を入れる。そのパッケージは、`ADD --checksum` が SHA-256 で確かめる。依存は、`pnpm-workspace.yaml` の設定のもとで、`pnpm-lock.yaml` からフロントエンドの分だけを入れる。イメージは Next.js の standalone のサーバーを持ち、それは distroless の Node の上で、ユーザー 65532 として動く。
@@ -161,4 +161,4 @@ AWS SDK for Go v2 は `backend/go.mod` のモジュールであり、前に述�
 - [OpenSSF Scorecard](https://github.com/ossf/scorecard)
 - 道具の固定は TPL-0022 に、1つの関心事に道具を1つだけ使う決まりは TPL-0023 に、更新は TPL-0025 にある。
 
-<!-- i18n-source: TPL-0024-supply-chain-defenses.md sha256:4908fdae59e39fee6e02657f210faaece7901764a7a4a4be3bf7488bbf368f2d -->
+<!-- i18n-source: TPL-0024-supply-chain-defenses.md sha256:6acdfce464bc752f380ba2e646d2e9d2c52c3fee021bef9045d258fce74c54e3 -->

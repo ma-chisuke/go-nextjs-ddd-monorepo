@@ -73,7 +73,7 @@ M1 から文脈はそれぞれ自分のイメージを持つが、それを ECS 
 - `backend/Dockerfile` は、ビルド引数 `CONTEXT` が指す文脈のイメージを `backend/cmd/<context>/` からビルドする。そのため、文脈を足しても専用の Dockerfile は要らず、Go のモジュールは1つのままである。
 - `make check-all` に含まれる `make smoke` は、すべての文脈のすべてのプロセスを、Docker Compose で別々のコンテナとして動かす。プロセスは、Facility と Reservation の API、Reservation の中継（Reservation のイメージから動く `reservation relay`）、Notification のワーカーである。そして、HTTP 越しに API を使って会議室を予約し、予約のイベントから生じるメールを待つ。文脈は別々のプロセスとして動き、互いの API とイベントを通してしか相手に届かない。
 - 各イメージのバイナリは、API でもワーカーでも、自分自身のヘルスチェックを行う（`<command> healthcheck`）。ECS のタスクのヘルスチェックも、このコマンドを実行する予定である。ワーカーが動いている間ヘルスチェックに答えることは、`httpserver.RunWorker` のテストが確かめる。
-- フロントエンドのマイルストーンから、フロントエンドも自分のイメージを持つ。Docker Compose はそれをサービス `web` として動かし、`web` は Compose のネットワークを通して API に届く。非公開のネットワークを通して届くのと同じ形である。`make e2e` はこれをブラウザーで操作し、そのテストの1つはヘルスチェックが答えることを確かめる。
+- フロントエンドのマイルストーンから、フロントエンドも自分のイメージを持つ。Docker Compose はそれをサービス `web` として動かし、`web` は Compose のネットワークを通して API に届く。AWS で非公開のネットワークを通して届くことになるのと同じ形である。`make e2e` はこれをブラウザーで操作し、そのテストの1つはヘルスチェックが答えることを確かめる。
 - `frontend/src/**/server/` の下のモジュールが `server-only` を import していないと、`lint-frontend` が失敗する。そのモジュールを import するクライアントコンポーネントでも失敗する（`no-restricted-syntax`）。クライアントコンポーネントが `server-only` を import すると、Next.js のビルドが失敗する。
 
 次のチェックは、インフラのマイルストーンで入る。

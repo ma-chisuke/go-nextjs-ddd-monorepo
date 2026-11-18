@@ -24,7 +24,7 @@ accf9c797f6d7f148b5bb2e840fe4f68d7ca862b718cfe96ccc1346a7e0360c2  TPL-0012-uuidv
 a28bfa97407abd9b95e57dfef1ea1c5b1f94bd9222ca401b834a9ceff61b2f38  TPL-0012-uuidv7-primary-keys.md
 40f463243366b557722251d005e2ea9641d91dd35207b05748a0fbea06b379bc  TPL-0013-events-with-outbox-cloudevents-eventbridge-sqs.ja.md
 fa9aad849205074e9a6b86aa1a952e5476d116ce6908553afb8b9ea5d7ae5c21  TPL-0013-events-with-outbox-cloudevents-eventbridge-sqs.md
-09f1acf15a041a2d86ec6d19986f5a6aacfbf26981d42eab758973d125a76ed9  TPL-0014-deploy-each-context-to-ecs.ja.md
+1b7dd00e72638de86fa27fd7959390b469eef24e2ea7a81fcd0dbb3820e3977c  TPL-0014-deploy-each-context-to-ecs.ja.md
 27161318690340aa18f4eef742f166999123bc10cf1919abacbe9d6cb0ef18e7  TPL-0014-deploy-each-context-to-ecs.md
 72dc009b297054216c347ebcb1761c12ab1856e22a3491e9d42cb2048ce79799  TPL-0015-terraform-and-terragrunt.ja.md
 9ef9277b9c464ba9578299da515dbcee9df6942323a71159ffcc40a0eba04ff8  TPL-0015-terraform-and-terragrunt.md
@@ -44,7 +44,7 @@ a67885614c5b88fa043d63f4d2e109ddb586cd9092d33da829f5a0ef25663e77  TPL-0022-pin-t
 a3b955199ef692e30a4cea7ad3822efc7628ed6e9e515817a62d37de601d0634  TPL-0022-pin-tool-versions-with-mise.md
 4f14e202a862700548a11237abc1235f1f87c0422b2188c5903c24faf0813aea  TPL-0023-one-tool-per-concern.ja.md
 5843f34701aec9b37a43a752db87053fee507e10ea31975ac06a050c023f2aaa  TPL-0023-one-tool-per-concern.md
-aa66b594f75e7654d236474ad816a27f195d232eeb52e17277baf368046b0e1c  TPL-0024-supply-chain-defenses.ja.md
-4908fdae59e39fee6e02657f210faaece7901764a7a4a4be3bf7488bbf368f2d  TPL-0024-supply-chain-defenses.md
+d1d5d921145e33448472ed678c6c1bf9a267041f36a9d28753af273611df10b9  TPL-0024-supply-chain-defenses.ja.md
+6acdfce464bc752f380ba2e646d2e9d2c52c3fee021bef9045d258fce74c54e3  TPL-0024-supply-chain-defenses.md
 5acfff70c8f46f633a891689de577566ac1c7eb70ab9a5f29b2c598de93c3094  TPL-0025-dependency-updates-with-renovate.ja.md
 d094b06890bba9546371bb3a4e90c9b0b252b1714179adad73ae6950268423df  TPL-0025-dependency-updates-with-renovate.md

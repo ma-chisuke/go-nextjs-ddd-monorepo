@@ -86,7 +86,7 @@ For the repository, the template uses these services on GitHub.
 For containers, these rules apply.
 
 - Base images are minimal and pinned by digest.
-- Containers run as a user other than root.
+- Containers run as a user other than root. In Docker Compose, the services of the product, the frontend included, also run with a read-only file system, without capabilities, and without new privileges (`x-context-service` in `compose.yaml`).
 - Trivy scans every image and writes its SBOM.
 - Builds get provenance through GitHub artifact attestations.
 - The image of the frontend (`frontend/Dockerfile`) builds on the official Node image, pinned by digest. Node no longer ships Corepack, so the build installs pnpm from its package on the registry of npm, which `ADD --checksum` checks against its SHA-256. It installs the dependencies of the frontend alone from `pnpm-lock.yaml`, under the settings of `pnpm-workspace.yaml`, and the image holds the standalone server of Next.js on distroless Node, as the user 65532.
