@@ -24,7 +24,7 @@
 | パス | 中身 |
 |---|---|
 | `backend/` | Go の API。モジュールは1つ。区切られた文脈ごとに `internal/<context>/` を置く。変える前に [backend/AGENTS.ja.md](backend/AGENTS.ja.md) を読む。 |
-| `frontend/` | Next.js。文脈ごとに `src/features/<context>/` を置く。 |
+| `frontend/` | Next.js。文脈ごとに `src/features/<context>/` を置く。変える前に [frontend/AGENTS.ja.md](frontend/AGENTS.ja.md) を読む。 |
 | `contracts/` | `http/` に OpenAPI の文書、`events/` に AsyncAPI の文書と各イベントの JSON Schema。生成コードと契約のテストの元になる。 |
 | `db/` | データベースの初期設定。 |
 | `infra/` | Terraform。`modules/` と、それらを AWS Emulator に適用する `local/`。Terragrunt はデプロイとともに加わる。 |
@@ -50,4 +50,4 @@
 - **GitHub Actions。** ワークフローのステップは、チェックアウトと mise の準備のあとは `make` だけを呼ぶ。Action はコミット SHA で固定する。（TPL-0018、TPL-0024）
 - **禁止。** `.env` を読まない。force push をしない。`main` に push しない。prd にインフラを適用しない。
 
-<!-- i18n-source: AGENTS.md sha256:97a62e19ec69a101a66af8b3fa183da66d8d728a017443dc72b6fa39c3d29b66 -->
+<!-- i18n-source: AGENTS.md sha256:e66b8e5e61dc95dc34198a5390c52add6cb728092d513f7ae4af98c4ea6b3135 -->
