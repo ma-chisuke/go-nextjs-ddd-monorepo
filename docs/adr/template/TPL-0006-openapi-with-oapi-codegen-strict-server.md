@@ -40,14 +40,18 @@ Chosen option: "OpenAPI 3.1 written first, with the oapi-codegen strict server a
 - `contracts/http/<context>.openapi.yaml` is the source of the API of each context. A change of the API starts with a change of this file.
 - oapi-codegen generates the strict server interface and the types for the Go server, on `net/http`. The strict server gives each operation a typed request object and typed response objects, so a handler can return only a status and a body that the document declares.
 - oapi-codegen also generates the client that another context uses to call the API (TPL-0005).
-- openapi-typescript generates the TypeScript types that the Next.js app uses.
+- openapi-typescript generates the TypeScript types that the Next.js app uses, one file per API document: `frontend/src/lib/api/<context>.gen.ts`, written by `tools/scripts/gen-frontend.sh`.
+- openapi-fetch, from the same project as openapi-typescript, is the client of the Next.js app. It takes the generated `paths` of an API, so a call with a path, a parameter, or a body that the document does not declare does not compile. It is a small runtime dependency, and the only one that the contracts add to the frontend.
 - Generated code is committed, in files named `*.gen.go` and `*.gen.ts`, which `.gitattributes` collapses in pull request diffs. `make gen` writes these files, and nobody edits them by hand.
 - The descriptions in the documents are in English (TPL-0021).
 - The health check, `GET /healthz`, is not an operation of the API document. The HTTP server of the platform, `backend/internal/platform/httpserver`, registers it next to the generated routes, because it belongs to the service that runs the API, not to the contract with the clients.
 - The API of a context has no authentication of its own, and its document declares `security: []`: only the private network reaches it (TPL-0014).
 
 The first bounded context verified that an OpenAPI 3.1 document passes oapi-codegen v2.8.2, kin-openapi, Redocly CLI, and oasdiff, so the documents need no fallback to OpenAPI 3.0.3.
-openapi-typescript and Schemathesis arrive with later milestones, and are not verified yet. If one of them cannot read 3.1, a new record states the change and the reason.
+The frontend milestone verified that openapi-typescript 7.13.0 reads the same documents as they are.
+Schemathesis arrives with a later milestone, and is not verified yet. If it cannot read 3.1, a new record states the change and the reason.
+
+This differs from the first plan in one point: the first plan bundled the API documents into one document for the Next.js app. Each document generates a file of its own instead, for three reasons. No step bundles the documents before the generator runs. Schemas that every document defines with the same name, such as `Problem`, cannot collide. And the frontend keeps the contexts apart as the backend does (TPL-0003): a feature imports the types of its own context.
 
 ### Consequences
 
@@ -59,13 +63,15 @@ openapi-typescript and Schemathesis arrive with later milestones, and are not ve
 - Bad, because the generators limit what a document can use. Some schema constructs, such as `oneOf`, become Go types that are awkward to use, so the documents are written to suit the generators.
 - Bad, because the generated code answers some errors by itself, such as a parameter that cannot be parsed, and the template must replace those answers so that every error is a problem (TPL-0008).
 - Bad, because people and agents write the document before the code, which is slower for a change that is only a few lines long.
+- Bad, because openapi-typescript 7 declares TypeScript 5 as its peer, and the frontend uses TypeScript 6. `pnpm-workspace.yaml` allows the pair (`peerDependencyRules`). If a later version stops generating the same types, `gen-check-api-ts` or the type check of the frontend fails.
 
 ### Confirmation
 
 These checks enforce this decision.
 
 - The compiler: the generated code takes an implementation of the strict server interface, so a missing or wrongly typed handler is a compile error. `lint-go` and `test-go` report it.
-- Freshness: `gen-check-api`, in `make check`, runs oapi-codegen again for each `oapi-codegen.yaml`, and fails when the result differs from the committed file.
+- Freshness: `gen-check-api`, in `make check`, runs oapi-codegen again for each `oapi-codegen.yaml`, and fails when the result differs from the committed file. `gen-check-api-ts` runs openapi-typescript again for each API document, and fails when a generated file differs (`gen/stale`), is missing (`gen/missing`), or has no document (`gen/no-document`).
+- The TypeScript compiler: `lint-frontend-types` runs `tsc` on the frontend, so a call of openapi-fetch that the generated types refuse fails. The self-test proves it with a query parameter that the document of Facility does not declare (`case_lint_frontend_types__api`).
 - Routes: the rule `arch/route-registration` of `lint-arch` fails on a route that code other than the generated code and `platform/httpserver` registers, so every route of an API comes from its document.
 
 TPL-0007 describes these checks, and the ones that catch what types cannot express.

@@ -49,6 +49,9 @@ Inside `make`, each concern has one tool. Targets marked "check-all" run only in
 | Linting of the frontend, including the boundaries between features | ESLint, with eslint-config-next, typescript-eslint, and eslint-plugin-boundaries | `lint-frontend` |
 | Types of the frontend | the TypeScript compiler (`tsc --noEmit`) | `lint-frontend-types` |
 | Files, exports, and dependencies of the frontend that nothing uses | knip | `lint-frontend-unused` |
+| The TypeScript types of the APIs, against what the generator writes from the API documents now (TPL-0006, TPL-0007) | openapi-typescript (`tools/scripts/gen-frontend.sh`) | `gen-check-api-ts` |
+| Unit tests of the frontend: the modules of pure logic | the test runner of Node (`node --test`), on TypeScript as it is | `test-frontend` |
+| The local system in a browser: the scenarios of a person, from a screen to the mail | Playwright, with Chromium (`frontend/e2e`) | `e2e` (check-all) |
 | Formatting of YAML, JSON, JSON5, JavaScript, TypeScript, and CSS | Prettier | `fmt-check-prettier` |
 | Linting of YAML, such as duplicate keys and ambiguous values | yamllint | `lint-yaml` |
 | Formatting and linting of TOML | taplo | `fmt-check-toml`, `lint-toml` |
@@ -113,6 +116,8 @@ These overlaps were resolved as follows.
 - The import rules of the layers and the rule against reading the clock in the domain live in `tools/cmd/arch`, not in depguard and forbidigo, which golangci-lint runs. The command derives every rule from the directory layout, so a new context needs no configuration. depguard and forbidigo keep only the rules that apply to every Go file.
 - An import of a package under `internal/` of another context does not compile, so `lint-go` and `test-go` report it, and `lint-arch` reports it as well (`arch/context-import`). This overlap is accepted: only the finding of `lint-arch` names the record and says how contexts integrate instead (TPL-0005).
 - squawk reads the SQL files and the DDL of each plan, with a configuration for each. The one for plans, `.squawk.plan.toml`, leaves the rules about what a table holds, such as the type of a column, to `lint-sql`, so such a problem is reported once, on `schema.sql`.
+- The unit tests of the frontend run on the test runner of Node, which runs TypeScript as it is, and not on a test framework such as Vitest or Jest, which would bring one more dependency tree and a configuration of its own. They cover the modules of pure logic, which import nothing of Next.js and import each other with the extension `.ts`. What a screen does is tested in a browser, by Playwright, the one tool of the end-to-end test.
+- `smoke` and `e2e` both run the local system end to end, and both wait for the mail of a booking, but each checks what the other cannot see. The smoke test checks every response against the API documents over HTTP; the end-to-end test checks the screens, the Server Functions, and the parts of a page that stream in. This overlap is accepted.
 
 The rules for running the tools are as follows.
 
@@ -126,13 +131,13 @@ The rules for running the tools are as follows.
 
 ### Consequences
 
-- Good, because each problem is reported once, by the tool that owns it, except where Trivy and govulncheck overlap on purpose.
+- Good, because each problem is reported once, by the tool that owns it, except where Trivy and govulncheck, or the smoke test and the end-to-end test, overlap on purpose.
 - Good, because `make check` is fast enough to run at the end of every agent turn and before every commit.
 - Good, because a new check needs only a target in one `make/<area>.mk` and a case in the self-test, and it inherits the scope, the ignore list, the parallel run, and the output format.
 - Bad, because choosing one tool per concern gives up the extra rules of the tools that were left out.
 - Bad, because every tool has its own configuration file, and agreements between tools, such as the layout rules of yamllint and Prettier, must be kept by hand.
 - Bad, because the budget pushes useful checks, such as known vulnerabilities and remote links, out of `make check`, so their findings appear only in CI, after a push.
-- Bad, because the budget is measured on the machine that runs the check, so the same run can be within budget on a fast machine and over it on a slow one.
+- Bad, because the budget is measured on the machine that runs the check, so the same run can be within budget on a fast machine and over it on a slow one. On an idle laptop, `make check` over every file took about 20 seconds in November 2026, the frontend included. On a machine busy with other work, a run in which every check passes can exceed 60 seconds and fail on the budget alone; the same run, repeated, passes.
 
 ### Confirmation
 

@@ -40,13 +40,14 @@ ETH Zurich による2026年の「Evaluating AGENTS.md: Are Repository-Level Cont
 
 - 大事な決まりは、チェックで守らせる。チェックの指摘は1件1行で、ファイルと行・ルール・直し方・理由を書いた記録を示す。エージェントは、その1行から自分で誤りを直せる。
 - `AGENTS.md` に書くのは、コマンド・ファイルの置き場所・「終える前に `make check` を実行する」という指示・よくある既定から外れる決まりだけである。理由は記録に、手順はスキルとガイドに書く。
-- `CLAUDE.md` は `AGENTS.md` を読み込むだけにする。こうして、どのエージェントも同じファイルを読む。
+- `CLAUDE.md` は `AGENTS.md` を読み込むだけにする。こうして、どのエージェントも同じファイルを読む。`backend/` と `frontend/` には、それぞれの部分への指示を書いた専用の `AGENTS.md` があり、それを読み込む `CLAUDE.md` が隣にある。
+- どの道具にも `AGENTS.md` を書かせない。Next.js 16 は、`next dev` がコーディングエージェントを見つけると、アプリの `AGENTS.md` に自分のブロックを足す。そのブロックはこのリポジトリの文章のチェックに通らず、消してもまた書き戻される。`frontend/next.config.ts` はこれを止め（`agentRules: false`）、`frontend/AGENTS.md` がそのブロックと同じことを書く。Next.js 16 はエージェントの知る Next.js と違うので、エージェントはコードを書く前に、インストールされたバージョンに付属する `frontend/node_modules/next/dist/docs/` の下の文書を読む。
 - `AGENTS.md` に指示を足すのは、どのチェックでも捕まえられない失敗が評価で見つかったときだけである。評価は `evals/` に置き、後のマイルストーンで入る。
 
 ハーネスは次の部品からなる。
 
 - Claude Code のフック。エージェントがファイルを編集すると、そのファイルを整形する。生成コードの編集・`.env` の読み取り・prd への変更の適用・force push を止める。ターンの終わりには、変更の及ぶ範囲のチェックを実行し、失敗をエージェントに差し戻す。差し戻す回数には上限がある。
-- 繰り返す手順のためのスキル（`.claude/skills/`）。`write-adr` は記録を書き、`sync-translation` は対訳を最新にする。スキルは、後のマイルストーンでコードと一緒に増える。
+- 繰り返す手順のためのスキル（`.claude/skills/`）。`write-adr` は記録を書き、`sync-translation` は対訳を最新にする。`add-endpoint` や `add-screen` のようなコードのスキルは、それぞれ `docs/guides/` のガイドに従い、それが変えるコードと一緒に加わる。
 - 書いた本人とは別の目で見るサブエージェント（`.claude/agents/`）。`design-reviewer` は変更を記録に照らしてレビューし、`translation-reviewer` は対訳を原文と比べる。
 - 権限の設定。安全なコマンドは確認なしで実行させ、危険なコマンドは拒む。
 - lefthook。人にも、コミットの前とプッシュの前に同じチェックをかける（`lefthook.yml`）。
@@ -99,4 +100,4 @@ ETH Zurich による2026年の「Evaluating AGENTS.md: Are Repository-Level Cont
 - [AGENTS.md](https://agents.md/)
 - `make check` の背後にある道具の選び方は TPL-0023 にある。
 
-<!-- i18n-source: TPL-0020-agent-harness-prefers-deterministic-checks.md sha256:a54d8985ea3d594f2e21e3f455bab452e66cb0c2de25390d3a5f2645f22ba220 -->
+<!-- i18n-source: TPL-0020-agent-harness-prefers-deterministic-checks.md sha256:a21763fba976361f19269e1c68eb0cfc767ad35c666839f9472a464f6309ffa8 -->

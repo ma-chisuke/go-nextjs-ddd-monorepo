@@ -93,7 +93,7 @@ These checks enforce the decision.
 - The integration tests of Reservation check that the store writes the events of a change with the change and none with a refused change, that two relays never take the same event, and that a row that cannot be read does not hold up the others.
 - The integration tests of Notification deliver one event twice, also twice at the same moment, and expect one mail.
 - The integration tests of `platform/awsevents` run the publisher and the consumer against AWS Emulator: an event reaches the handler of a subscriber through a rule and a queue, and an event whose handler keeps failing moves to the dead-letter queue. They run in `make test-integration`, part of `make check-all` and of CI.
-- `make smoke` books, reschedules, and cancels a reservation in the local system, and waits for the three mails in Mailpit, through the outbox, the relay, the bus, the queue, and the worker of Notification.
+- `make smoke` books, reschedules, and cancels a reservation in the local system, and waits for the three mails in Mailpit, through the outbox, the relay, the bus, the queue, and the worker of Notification. `make e2e` does the same through the screens, in a browser.
 
 ## Pros and Cons of the Options
 

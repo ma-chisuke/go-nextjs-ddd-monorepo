@@ -49,6 +49,9 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 | フロントエンドの lint（機能どうしの境界を含む） | ESLint（eslint-config-next・typescript-eslint・eslint-plugin-boundaries を使う） | `lint-frontend` |
 | フロントエンドの型 | TypeScript のコンパイラー（`tsc --noEmit`） | `lint-frontend-types` |
 | フロントエンドの、どこからも使われていないファイル・export・依存 | knip | `lint-frontend-unused` |
+| API の TypeScript の型が、生成器がいまの API の文書から書く内容と同じであること（TPL-0006、TPL-0007） | openapi-typescript（`tools/scripts/gen-frontend.sh`） | `gen-check-api-ts` |
+| フロントエンドの単体テスト（純粋なロジックのモジュール） | Node のテストランナー（`node --test`）。TypeScript をそのまま動かす | `test-frontend` |
+| ブラウザーで見た手元のシステム（画面からメールまでの、人のシナリオ） | Playwright と Chromium（`frontend/e2e`） | `e2e`（check-all） |
 | YAML・JSON・JSON5・JavaScript・TypeScript・CSS の整形 | Prettier | `fmt-check-prettier` |
 | YAML の lint（キーの重複や曖昧な値など） | yamllint | `lint-yaml` |
 | TOML の整形と lint | taplo | `fmt-check-toml`・`lint-toml` |
@@ -113,6 +116,8 @@ Schemathesis は、それを加えるマイルストーンで加わる（TPL-000
 - 層の import のルールと、ドメインで時計を読むことを禁じるルールは、golangci-lint が動かす depguard と forbidigo ではなく、`tools/cmd/arch` に置く。このコマンドはすべてのルールをディレクトリの構成から導くので、文脈を足しても設定は要らない。depguard と forbidigo には、すべての Go のファイルに当てはまるルールだけを残す。
 - 別の文脈の `internal/` の下のパッケージを import するとコンパイルが通らないので、`lint-go` と `test-go` がそれを報告し、`lint-arch` も報告する（`arch/context-import`）。この重なりは認めている。記録を挙げ、代わりに文脈どうしをどうつなぐかを示すのは、`lint-arch` の指摘だけだからである（TPL-0005）。
 - squawk は、SQL のファイルと、各 plan の DDL を読む。設定はそれぞれに1つある。plan 用の `.squawk.plan.toml` は、列の型のようにテーブルが何を持つかについてのルールを `lint-sql` に任せる。そのため、そうした問題は `schema.sql` の上で1回だけ報告される。
+- フロントエンドの単体テストは、TypeScript をそのまま動かす Node のテストランナーで動かす。Vitest や Jest のようなテストのフレームワークは使わない。使えば、依存のツリーと専用の設定が1つずつ増えるからである。対象は純粋なロジックのモジュールで、これらは Next.js のものを何も import せず、互いを拡張子 `.ts` 付きで import する。画面の振る舞いは、エンドツーエンドテストの唯一の道具である Playwright がブラウザーでテストする。
+- `smoke` と `e2e` は、どちらも手元のシステムを端から端まで動かし、どちらも予約のメールを待つ。ただし、それぞれが確かめるのは、もう一方には見えないものである。スモークテストは、HTTP ですべての応答を API の文書と照らし合わせる。エンドツーエンドテストは、画面・サーバー関数・ストリーミングされるページの部分を確かめる。この重なりは認めている。
 
 道具の動かし方の決まりは次のとおりである。
 
@@ -126,13 +131,13 @@ Schemathesis は、それを加えるマイルストーンで加わる（TPL-000
 
 ### 結果
 
-- 良い点：どの問題も、それを受け持つ道具から1回だけ報告される。例外は、意図して重ねた Trivy と govulncheck だけである。
+- 良い点：どの問題も、それを受け持つ道具から1回だけ報告される。例外は、意図して重ねた Trivy と govulncheck、およびスモークテストとエンドツーエンドテストだけである。
 - 良い点：`make check` は、エージェントのターンの終わりにもコミットの前にも毎回実行できるほど速い。
 - 良い点：新しいチェックは、`make/<area>.mk` の1つにターゲットを足し、自己テストにケースを足すだけで、範囲の絞り込み・除外の一覧・並列の実行・出力の形式を引き継ぐ。
 - 悪い点：1つの関心事に道具を1つしか選ばないので、選ばなかった道具にしかないルールは失われる。
 - 悪い点：道具ごとに設定ファイルがあり、yamllint と Prettier の配置のルールのような、道具の間の取り決めは手で保つ必要がある。
 - 悪い点：時間の上限があるので、既知の脆弱性やリポジトリの外へのリンクのような役に立つチェックが `make check` から外れる。それらの指摘は、プッシュしたあとに CI で初めて出る。
-- 悪い点：時間はチェックを動かしたマシンで測るので、速いマシンでは上限に収まる実行が、遅いマシンでは上限を超えることがある。
+- 悪い点：時間はチェックを動かしたマシンで測るので、速いマシンでは上限に収まる実行が、遅いマシンでは上限を超えることがある。2026年11月の時点で、ほかの作業をしていないノート PC では、すべてのファイルに対する `make check` がフロントエンドを含めて20秒ほどで終わった。ほかの作業で忙しいマシンでは、すべてのチェックが通る実行でも60秒を超え、上限だけで失敗することがある。同じ実行を繰り返せば通る。
 
 ### 確認の方法
 
@@ -172,4 +177,4 @@ Schemathesis は、それを加えるマイルストーンで加わる（TPL-000
 - `make help` が主なターゲットを一覧にし、`make/<area>.mk` が領域ごとのターゲットを持つ。
 - これらの道具の固定は TPL-0022 に、Trivy と GitHub の側のスキャナーを選んだ理由は TPL-0024 にある。
 
-<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:36554164f33d6101adeadacc86f8361d696661d00d6580d94b2a0c688441332a -->
+<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:5843f34701aec9b37a43a752db87053fee507e10ea31975ac06a050c023f2aaa -->

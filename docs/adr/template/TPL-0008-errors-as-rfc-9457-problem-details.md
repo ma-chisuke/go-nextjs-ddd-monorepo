@@ -56,6 +56,7 @@ Chosen option: "RFC 9457 problem details", because it is the current standard fo
 - Bad, because each `type` URI needs a page that stays at the same address. A team that copies the template points the URIs at its own site, and each page also needs a Japanese translation (TPL-0021).
 - Bad, because the Go types do not prove that an operation answers only the statuses that its document declares. The strict server of oapi-codegen types the `application/problem+json` responses of each operation, but the operations return a problem as an error, with any status. The validation of responses in the tests (TPL-0007, layer 4) proves it instead, for the requests that the tests send.
 - Bad, because the standard leaves the shape of extension members open, so the template defines `errors` itself, and a client learns that part from the template's documents.
+- Bad, because the frontend sees the body of a problem and nothing else: `outcome` in `frontend/src/lib/api/server/outcome.ts` drops the headers of the answer, such as the `Retry-After` of facility-unavailable, so a screen cannot say how long to wait.
 
 ### Confirmation
 
@@ -64,6 +65,13 @@ These checks enforce this decision.
 - The rule `rule/problem-details-only` in `redocly.yaml`, which `lint-contracts` runs, fails when a 4xx or 5xx response in an OpenAPI document has a media type other than `application/problem+json` (TPL-0007, layer 7).
 - The linter exhaustive, in `lint-go`, fails when a kind of business error has no case in the table. A test in the HTTP adapter of each context, `problems_test.go`, fails when a kind maps to no problem of its own, or when a problem has no page under `docs/problems/` or no translation of the page.
 - The API tests validate every response against the document through the client of `backend/internal/platform/apitest` (TPL-0007, layer 4), so an error body that is not a problem, or a status that the operation does not declare, fails the test that produced it.
+
+The frontend is a client of every API, and it reads problems as this record says.
+
+- `outcome` turns each call to an API into a value or a problem. An API that does not answer, or that answers with something that is not a problem, becomes a problem too, so a screen shows every failure in one way.
+- `problemKind` in `frontend/src/lib/problem.ts` takes the kind of a problem from its `type`: the name of its page in `docs/problems/`, such as `room-already-booked`. A screen chooses its words by that name, and shows any problem that it does not know with its `title` and `detail` as they are.
+- `fieldErrors` maps the `pointer` of each item of `errors` to a field of a form, so a screen shows the message at the field that is wrong.
+- The unit tests of `problem.ts`, and of the words of each feature (`registration.test.ts`, `problems.test.ts`), check these mappings. No check stops a screen from parsing a `title` or a `detail`; review does.
 
 ## Pros and Cons of the Options
 

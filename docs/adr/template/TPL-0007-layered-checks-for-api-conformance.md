@@ -71,14 +71,16 @@ Layer 1 compiles each operation against the strict server interface (`lint-go`, 
 Layer 3 is the rule `arch/route-registration` of `lint-arch`.
 Layer 4 is the client of the API tests, `backend/internal/platform/apitest`, which validates every response with kin-openapi, together with the request validation of `platform/httpserver`, which every request of a test passes through.
 Layer 6 is `lint-contracts-breaking`, and layer 7 is `lint-contracts`.
-Still to come: layer 5, with the milestone that adds Schemathesis, and the TypeScript side of layers 1 and 2, with the Next.js app. `lint-frontend-types` exists already, and checks the first TypeScript file when it arrives.
+Since the frontend milestone, layers 1 and 2 check the TypeScript side too. The Next.js app calls the APIs through openapi-fetch, which takes the types that openapi-typescript generates from each document (TPL-0006), so `lint-frontend-types` fails on a call that the document does not allow. The self-test proves it with a query parameter that the document of Facility does not declare (`case_lint_frontend_types__api`). `gen-check-api-ts` is layer 2 for those types.
+Still to come: layer 5, with the milestone that adds Schemathesis.
+The frontend reads the answers of the APIs as their types say, and does not validate them at run time, as production validates no response; layer 4 checks the responses in the tests of each API. The end-to-end test (`make e2e`, in `make check-all`) then runs the screens against the real APIs.
 
 The table names the target that runs each layer. A target marked "planned" does not exist yet, and its name may change when it is written.
 
 | Layer | Make target | Run by |
 |---|---|---|
 | 1. Compile time | `lint-go` and `test-go` for Go; `lint-frontend-types` for `tsc --noEmit` | `make check` |
-| 2. Freshness | `gen-check-api`: runs oapi-codegen again, and fails when the result differs from the committed code | `make check` |
+| 2. Freshness | `gen-check-api`: runs oapi-codegen again, and fails when the result differs from the committed code; `gen-check-api-ts`: the same for openapi-typescript | `make check` |
 | 3. No entry point outside the document | `lint-arch`, with the rule `arch/route-registration` | `make check` |
 | 4. Validation in tests | `test-go`, through the client of `platform/apitest` | `make check` |
 | 5. Generated inputs | `test-api` (planned) | `make check-all` |

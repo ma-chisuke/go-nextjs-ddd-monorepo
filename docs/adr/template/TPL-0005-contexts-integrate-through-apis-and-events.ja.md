@@ -90,6 +90,8 @@ Reservation のテストは、発行するすべてのイベントを、その�
 Notification は、モデル変換装置 `internal/app/events.go` でイベントを読む。そのテストは、ファイルとして読んだスキーマのすべての例をメールにする。
 どちらかの側が追従していない変更がスキーマに入ると、その側のテストが失敗する。あるバージョンを受け取る側が読めなくなる変更では、`lint-events-breaking` が失敗する。
 
+フロントエンドは、この記録が想定するとおりに、2つの文脈を1つの画面に合わせる。会議室のページは、それぞれの文脈の機能を通して Facility の API と Reservation の API を呼ぶ。そして `frontend/src/app/_compose/` で、Facility の会議室を Reservation の言葉に変える（TPL-0003）。呼び出しは API の文書から生成した型を使うので、画面の呼び出しを壊す変更が文書に入ると、フロントエンドの型の検査が失敗する（TPL-0007）。
+
 ## 選択肢の長所と短所
 
 ### HTTP の API と統合イベントで連携し、直接には依存しない
@@ -121,4 +123,4 @@ Notification は、モデル変換装置 `internal/app/events.go` でイベン�
 
 - Vlad Khononov『ドメイン駆動設計をはじめよう』（オライリー・ジャパン）の4章：共有カーネル、モデル変換装置、共用サービス、公開された言語。原書の "Integrating Bounded Contexts" の章である。
 
-<!-- i18n-source: TPL-0005-contexts-integrate-through-apis-and-events.md sha256:826bf5dba10182ee819b958eb5cfa9de56d49d2c10df65ae3824ad6a42ef4311 -->
+<!-- i18n-source: TPL-0005-contexts-integrate-through-apis-and-events.md sha256:22fa73a62130f30b828aa0aa269b9da926d3fce158823196206b032ac68391e6 -->

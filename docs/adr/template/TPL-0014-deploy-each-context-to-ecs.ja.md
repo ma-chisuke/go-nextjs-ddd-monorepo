@@ -49,7 +49,9 @@ AWS でサービスごとに入口を作るよくある方法は、ロードバ�
 - どのプロセスも、ワーカーも含めて、`GET /healthz` に答える（`httpserver.RunWorker`）。そのため、イメージのヘルスチェックのコマンド `<command> healthcheck` は、どのプロセスも同じ方法で見張れる。ワーカーのヘルスチェックが示すのは、プロセスが動いていることだけである。データベースやブローカーに届かないワーカーは、正常のまま試し直す。再起動しても、それらが戻るわけではないからである。
 - サービスは、設定を秘密情報も含めて環境変数から読む（`platform/config`）。たとえば、`DATABASE_URL` の中のパスワードである。AWS では、タスク定義がその秘密情報を Secrets Manager から埋めるので、コードが秘密情報を読むために AWS の API を呼ぶことはない。
 - 文脈はそれぞれ自分のコンテナイメージを持ち、イメージは `backend/cmd/<context>/` からビルドする。Go のモジュールは1つのままにする。
-- Next.js も、Fargate 上の ECS で動かす。
+- Next.js も、Fargate 上の ECS で、専用のイメージ（`frontend/Dockerfile`）から動かす。
+- 文脈の API を呼ぶのは、Next.js のサーバーだけである。ブラウザーは Next.js とだけ通信するので、どの API にも CORS は要らず、API のアドレスがブラウザーに届くこともない。API のクライアントは、`server-only` を import する `frontend/src/lib/api/server/clients.ts` にある。サーバーは、各 API のベース URL を環境変数（`FACILITY_API_URL`、`RESERVATION_API_URL`）から読む。そのため、1つのイメージがどの環境でも動く。
+- フロントエンドのヘルスチェック `GET /healthz` は、API を呼ばない。文脈のヘルスチェックがほかのサービスを呼ばないのと同じである。止まっている文脈があるからといって、プラットフォームがフロントエンドを再起動してはならない。このヘルスチェックは、204 ではなく、本文を付けた 200 で答える。Next.js がその答えをビルドの時点で描くからである。イメージにシェルがないので、このチェックは Docker Compose でも ECS でも Node が実行する（`frontend/healthcheck.mjs`）。
 - リクエストの入口は Amazon ECS Gateway にする。文脈の API は非公開のゲートウェイにつなぎ、Terraform のコードではアクセスの種類 `PRIVATE` を既定値に頼らず明示する。公開するのは Next.js だけである。
 - サービスのネットワークモードは、ECS Gateway が必要とする `awsvpc` にする。ECS Express Mode のサービスは ECS Gateway につなげないので、Express Mode は使わない。
 
@@ -71,6 +73,8 @@ M1 から文脈はそれぞれ自分のイメージを持つが、それを ECS 
 - `backend/Dockerfile` は、ビルド引数 `CONTEXT` が指す文脈のイメージを `backend/cmd/<context>/` からビルドする。そのため、文脈を足しても専用の Dockerfile は要らず、Go のモジュールは1つのままである。
 - `make check-all` に含まれる `make smoke` は、すべての文脈のすべてのプロセスを、Docker Compose で別々のコンテナとして動かす。プロセスは、Facility と Reservation の API、Reservation の中継（Reservation のイメージから動く `reservation relay`）、Notification のワーカーである。そして、HTTP 越しに API を使って会議室を予約し、予約のイベントから生じるメールを待つ。文脈は別々のプロセスとして動き、互いの API とイベントを通してしか相手に届かない。
 - 各イメージのバイナリは、API でもワーカーでも、自分自身のヘルスチェックを行う（`<command> healthcheck`）。ECS のタスクのヘルスチェックも、このコマンドを実行する予定である。ワーカーが動いている間ヘルスチェックに答えることは、`httpserver.RunWorker` のテストが確かめる。
+- フロントエンドのマイルストーンから、フロントエンドも自分のイメージを持つ。Docker Compose はそれをサービス `web` として動かし、`web` は Compose のネットワークを通して API に届く。非公開のネットワークを通して届くのと同じ形である。`make e2e` はこれをブラウザーで操作し、そのテストの1つはヘルスチェックが答えることを確かめる。
+- `frontend/src/**/server/` の下のモジュールが `server-only` を import していないと、`lint-frontend` が失敗する。そのモジュールを import するクライアントコンポーネントでも失敗する（`no-restricted-syntax`）。クライアントコンポーネントが `server-only` を import すると、Next.js のビルドが失敗する。
 
 次のチェックは、インフラのマイルストーンで入る。
 
@@ -125,4 +129,4 @@ M1 から文脈はそれぞれ自分のイメージを持つが、それを ECS 
 
 まだ確かめていないこと：Next.js の公開の入口に、ECS Gateway を通してチーム自身のドメイン名を付ける方法。これはインフラを作るときに確かめる。
 
-<!-- i18n-source: TPL-0014-deploy-each-context-to-ecs.md sha256:5793ffad5b374afce995c60083587b39de3b13189be308b5b8a2bf2902e5bfa6 -->
+<!-- i18n-source: TPL-0014-deploy-each-context-to-ecs.md sha256:27161318690340aa18f4eef742f166999123bc10cf1919abacbe9d6cb0ef18e7 -->

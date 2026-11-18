@@ -94,7 +94,10 @@ These checks keep the split in the Go code:
 
 The check that fails when a directory under `backend/internal/`, other than `platform/`, has no README under `docs/contexts/` is not built yet. Until it is, review enforces it.
 
-The screens follow the same split. eslint-plugin-boundaries, which `lint-frontend` runs, keeps the features under `frontend/src/features/` apart: a feature never imports another feature. Its rules are in `frontend/eslint.config.mjs` already, and they act on the first screen.
+The screens follow the same split. Each context with screens has a feature, `frontend/src/features/<context>/`, that holds the calls to its API, its Server Functions, its pure logic, and its components. A page in `frontend/src/app/` composes the features, and `frontend/src/app/_compose/` turns what one context gives into what another needs, as the adapter `adapter/facility` does in the backend: the page of a room hands Reservation a room of Facility in the words of Reservation.
+
+- eslint-plugin-boundaries, which `lint-frontend` runs, keeps the features apart: a feature never imports another feature, and `frontend/src/lib/` imports no feature (rule `boundaries/dependencies`, in `frontend/eslint.config.mjs`). The self-test proves the rule with a feature that imports the server module of Facility (`case_lint_frontend`).
+- No check keeps a feature to the API of its own context: `frontend/src/lib/api/server/clients.ts` gives the client of every API to every feature. Review keeps it.
 
 ## Pros and Cons of the Options
 

@@ -89,12 +89,14 @@ Trivy は、ロックファイルをもとに、既知の脆弱性と、禁止�
 - コンテナは root 以外のユーザーで動かす。
 - Trivy がすべてのイメージをスキャンし、その SBOM を書く。
 - ビルドには、GitHub の artifact attestations で来歴を付ける。
+- フロントエンドのイメージ（`frontend/Dockerfile`）は、ダイジェストで固定した Node の公式イメージの上でビルドする。Node はもう Corepack を同梱しないので、ビルドは npm のレジストリにある pnpm のパッケージから pnpm を入れる。そのパッケージは、`ADD --checksum` が SHA-256 で確かめる。依存は、`pnpm-workspace.yaml` の設定のもとで、`pnpm-lock.yaml` からフロントエンドの分だけを入れる。イメージは Next.js の standalone のサーバーを持ち、それは distroless の Node の上で、ユーザー 65532 として動く。
 
 手元の環境は、製品が出荷しないソフトウェアも動かし、それも固定する（TPL-0017）。
 
 - Mailpit は、`compose.yaml` でダイジェストで固定する。バージョンは最新のリリースではなく v1.33.1 にした。Mailpit を加えた時点で、最新のリリースは公開から1日しか経っておらず、ほかの更新が待つ3日に満たなかったからである。
 - AWS Emulator は、`infra/local/aws-emulator/Dockerfile` で3つの方法で固定する。パッケージのバージョン、アーキテクチャごとのパッケージの SHA-256、そして AWS の署名である。署名は、`rpm` が `signing-key.asc` の公開鍵で確かめる。ベースイメージはダイジェストで固定し、ユーザー 65532 で動かす。
 - Terraform の AWS の provider は、`infra/local/.terraform.lock.hcl` で、4つのプラットフォームのハッシュとともに固定する。
+- エンドツーエンドテストのブラウザーは、`pnpm-lock.yaml` にある `@playwright/test` のバージョンが指す Chromium のビルドである。それがないとき、`tools/scripts/stack.sh e2e` が `.cache/ms-playwright/` にダウンロードする。`make setup` はダウンロードしない。このリポジトリは、ブラウザーそのもののチェックサムを記録しない。前に述べた決まりのもとで pnpm が入れた Playwright のリリースを信頼する。
 
 AWS SDK for Go v2 は `backend/go.mod` のモジュールであり、前に述べた Go のモジュールの決まりに従う。
 
@@ -114,6 +116,7 @@ AWS SDK for Go v2 は `backend/go.mod` のモジュールであり、前に述�
 - 悪い点：このリポジトリは、Go のモジュールにも `mise.toml` の道具にも待ちの期間を設けていない。人が手で足したバージョンは、`go get` でも `mise.toml` でもすぐに入る。待つのは、Renovate が提案する更新だけである（TPL-0025）。
 - 悪い点：GitHub の守りのいくつかは、ファイルではなく設定である。`make github-settings` がそれらを `docs/guides/github-settings.md` と比べるが、`make check` からは見えない。
 - 悪い点：AWS Emulator のバージョンを更新する Renovate のルールは、まだない。人が Dockerfile のバージョンと2つのチェックサムを手で変えるので、3日の待ちも働かない（TPL-0025）。
+- 悪い点：`frontend/Dockerfile` にある pnpm のバージョンとそのパッケージのチェックサムを更新する Renovate のルールも、ない。更新が `mise.toml` と `package.json` の pnpm を動かしたら、人が Dockerfile の両方を手で変える（TPL-0025）。
 
 ### 確認の方法
 
@@ -122,9 +125,10 @@ AWS SDK for Go v2 は `backend/go.mod` のモジュールであり、前に述�
 - `make check-all` は `scan-deps` と `vuln-go` を実行する。
 - `trivy-action` と `setup-trivy` を使うワークフローがないことは、レビューで確かめる。これを守らせるチェックはない。
 - CodeQL と Scorecard は、ワークフローとして動く。シークレットスキャン・プッシュ保護・private vulnerability reporting・Dependabot alerts は、リポジトリの設定である。`make github-settings` がこれらを有効にし、`docs/guides/github-settings.md` と違うものがあれば報告する。
-- コンテナについては、`make check` が `lint-image-pins` と `scan-config` を実行する。`lint-image-pins` はダイジェストのないベースイメージで失敗し、`scan-config` の Trivy のチェックは root で動くイメージの Dockerfile で失敗する。どちらも AWS Emulator の Dockerfile も調べる。サービスのイメージ（`backend/Dockerfile`）は、distroless static のユーザー `nonroot` で動く。
+- コンテナについては、`make check` が `lint-image-pins` と `scan-config` を実行する。`lint-image-pins` はダイジェストのないベースイメージで失敗し、`scan-config` の Trivy のチェックは root で動くイメージの Dockerfile で失敗する。どちらも、AWS Emulator とフロントエンドの Dockerfile も調べる。文脈のイメージ（`backend/Dockerfile`）は、distroless static のユーザー `nonroot` で動く。フロントエンドのイメージ（`frontend/Dockerfile`）は、distroless の Node のユーザー 65532 で動く。
+- pnpm のパッケージがチェックサムに合わなければ、フロントエンドのイメージのビルドは失敗する。
 - パッケージがチェックサムか署名に合わなければ、AWS Emulator のイメージのビルドは失敗する。
-- `make check-all` は `scan-images` を実行し、すべての文脈のイメージに既知の脆弱性がないかを Trivy でスキャンする。`make sbom` は、それらのイメージごとに CycloneDX の SBOM を `dist/sbom/` に書く。どちらも AWS Emulator のイメージは対象にしない。これは手元の環境の道具であり、出荷されないからである。
+- `make check-all` は `scan-images` を実行し、すべての文脈のイメージとフロントエンドのイメージに既知の脆弱性がないかを Trivy でスキャンする。`make sbom` は、それらのイメージごとに CycloneDX の SBOM を `dist/sbom/` に書く。どちらも AWS Emulator のイメージは対象にしない。これは手元の環境の道具であり、出荷されないからである。
 - GitHub の artifact attestations による来歴は、イメージを公開するワークフローと一緒に、インフラのマイルストーンで入る。そのワークフローは、`make sbom` の SBOM にも attestation を付ける。
 
 ## 選択肢の長所と短所
@@ -157,4 +161,4 @@ AWS SDK for Go v2 は `backend/go.mod` のモジュールであり、前に述�
 - [OpenSSF Scorecard](https://github.com/ossf/scorecard)
 - 道具の固定は TPL-0022 に、1つの関心事に道具を1つだけ使う決まりは TPL-0023 に、更新は TPL-0025 にある。
 
-<!-- i18n-source: TPL-0024-supply-chain-defenses.md sha256:49190113342cd607266486b6e2894843e1fd7296ad39861034d21458d686773d -->
+<!-- i18n-source: TPL-0024-supply-chain-defenses.md sha256:4908fdae59e39fee6e02657f210faaece7901764a7a4a4be3bf7488bbf368f2d -->

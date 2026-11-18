@@ -89,12 +89,14 @@ For containers, these rules apply.
 - Containers run as a user other than root.
 - Trivy scans every image and writes its SBOM.
 - Builds get provenance through GitHub artifact attestations.
+- The image of the frontend (`frontend/Dockerfile`) builds on the official Node image, pinned by digest. Node no longer ships Corepack, so the build installs pnpm from its package on the registry of npm, which `ADD --checksum` checks against its SHA-256. It installs the dependencies of the frontend alone from `pnpm-lock.yaml`, under the settings of `pnpm-workspace.yaml`, and the image holds the standalone server of Next.js on distroless Node, as the user 65532.
 
 The local environment runs software that the product does not ship, and pins it too (TPL-0017).
 
 - Mailpit is pinned by digest in `compose.yaml`, at v1.33.1 rather than the newest release. That release was one day old when Mailpit was added, younger than the three days that the other updates wait.
 - AWS Emulator is pinned three ways in `infra/local/aws-emulator/Dockerfile`: by the version of its package, by the SHA-256 of the package for each architecture, and by the signature of AWS, which `rpm` checks against the public key in `signing-key.asc`. Its base image is pinned by digest, and it runs as the user 65532.
 - The AWS provider of Terraform is locked with its hashes for four platforms in `infra/local/.terraform.lock.hcl`.
+- The browser of the end-to-end test is the build of Chromium that the version of `@playwright/test` in `pnpm-lock.yaml` names. `tools/scripts/stack.sh e2e` downloads it into `.cache/ms-playwright/` when it is missing, not `make setup`. This repository records no checksum of the browser itself; it trusts the release of Playwright that pnpm installed under the rules above.
 
 The AWS SDK for Go v2 is a module in `backend/go.mod`, under the rules for Go modules above.
 
@@ -114,6 +116,7 @@ Two parts of this decision differ from the first plan, on purpose.
 - Bad, because the repository sets no wait for Go modules or for the tools in `mise.toml`. A version that a person adds by hand, with `go get` or in `mise.toml`, arrives at once, and only the updates that Renovate proposes wait (TPL-0025).
 - Bad, because several defenses on GitHub are settings, not files. `make github-settings` compares them with `docs/guides/github-settings.md`, but `make check` cannot see them.
 - Bad, because no Renovate rule updates the version of AWS Emulator yet. A person changes the version and the two checksums in its Dockerfile by hand, and no wait of three days applies (TPL-0025).
+- Bad, because no Renovate rule updates the version of pnpm and the checksum of its package in `frontend/Dockerfile` either. When an update moves pnpm in `mise.toml` and `package.json`, a person changes both in the Dockerfile by hand (TPL-0025).
 
 ### Confirmation
 
@@ -122,9 +125,10 @@ Two parts of this decision differ from the first plan, on purpose.
 - `make check-all` runs `scan-deps` and `vuln-go`.
 - Review confirms that no workflow uses `trivy-action` or `setup-trivy`. No check enforces it.
 - CodeQL and Scorecard run as workflows. Secret scanning, push protection, private vulnerability reporting, and Dependabot alerts are settings of the repository: `make github-settings` turns them on, and reports any that differ from `docs/guides/github-settings.md`.
-- For containers, `make check` runs `lint-image-pins`, which fails on a base image without a digest, and `scan-config`, whose Trivy checks fail a Dockerfile whose image runs as root. Both check the Dockerfile of AWS Emulator too. The images of the services (`backend/Dockerfile`) run as the user `nonroot` of distroless static.
+- For containers, `make check` runs `lint-image-pins`, which fails on a base image without a digest, and `scan-config`, whose Trivy checks fail a Dockerfile whose image runs as root. Both check the Dockerfiles of AWS Emulator and of the frontend too. The images of the contexts (`backend/Dockerfile`) run as the user `nonroot` of distroless static, and the image of the frontend (`frontend/Dockerfile`) as the user 65532 of distroless Node.
+- The build of the image of the frontend fails when the package of pnpm does not match its checksum.
 - The build of the image of AWS Emulator fails when the package does not match its checksum or its signature.
-- `make check-all` runs `scan-images`, which scans the image of every context with Trivy for known vulnerabilities. `make sbom` writes a CycloneDX SBOM of each of those images to `dist/sbom/`. Neither covers the image of AWS Emulator, a tool of the local environment that nothing ships.
+- `make check-all` runs `scan-images`, which scans the image of every context and the image of the frontend with Trivy for known vulnerabilities. `make sbom` writes a CycloneDX SBOM of each of those images to `dist/sbom/`. Neither covers the image of AWS Emulator, a tool of the local environment that nothing ships.
 - Provenance through GitHub artifact attestations arrives with the workflow that publishes the images, in the infrastructure milestone. That workflow attests the SBOMs of `make sbom` too.
 
 ## Pros and Cons of the Options

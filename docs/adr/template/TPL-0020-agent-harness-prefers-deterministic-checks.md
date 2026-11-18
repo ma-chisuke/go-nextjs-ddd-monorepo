@@ -40,13 +40,14 @@ The rules are as follows.
 
 - A rule that matters is enforced by a check. A finding is one line that gives the file and the line, the rule, how to fix it, and the record that holds the reason, so an agent can correct itself from that line.
 - `AGENTS.md` holds only the commands, where things go, the instruction "run `make check` before you finish", and the rules that differ from common defaults. Reasons live in the records, and procedures live in skills and guides.
-- `CLAUDE.md` only imports `AGENTS.md`, so every agent reads the same file.
+- `CLAUDE.md` only imports `AGENTS.md`, so every agent reads the same file. `backend/` and `frontend/` each have an `AGENTS.md` of their own, with a `CLAUDE.md` that imports it, for the instructions of that part.
+- No tool writes into an `AGENTS.md`. Next.js 16 adds a block of its own to the `AGENTS.md` of an app when `next dev` sees a coding agent; that block would fail the prose checks of this repository, and would come back after every removal. `frontend/next.config.ts` turns it off (`agentRules: false`), and `frontend/AGENTS.md` says what the block says: Next.js 16 differs from what an agent knows, so an agent reads the documentation bundled with the installed version, under `frontend/node_modules/next/dist/docs/`, before it writes code.
 - An instruction is added to `AGENTS.md` only after an evaluation shows a failure that no check can catch. The evaluation lives in `evals/` and arrives in a later milestone.
 
 The harness has the following parts.
 
 - Hooks for Claude Code. They format a file after an agent edits it. They block edits to generated files, reading `.env`, applying changes to prd, and force pushes. At the end of a turn, they run the checks for what changed and hand failures back to the agent, a bounded number of times.
-- Skills for recurring procedures, in `.claude/skills/`: `write-adr` writes a record, and `sync-translation` brings a translation up to date. More skills arrive with the code in later milestones.
+- Skills for recurring procedures, in `.claude/skills/`: `write-adr` writes a record, and `sync-translation` brings a translation up to date. The skills of the code, such as `add-endpoint` and `add-screen`, each follow a guide in `docs/guides/`, and arrive with the code that they change.
 - Subagents that bring eyes other than the author's, in `.claude/agents/`: `design-reviewer` reviews a change against the records, and `translation-reviewer` compares a translation with its source.
 - Permissions that let safe commands run without asking and deny dangerous ones.
 - lefthook, which gives people the same checks before a commit and before a push (`lefthook.yml`).
