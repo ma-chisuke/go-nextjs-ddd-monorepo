@@ -48,7 +48,13 @@ services:
       POSTGRES_PASSWORD: postgres
     ports:
       # Loopback only. 5432 is often taken by another PostgreSQL.
-      - 127.0.0.1:${POSTGRES_PORT:-55432}:5432
+      #
+      # Every port that this file publishes lies below 32768. From there up,
+      # Linux and macOS hand out ports by themselves, to outgoing connections
+      # too: a test that holds a connection to this PostgreSQL can sit on the
+      # very port that a service is about to publish, and the service then
+      # fails to start with "address already in use".
+      - 127.0.0.1:${POSTGRES_PORT:-15432}:5432
     volumes:
       - postgres-data:/var/lib/postgresql
       - ./db/bootstrap.sql:/docker-entrypoint-initdb.d/10-bootstrap.sql:ro
@@ -78,7 +84,7 @@ services:
       - no-new-privileges:true
     ports:
       # Loopback only: the emulator checks no signature.
-      - 127.0.0.1:${AWS_PORT:-59297}:9297
+      - 127.0.0.1:${AWS_PORT:-19297}:9297
     volumes:
       - aws-emulator:/home/emulator/.aws/emulator
 
@@ -94,7 +100,7 @@ services:
     environment:
       DATABASE_URL: postgres://facility_runtime:facility_runtime@postgres:5432/app?sslmode=disable
     ports:
-      - 127.0.0.1:${FACILITY_PORT:-58081}:8080
+      - 127.0.0.1:${FACILITY_PORT:-18081}:8080
     depends_on:
       postgres:
         condition: service_healthy
@@ -112,7 +118,7 @@ services:
       # it through the private network in AWS (TPL-0014).
       FACILITY_API_URL: http://facility:8080
     ports:
-      - 127.0.0.1:${RESERVATION_PORT:-58082}:8080
+      - 127.0.0.1:${RESERVATION_PORT:-18082}:8080
     depends_on:
       postgres:
         condition: service_healthy
@@ -171,7 +177,7 @@ services:
         condition: service_healthy
 
   # Mailpit catches the mail that Notification sends, and shows it at
-  # http://127.0.0.1:58025. No mail leaves the machine, and the mail is gone
+  # http://127.0.0.1:18025. No mail leaves the machine, and the mail is gone
   # when the container stops.
   mailpit:
     image: axllent/mailpit:v1.33.1@sha256:aef2aacc11f075ec0fb6874275ee4a421e688e11a96ebb296134d1735c7761ce
@@ -187,7 +193,7 @@ services:
     ports:
       # The web interface and the API, on the loopback address only. SMTP
       # (1025) is for the other containers.
-      - 127.0.0.1:${MAILPIT_PORT:-58025}:8025
+      - 127.0.0.1:${MAILPIT_PORT:-18025}:8025
     healthcheck:
       test: [CMD, /mailpit, readyz]
       interval: 2s

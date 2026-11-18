@@ -187,7 +187,7 @@ PostgreSQL 18 の1つのデータベースに、すべての文脈が入る（TP
 - 実行時のロールは自分のスキーマを使え、文脈の `schema.sql` が各テーブルへの `SELECT`・`INSERT`・`UPDATE`・`DELETE` を与える。ほかのスキーマには何の権限もなく、自分のスキーマも変えられない。`public` にオブジェクトを作れるロールもない。
 - 文脈の各ロールの検索パスは `<context>, extensions` なので、SQL にスキーマの名前は書かない。Reservation の排他制約が必要とする拡張 `btree_gist` は、スキーマ `extensions` に置く。
 - 文脈の `schema.sql` は、そのスキーマのあるべき状態である。pgschema はこれをデータベースに適用し（`make db-apply`）、sqlc はこれを読んでクエリに型を付ける（`make gen`）。tbls は、これから `docs/generated/db/<context>/` を書く（`make gen-db-docs`）。
-- 手元では、`compose.yaml` が PostgreSQL を `127.0.0.1:55432` で動かし、`db/local.sql` が各ロールに自分の名前をパスワードとして与える。手元のシステムはデータベース `app` を使い、結合テストは同じサーバーにある専用のデータベース `app_test` を使う。
+- 手元では、`compose.yaml` が PostgreSQL を `127.0.0.1:15432` で動かし、`db/local.sql` が各ロールに自分の名前をパスワードとして与える。手元のシステムはデータベース `app` を使い、結合テストは同じサーバーにある専用のデータベース `app_test` を使う。
 
 ## インフラ
 
@@ -242,4 +242,4 @@ PostgreSQL 18 の1つのデータベースに、すべての文脈が入る（TP
 
 次の決まりを守らせるチェックはまだないので、レビューで守る。文脈の業務領域の種類とその README（TPL-0003）、各主キーの型が `uuid` であること（TPL-0012）、受け取る側がそれぞれ受け取るものを AsyncAPI 文書で宣言すること（TPL-0013）である。
 
-<!-- i18n-source: ARCHITECTURE.md sha256:c33cb4360427d6168e18327437745fbfa545df57cd5aad4a954a998cd3498913 -->
+<!-- i18n-source: ARCHITECTURE.md sha256:9feaf745c970dd8c73388a9aaf4aeb2b6d60d9ae5ae759cc3cc75320c8165a7d -->

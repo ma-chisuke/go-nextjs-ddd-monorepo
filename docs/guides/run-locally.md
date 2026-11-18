@@ -22,22 +22,24 @@ Each service listens on the loopback address only:
 
 | Service | Address | Variable for another port |
 |---|---|---|
-| PostgreSQL | `127.0.0.1:55432` | `POSTGRES_PORT` |
-| AWS Emulator | `https://localhost:59297` | `AWS_PORT` |
-| Mailpit, its web interface | `http://127.0.0.1:58025` | `MAILPIT_PORT` |
-| Facility | `http://127.0.0.1:58081` | `FACILITY_PORT` |
-| Reservation | `http://127.0.0.1:58082` | `RESERVATION_PORT` |
+| PostgreSQL | `127.0.0.1:15432` | `POSTGRES_PORT` |
+| AWS Emulator | `https://localhost:19297` | `AWS_PORT` |
+| Mailpit, its web interface | `http://127.0.0.1:18025` | `MAILPIT_PORT` |
+| Facility | `http://127.0.0.1:18081` | `FACILITY_PORT` |
+| Reservation | `http://127.0.0.1:18082` | `RESERVATION_PORT` |
 
 The relay and the worker publish no port. Mailpit accepts SMTP on port 1025 from the other containers only.
 
-Check: `curl -i http://127.0.0.1:58081/healthz` and `curl -i http://127.0.0.1:58082/healthz` answer `204 No Content`, and `docker compose ps` shows every service as healthy.
+Every published port lies below 32768, and a port that you choose with a variable should too. From 32768 up, Linux and macOS hand out ports by themselves, also to outgoing connections. A test that holds a connection to PostgreSQL can then sit on the port that a service is about to publish, and the service fails to start with "address already in use".
+
+Check: `curl -i http://127.0.0.1:18081/healthz` and `curl -i http://127.0.0.1:18082/healthz` answer `204 No Content`, and `docker compose ps` shows every service as healthy.
 
 ## Book a room
 
 1. Register a room in Facility:
 
    ```sh
-   curl -i -X POST http://127.0.0.1:58081/rooms \
+   curl -i -X POST http://127.0.0.1:18081/rooms \
      -H 'Content-Type: application/json' \
      -d '{"name":"Aoba","capacity":8,"openFrom":"09:00","openUntil":"18:00","timeZone":"Asia/Tokyo"}'
    ```
@@ -48,13 +50,13 @@ Check: `curl -i http://127.0.0.1:58081/healthz` and `curl -i http://127.0.0.1:58
    room=<the id of the room>
    ```
 
-   If a room named Aoba exists already, the answer is `409 Conflict` with the problem room-name-taken: choose another name, or find the room with `curl http://127.0.0.1:58081/rooms`.
+   If a room named Aoba exists already, the answer is `409 Conflict` with the problem room-name-taken: choose another name, or find the room with `curl http://127.0.0.1:18081/rooms`.
 
 2. Book the room from 10:00 to 11:00 in Tokyo, two days from now:
 
    ```sh
    day=$(date -d '+2 days' +%F 2> /dev/null || date -v+2d +%F)   # GNU date, or the date of macOS
-   curl -i -X POST http://127.0.0.1:58082/reservations \
+   curl -i -X POST http://127.0.0.1:18082/reservations \
      -H 'Content-Type: application/json' \
      -H "Idempotency-Key: aoba-$day-10" \
      -d "{\"roomId\":\"$room\",\"startsAt\":\"${day}T10:00:00+09:00\",\"endsAt\":\"${day}T11:00:00+09:00\",\"attendees\":4,\"organizerEmail\":\"organizer@example.com\"}"
@@ -71,7 +73,7 @@ Check: `curl -i http://127.0.0.1:58081/healthz` and `curl -i http://127.0.0.1:58
 3. Reschedule it, naming the version that you read:
 
    ```sh
-   curl -i -X PATCH http://127.0.0.1:58082/reservations/$reservation \
+   curl -i -X PATCH http://127.0.0.1:18082/reservations/$reservation \
      -H 'Content-Type: application/json' -H 'If-Match: "1"' -d '{"attendees":6}'
    ```
 
@@ -80,7 +82,7 @@ Check: `curl -i http://127.0.0.1:58081/healthz` and `curl -i http://127.0.0.1:58
 4. Cancel it:
 
    ```sh
-   curl -i -X POST http://127.0.0.1:58082/reservations/$reservation/cancellation -H 'If-Match: "2"'
+   curl -i -X POST http://127.0.0.1:18082/reservations/$reservation/cancellation -H 'If-Match: "2"'
    ```
 
    The answer is `200 OK`, with the status `cancelled` and `ETag: "3"`.
@@ -97,7 +99,7 @@ Check: `curl -i http://127.0.0.1:58081/healthz` and `curl -i http://127.0.0.1:58
 
 The booking, the rescheduling, and the cancellation each wrote an event to the outbox of Reservation. Within a few seconds, the relay publishes each to the bus, the rule of Notification sends it to its queue, and the worker sends a mail to Mailpit.
 
-Open <http://127.0.0.1:58025>. It holds three mails to `organizer@example.com`: two whose subject starts with `Reservation confirmed`, for the booking and for the rescheduling, and one that starts with `Reservation cancelled`. The repeated booking of step 2 and the refused requests sent none.
+Open <http://127.0.0.1:18025>. It holds three mails to `organizer@example.com`: two whose subject starts with `Reservation confirmed`, for the booking and for the rescheduling, and one that starts with `Reservation cancelled`. The repeated booking of step 2 and the refused requests sent none.
 
 Each process writes one JSON record per line to its log. To follow an event, read the logs of the relay and the worker; each record names the `event_id`:
 
@@ -154,7 +156,7 @@ In one terminal, start Facility as its runtime role:
 
 ```sh
 cd backend
-DATABASE_URL='postgres://facility_runtime:facility_runtime@127.0.0.1:55432/app?sslmode=disable' \
+DATABASE_URL='postgres://facility_runtime:facility_runtime@127.0.0.1:15432/app?sslmode=disable' \
 HTTP_ADDR=127.0.0.1:8081 \
 mise exec -- go run ./cmd/facility
 ```
@@ -163,7 +165,7 @@ In another terminal, start Reservation, and tell it where Facility is:
 
 ```sh
 cd backend
-DATABASE_URL='postgres://reservation_runtime:reservation_runtime@127.0.0.1:55432/app?sslmode=disable' \
+DATABASE_URL='postgres://reservation_runtime:reservation_runtime@127.0.0.1:15432/app?sslmode=disable' \
 FACILITY_API_URL=http://127.0.0.1:8081 \
 HTTP_ADDR=127.0.0.1:8082 \
 mise exec -- go run ./cmd/reservation
@@ -177,7 +179,7 @@ To run the relay from its source, point it at the emulator with the environment 
 make aws-server aws-apply
 eval "$(tools/scripts/aws.sh env)"
 cd backend
-DATABASE_URL='postgres://reservation_runtime:reservation_runtime@127.0.0.1:55432/app?sslmode=disable' \
+DATABASE_URL='postgres://reservation_runtime:reservation_runtime@127.0.0.1:15432/app?sslmode=disable' \
 EVENT_BUS_NAME=contexts \
 HTTP_ADDR=127.0.0.1:8083 \
 mise exec -- go run ./cmd/reservation relay

@@ -53,7 +53,7 @@ make check   # 速いチェック。数秒で終わる
 
 `.devcontainer/` の dev container を使うと、手元に何も入れずに同じ環境が手に入る。
 
-手元のシステムと `make check-all` には Docker が要る。[サービスを手元で動かす](docs/guides/run-locally.ja.md)では、システムを起動し、API を通して curl で会議室を予約する。そして、予約から生じるメールを Mailpit（<http://127.0.0.1:58025>）で見る。
+手元のシステムと `make check-all` には Docker が要る。[サービスを手元で動かす](docs/guides/run-locally.ja.md)では、システムを起動し、API を通して curl で会議室を予約する。そして、予約から生じるメールを Mailpit（<http://127.0.0.1:18025>）で見る。
 
 ## テンプレートの使い方
 
@@ -103,4 +103,4 @@ make check   # 速いチェック。数秒で終わる
 
 [MIT No Attribution](LICENSE)。表示を残さずに、テンプレートをコピーして自分のものにできる。
 
-<!-- i18n-source: README.md sha256:d3ef113700455036e69e03b081c1a6cccd7af749f3530581d8279401daaab860 -->
+<!-- i18n-source: README.md sha256:324e42a05ddce428329f67e7b4699d02795eb905ff47d28a62e8d24b64a797a7 -->

@@ -186,7 +186,7 @@ One PostgreSQL 18 database holds every context (TPL-0009). `db/bootstrap.sql` cr
 - The runtime role may use its own schema, and the `schema.sql` of the context grants it `SELECT`, `INSERT`, `UPDATE`, and `DELETE` on each table. It has no privilege in another schema, cannot change its own, and nobody may create objects in `public`.
 - Each role of a context has the search path `<context>, extensions`, so no SQL names a schema. The extension `btree_gist`, which the exclusion constraint of Reservation needs, lives in the schema `extensions`.
 - The `schema.sql` of a context is its desired state. pgschema applies it to a database (`make db-apply`), sqlc reads it to type the queries (`make gen`), and tbls writes `docs/generated/db/<context>/` from it (`make gen-db-docs`).
-- Locally, `compose.yaml` runs PostgreSQL on `127.0.0.1:55432`, and `db/local.sql` gives each role its own name as its password. The local system uses the database `app`, and the integration tests a database of their own, `app_test`, on the same server.
+- Locally, `compose.yaml` runs PostgreSQL on `127.0.0.1:15432`, and `db/local.sql` gives each role its own name as its password. The local system uses the database `app`, and the integration tests a database of their own, `app_test`, on the same server.
 
 ## Infrastructure
 

@@ -52,7 +52,7 @@ func New(t *testing.T, doc *openapi3.T, handler http.Handler) *Client {
 }
 
 // NewRemote returns a client for the server at baseURL, such as
-// http://127.0.0.1:58081, which serves the API that doc describes. It sends
+// http://127.0.0.1:18081, which serves the API that doc describes. It sends
 // real requests over the network, for a test of a running system, and fails
 // the test when the server does not answer.
 func NewRemote(t *testing.T, doc *openapi3.T, baseURL string) *Client {
