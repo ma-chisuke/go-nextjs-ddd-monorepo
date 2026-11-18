@@ -22,22 +22,24 @@ make up
 
 | サービス | アドレス | 別のポートにする変数 |
 |---|---|---|
-| PostgreSQL | `127.0.0.1:55432` | `POSTGRES_PORT` |
-| AWS Emulator | `https://localhost:59297` | `AWS_PORT` |
-| Mailpit の Web の画面 | `http://127.0.0.1:58025` | `MAILPIT_PORT` |
-| Facility | `http://127.0.0.1:58081` | `FACILITY_PORT` |
-| Reservation | `http://127.0.0.1:58082` | `RESERVATION_PORT` |
+| PostgreSQL | `127.0.0.1:15432` | `POSTGRES_PORT` |
+| AWS Emulator | `https://localhost:19297` | `AWS_PORT` |
+| Mailpit の Web の画面 | `http://127.0.0.1:18025` | `MAILPIT_PORT` |
+| Facility | `http://127.0.0.1:18081` | `FACILITY_PORT` |
+| Reservation | `http://127.0.0.1:18082` | `RESERVATION_PORT` |
 
 中継とワーカーは、ポートを公開しない。Mailpit は、ポート 1025 の SMTP をほかのコンテナからだけ受け付ける。
 
-確認：`curl -i http://127.0.0.1:58081/healthz` と `curl -i http://127.0.0.1:58082/healthz` が `204 No Content` を返す。`docker compose ps` は、すべてのサービスを healthy と示す。
+公開するポートは、どれも 32768 より小さい。変数で選ぶポートも、そうするとよい。32768 以上のポートは、Linux と macOS が自分で割り当てる。外へ向かう接続にも割り当てる。そのため、PostgreSQL への接続を保っているテストが、サービスがこれから公開するポートを先に使っていることがある。そのときサービスは「address already in use」で起動に失敗する。
+
+確認：`curl -i http://127.0.0.1:18081/healthz` と `curl -i http://127.0.0.1:18082/healthz` が `204 No Content` を返す。`docker compose ps` は、すべてのサービスを healthy と示す。
 
 ## 会議室を予約する
 
 1. Facility に会議室を登録する。
 
    ```sh
-   curl -i -X POST http://127.0.0.1:58081/rooms \
+   curl -i -X POST http://127.0.0.1:18081/rooms \
      -H 'Content-Type: application/json' \
      -d '{"name":"Aoba","capacity":8,"openFrom":"09:00","openUntil":"18:00","timeZone":"Asia/Tokyo"}'
    ```
@@ -48,13 +50,13 @@ make up
    room=<会議室の ID>
    ```
 
-   Aoba という名前の会議室がすでにあれば、答えは problem room-name-taken を持つ `409 Conflict` になる。ほかの名前を選ぶか、`curl http://127.0.0.1:58081/rooms` でその会議室を探す。
+   Aoba という名前の会議室がすでにあれば、答えは problem room-name-taken を持つ `409 Conflict` になる。ほかの名前を選ぶか、`curl http://127.0.0.1:18081/rooms` でその会議室を探す。
 
 2. 2日後の東京の 10:00 から 11:00 まで、会議室を予約する。
 
    ```sh
    day=$(date -d '+2 days' +%F 2> /dev/null || date -v+2d +%F)   # GNU の date、または macOS の date
-   curl -i -X POST http://127.0.0.1:58082/reservations \
+   curl -i -X POST http://127.0.0.1:18082/reservations \
      -H 'Content-Type: application/json' \
      -H "Idempotency-Key: aoba-$day-10" \
      -d "{\"roomId\":\"$room\",\"startsAt\":\"${day}T10:00:00+09:00\",\"endsAt\":\"${day}T11:00:00+09:00\",\"attendees\":4,\"organizerEmail\":\"organizer@example.com\"}"
@@ -71,7 +73,7 @@ make up
 3. 読んだバージョンを示して、予約を変更する。
 
    ```sh
-   curl -i -X PATCH http://127.0.0.1:58082/reservations/$reservation \
+   curl -i -X PATCH http://127.0.0.1:18082/reservations/$reservation \
      -H 'Content-Type: application/json' -H 'If-Match: "1"' -d '{"attendees":6}'
    ```
 
@@ -80,7 +82,7 @@ make up
 4. 予約を取り消す。
 
    ```sh
-   curl -i -X POST http://127.0.0.1:58082/reservations/$reservation/cancellation -H 'If-Match: "2"'
+   curl -i -X POST http://127.0.0.1:18082/reservations/$reservation/cancellation -H 'If-Match: "2"'
    ```
 
    答えは、状態 `cancelled` と `ETag: "3"` を持つ `200 OK` である。
@@ -97,7 +99,7 @@ make up
 
 予約・変更・取り消しは、それぞれ Reservation の送信箱にイベントを1つ書いた。数秒のうちに、中継が各イベントをバスに発行し、Notification のルールがそれを自分のキューに送り、ワーカーが Mailpit にメールを送る。
 
-<http://127.0.0.1:58025> を開く。`organizer@example.com` 宛てのメールが3通ある。予約と変更の2通は件名が `Reservation confirmed` で始まり、取り消しの1通は `Reservation cancelled` で始まる。手順2で繰り返した予約と、拒まれたリクエストは、メールを送っていない。
+<http://127.0.0.1:18025> を開く。`organizer@example.com` 宛てのメールが3通ある。予約と変更の2通は件名が `Reservation confirmed` で始まり、取り消しの1通は `Reservation cancelled` で始まる。手順2で繰り返した予約と、拒まれたリクエストは、メールを送っていない。
 
 各プロセスは、ログに1行ずつ JSON のレコードを書く。イベントを追うには、中継とワーカーのログを読む。各レコードには `event_id` がある。
 
@@ -154,7 +156,7 @@ AWS Emulator は状態をメモリにしか持たず、起動のたびに新し�
 
 ```sh
 cd backend
-DATABASE_URL='postgres://facility_runtime:facility_runtime@127.0.0.1:55432/app?sslmode=disable' \
+DATABASE_URL='postgres://facility_runtime:facility_runtime@127.0.0.1:15432/app?sslmode=disable' \
 HTTP_ADDR=127.0.0.1:8081 \
 mise exec -- go run ./cmd/facility
 ```
@@ -163,7 +165,7 @@ mise exec -- go run ./cmd/facility
 
 ```sh
 cd backend
-DATABASE_URL='postgres://reservation_runtime:reservation_runtime@127.0.0.1:55432/app?sslmode=disable' \
+DATABASE_URL='postgres://reservation_runtime:reservation_runtime@127.0.0.1:15432/app?sslmode=disable' \
 FACILITY_API_URL=http://127.0.0.1:8081 \
 HTTP_ADDR=127.0.0.1:8082 \
 mise exec -- go run ./cmd/reservation
@@ -177,7 +179,7 @@ mise exec -- go run ./cmd/reservation
 make aws-server aws-apply
 eval "$(tools/scripts/aws.sh env)"
 cd backend
-DATABASE_URL='postgres://reservation_runtime:reservation_runtime@127.0.0.1:55432/app?sslmode=disable' \
+DATABASE_URL='postgres://reservation_runtime:reservation_runtime@127.0.0.1:15432/app?sslmode=disable' \
 EVENT_BUS_NAME=contexts \
 HTTP_ADDR=127.0.0.1:8083 \
 mise exec -- go run ./cmd/reservation relay
@@ -207,4 +209,4 @@ AWS Emulator のバージョンを更新する Renovate のルールはまだな
 2. `EMULATOR_VERSION` と、2つのチェックサム `EMULATOR_SHA256_ARM64` と `EMULATOR_SHA256_AMD64` を変える。各パッケージ（`aarch64` 用と `x86_64` 用）のチェックサムは、`curl --location <パッケージの URL> | shasum -a 256` で得る。パッケージの URL は、Dockerfile の `RUN` 命令にある。
 3. `make up` でイメージをビルドしてエミュレーターのコンテナを作り直し、`CHECK_SCOPE=changed make check-all` を実行する。新しいバージョンがテンプレートの頼る動きを続けているかは、`platform/awsevents` の結合テストと `make smoke` でわかる。パッケージがチェックサムや AWS の署名に合わなければ、ビルドが失敗する。
 
-<!-- i18n-source: run-locally.md sha256:98e981887ef49ea59d2068ca680248be72d47956a26c6d83ea9e7c690452f6d3 -->
+<!-- i18n-source: run-locally.md sha256:35f47f284a6fa226c8e2d7a9d93df74c9bc34d3f81b5f771b3420b14fab1e8f9 -->

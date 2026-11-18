@@ -37,7 +37,7 @@ func Open(t *testing.T, boundedContext string) *pgxpool.Pool {
 func URL(role string) string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
 		role, role,
-		env("PGHOST", "127.0.0.1"), env("POSTGRES_PORT", "55432"), env("PGDATABASE", "app"))
+		env("PGHOST", "127.0.0.1"), env("POSTGRES_PORT", "15432"), env("PGDATABASE", "app"))
 }
 
 func env(name, fallback string) string {

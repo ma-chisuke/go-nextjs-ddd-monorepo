@@ -72,7 +72,7 @@ func get(t *testing.T, cfg aws.Config, url string) error {
 func TestLoadReadsTheRegionAndTheEndpoint(t *testing.T) {
 	cfg, err := awsconfig.Load(t.Context(), getenv(t, map[string]string{
 		awsconfig.RegionVariable:   "ap-northeast-1",
-		awsconfig.EndpointVariable: "https://localhost:59297",
+		awsconfig.EndpointVariable: "https://localhost:19297",
 	}), placeholder())
 	if err != nil {
 		t.Fatal(err)
@@ -80,7 +80,7 @@ func TestLoadReadsTheRegionAndTheEndpoint(t *testing.T) {
 	if cfg.Region != "ap-northeast-1" {
 		t.Errorf("Region = %q, want ap-northeast-1", cfg.Region)
 	}
-	if got := aws.ToString(cfg.BaseEndpoint); got != "https://localhost:59297" {
+	if got := aws.ToString(cfg.BaseEndpoint); got != "https://localhost:19297" {
 		t.Errorf("BaseEndpoint = %q, want the endpoint of the environment", got)
 	}
 }

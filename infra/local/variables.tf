@@ -4,7 +4,7 @@ variable "endpoint" {
 
   validation {
     condition     = can(regex("^https://(localhost|127\\.0\\.0\\.1):[0-9]+$", var.endpoint))
-    error_message = "The endpoint must be AWS Emulator on this machine, such as https://localhost:59297. This configuration is never applied to AWS."
+    error_message = "The endpoint must be AWS Emulator on this machine, such as https://localhost:19297. This configuration is never applied to AWS."
   }
 }
 

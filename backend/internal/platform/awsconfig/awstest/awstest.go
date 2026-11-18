@@ -36,7 +36,7 @@ func Config(t *testing.T) aws.Config {
 		case awsconfig.RegionVariable:
 			return "us-east-1"
 		case awsconfig.EndpointVariable:
-			return "https://localhost:" + env("AWS_PORT", "59297")
+			return "https://localhost:" + env("AWS_PORT", "19297")
 		case awsconfig.CABundleVariable:
 			return findCA(t)
 		}

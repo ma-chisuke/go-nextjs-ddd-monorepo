@@ -20,7 +20,7 @@
 # pgschema connects as the role <context>_owner.
 #
 # The connection is the local one unless the environment says otherwise:
-#   PGHOST (127.0.0.1), POSTGRES_PORT (55432), PGDATABASE (app; `init`
+#   PGHOST (127.0.0.1), POSTGRES_PORT (15432), PGDATABASE (app; `init`
 #   creates a database that does not exist yet)
 #   DB_OWNER_PASSWORD_<CONTEXT>   password of <context>_owner (default: its name)
 #   PGSCHEMA_PLAN_USER/PASSWORD   a role that may create schemas in the database
@@ -34,7 +34,7 @@ set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 host="${PGHOST:-127.0.0.1}"
-port="${POSTGRES_PORT:-55432}"
+port="${POSTGRES_PORT:-15432}"
 database="${PGDATABASE:-app}"
 
 # A lock per database, in a directory that every checkout on this machine
