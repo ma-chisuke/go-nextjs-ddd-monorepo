@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=https://asyncapi.com/definitions/3.0.0/asyncapi.json
+asyncapi: 3.0.0
+info:
+  title: Notification events
+  version: 0.1.0
+  description: |
+    The integration events that the Notification context receives. It sends
+    a mail to the organizer of a reservation for each of them, and publishes
+    no event of its own.
+
+    The publisher's document names no consumer, so this document declares
+    what Notification consumes: each operation refers to the channel and the
+    messages of `./reservation.asyncapi.yaml`, where Reservation defines
+    them. In AWS, a rule of the infrastructure unit of Notification selects
+    these events into its SQS queue (TPL-0013).
+
+    Delivery is at least once, and events can arrive out of order.
+    Notification records the `id` of each event that it handled and sends no
+    second mail for it, ignores an event of any other type, and sets aside an
+    event whose `data` breaks its contract in its dead-letter queue.
+  license:
+    name: MIT No Attribution
+    url: https://spdx.org/licenses/MIT-0.html
+defaultContentType: application/cloudevents+json
+channels:
+  reservationEvents:
+    $ref: ./reservation.asyncapi.yaml#/channels/reservationEvents
+operations:
+  receiveReservationConfirmed:
+    action: receive
+    title: Receive ReservationConfirmed
+    summary: Mail the organizer that the reservation is confirmed.
+    channel:
+      $ref: "#/channels/reservationEvents"
+    messages:
+      - $ref: "#/channels/reservationEvents/messages/reservationConfirmed"
+  receiveReservationCancelled:
+    action: receive
+    title: Receive ReservationCancelled
+    summary: Mail the organizer that the reservation is cancelled.
+    channel:
+      $ref: "#/channels/reservationEvents"
+    messages:
+      - $ref: "#/channels/reservationEvents/messages/reservationCancelled"
