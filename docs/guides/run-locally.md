@@ -1,6 +1,6 @@
 # Run the services locally
 
-This guide starts the local system on your machine, books a room through the APIs with curl, and shows the mail that Notification sends about the booking.
+This guide starts the local system on your machine, books a room in the browser and through the APIs with curl, and shows the mail that Notification sends about the booking.
 You need Docker, and the tools that `make setup` installs.
 
 ## Start the system
@@ -14,7 +14,8 @@ make up
 1. PostgreSQL 18, with `db/bootstrap.sql`, `db/local.sql`, and the `schema.sql` of each context applied (`tools/scripts/db.sh up`).
 2. AWS Emulator, built from `infra/local/aws-emulator/Dockerfile` (TPL-0017).
 3. The event bus `contexts`, and the queue of Notification with its dead-letter queue and its rule, which Terraform creates in the emulator from `infra/local/` (`tools/scripts/aws.sh apply`). The first apply after the emulator starts takes about a minute, because the AWS provider waits about 25 seconds after it creates each queue. An apply without changes takes a few seconds.
-4. Mailpit, and every process of every context, built from `backend/Dockerfile`: the APIs of Facility and Reservation, the relay of Reservation (`reservation relay`), and the worker of Notification (`notification`). `make up` waits until each one is healthy.
+4. Mailpit, every process of every context, built from `backend/Dockerfile`, and the frontend, built from `frontend/Dockerfile`. The processes are the APIs of Facility and Reservation, the relay of Reservation (`reservation relay`), and the worker of Notification (`notification`). `make up` waits until each one is healthy.
+5. If step 2 started the emulator anew, a restart of the services that call it, so that they read its new CA ([When AWS Emulator restarts](#when-aws-emulator-restarts)).
 
 Start the system with `make up`, not with `docker compose up` alone: the schemas and the AWS resources are applied from the host, with the pgschema and the Terraform that mise pins, and the relay refuses to start without its bus.
 
@@ -27,14 +28,26 @@ Each service listens on the loopback address only:
 | Mailpit, its web interface | `http://127.0.0.1:18025` | `MAILPIT_PORT` |
 | Facility | `http://127.0.0.1:18081` | `FACILITY_PORT` |
 | Reservation | `http://127.0.0.1:18082` | `RESERVATION_PORT` |
+| The frontend (`web`) | `http://127.0.0.1:13000` | `WEB_PORT` |
 
 The relay and the worker publish no port. Mailpit accepts SMTP on port 1025 from the other containers only.
 
 Every published port lies below 32768, and a port that you choose with a variable should too. From 32768 up, Linux and macOS hand out ports by themselves, also to outgoing connections. A test that holds a connection to PostgreSQL can then sit on the port that a service is about to publish, and the service fails to start with "address already in use".
 
-Check: `curl -i http://127.0.0.1:18081/healthz` and `curl -i http://127.0.0.1:18082/healthz` answer `204 No Content`, and `docker compose ps` shows every service as healthy.
+Check: `curl -i http://127.0.0.1:18081/healthz` and `curl -i http://127.0.0.1:18082/healthz` answer `204 No Content`, `curl -i http://127.0.0.1:13000/healthz` answers `200 OK`, and `docker compose ps` shows every service as healthy.
 
-## Book a room
+## Book a room in the browser
+
+The frontend is the only service that a browser needs. Its server calls the APIs, and the browser talks to it alone (TPL-0014).
+
+1. Open <http://127.0.0.1:13000>. The first screen lists the rooms of Facility.
+2. Choose "Register a room", and register a room with a name, a capacity, its opening hours, and a time zone. The page of the new room follows: the room, its reservations on one day in its time zone, and a form that books it.
+3. Choose "Next day", fill in the period, the attendees, and the email of the organizer, and choose "Book the room". The page of the reservation follows, with forms that reschedule and cancel it.
+4. Reschedule the reservation, then cancel it. Each form sends the version of the reservation that the page shows. A change from a page that is out of date, such as a second tab, gets a notice, and the page shows the reservation as it is now.
+
+The mail of these changes reaches Mailpit, as [See the mail](#see-the-mail) describes for the calls below.
+
+## Book a room through the APIs
 
 1. Register a room in Facility:
 
@@ -135,15 +148,15 @@ AWS Emulator keeps its state in memory, and makes a new CA at every start. After
    make aws-apply
    ```
 
-   `make up` does this too, but it does not restart the services that run already.
 2. Restart the services that call the emulator, so that they read the new CA:
 
    ```sh
    docker compose restart reservation-relay notification
    ```
 
+`make up` does both steps when it starts the emulator anew. After the emulator restarts in any other way, such as `docker compose restart aws`, run them by hand.
 Events wait in the outbox meanwhile, so none is lost; the relay publishes them once it can.
-`make aws-server` starts the emulator alone, without the other services, and copies its CA. The integration tests use it: `make test-integration` and `make smoke` start the emulator before they run.
+`make aws-server` starts the emulator alone, without the other services, and copies its CA. The tests use it: `make test-integration`, `make smoke`, and `make e2e` start the emulator before they run.
 
 ## Run an API from its source
 
@@ -171,7 +184,7 @@ HTTP_ADDR=127.0.0.1:8082 \
 mise exec -- go run ./cmd/reservation
 ```
 
-The calls of [Book a room](#book-a-room) work against these ports, `8081` and `8082`, as well. The events of these bookings reach Mailpit too, if the relay and the worker of `make up` run: the relay reads the same outbox.
+The calls of [Book a room through the APIs](#book-a-room-through-the-apis) work against these ports, `8081` and `8082`, as well. The events of these bookings reach Mailpit too, if the relay and the worker of `make up` run: the relay reads the same outbox.
 
 To run the relay from its source, point it at the emulator with the environment of `tools/scripts/aws.sh`:
 
@@ -187,17 +200,32 @@ mise exec -- go run ./cmd/reservation relay
 
 Several relays can run on one outbox, so this one and the one of `make up` share the events. The worker of Notification needs Mailpit over SMTP, which only the containers reach, so run it with `make up`.
 
+## Run the frontend from its source
+
+To see a change to the frontend without building its image, run the development server of Next.js against the APIs of the local system:
+
+```sh
+make frontend-dev
+```
+
+It serves the frontend at <http://127.0.0.1:3000>, and reloads a page when its source changes. It calls the APIs at the ports of the table in [Start the system](#start-the-system), or at the ports that `FACILITY_PORT` and `RESERVATION_PORT` name. To call the APIs that you run from their source, set the base URLs: `FACILITY_API_URL=http://127.0.0.1:8081 RESERVATION_API_URL=http://127.0.0.1:8082 make frontend-dev`.
+
 ## The test database
 
 `make test-integration` runs the tests behind the build tag `integration` on a database of their own, `app_test`, on the same PostgreSQL. `tools/scripts/db.sh init` creates it with every schema. The local system uses the database `app`, so the relay of the running system never takes an event that a test wrote to an outbox, and a test never meets the rows of the system.
 
-## The smoke test, and stopping
+## The smoke test, the end-to-end test, and stopping
 
 `make smoke` starts the services if they are not running, runs one booking across Facility and Reservation over HTTP, checks every response against the two API documents, and waits for the three mails of the booking in Mailpit. `make check-all` runs it.
 
+`make e2e` starts the services in the same way, and runs the scenarios of `frontend/e2e/` in a browser with Playwright: a person registers a room, books it, reschedules, and cancels, and gets the three mails. Three more scenarios send what a form refuses: a period that is booked already, a change from a page that is out of date, and a form that is not filled in. `make check-all` runs it too. The browser is Chromium, in the build that the version of Playwright names. The first run downloads it into `.cache/ms-playwright/`; `make setup` does not.
+
 ```sh
 make smoke
+make e2e
 ```
+
+Each of the two tests stops the services that it started, and leaves those that ran before, such as the services of `make up`. When both run at once, as in `make check-all`, the second waits for the first.
 
 `make down` stops every container, and keeps the data of PostgreSQL. The state of AWS Emulator and the mail in Mailpit are gone. `make db-down` deletes the data of PostgreSQL.
 

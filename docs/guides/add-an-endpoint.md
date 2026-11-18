@@ -16,9 +16,9 @@ In a supporting context such as Facility, which has no domain layer, skip step 3
    make gen
    ```
 
-   oapi-codegen rewrites the server of the context, `internal/adapter/http/api.gen.go`, and every client of this API in other contexts, such as `internal/adapter/facility/client.gen.go` in Reservation.
+   oapi-codegen rewrites the server of the context, `internal/adapter/http/api.gen.go`, and every client of this API in other contexts, such as `internal/adapter/facility/client.gen.go` in Reservation. openapi-typescript rewrites the TypeScript types of the API for the frontend, `frontend/src/lib/api/<context>.gen.ts`.
 
-   Check: the build fails with `missing method <Operation>`, because `handler.go` asserts that its operations implement the generated `StrictServerInterface`. `make check` reports it in `lint-go` and `test-go`.
+   Check: the build fails with `missing method <Operation>`, because `handler.go` asserts that its operations implement the generated `StrictServerInterface`. `make check` reports it in `lint-go` and `test-go`. A change to an operation that the frontend calls also fails `lint-frontend-types` at each call that no longer fits the document; fix those calls in the same pull request.
 
 3. In a core context, write the rules in `internal/domain/`. A new rule is a function or a method that takes values, the current time included, and returns values, events, and a `*domain.Error` of a new `Kind`, which you add to `Kinds()`. Test it with plain function calls.
 
@@ -49,6 +49,8 @@ In a supporting context such as Facility, which has no domain layer, skip step 3
 9. Update the documents of the context: the table of operations in `docs/contexts/<context>/README.md`, and a row in `glossary.md` for each type that the change exports from `domain`, or from `app` in a supporting context. Change the translations as well, then run `make i18n-stamp`.
 
    Check: `make check` fails while an exported type has no row in both glossaries (`arch/glossary`), and while a translation is out of date (`lint-i18n`).
+
+   To show the operation on a screen, follow [Add a screen](add-a-screen.md).
 
 10. Finish:
 

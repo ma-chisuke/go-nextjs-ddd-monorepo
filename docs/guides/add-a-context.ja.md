@@ -26,7 +26,7 @@
    - `internal/adapter/http/`。API を持つ文脈だけに置く。変えずに使う `oapi-codegen.yaml` と、`handler.go`・`problems.go`・`problems_test.go` である。
    - `internal/adapter/postgres/`。`schema.sql`・`queries/`・`sqlc.yaml` である。`sqlc.yaml` の設定 `database`・`analyzer`・`rules` と、末尾のルール `no-unfiltered-write` は、`lint-sqlc` が頼るので変えない。
 
-   生成された `*.gen.go` のファイルはコピーせず、`make gen` を実行する。API を持つ文脈では、`gen-backend.sh` が、ディレクトリ `adapter/http/` と文脈の名前から API の文書を見つける。
+   生成された `*.gen.go` のファイルはコピーせず、`make gen` を実行する。API を持つ文脈では、`gen-backend.sh` が、ディレクトリ `adapter/http/` と文脈の名前から API の文書を見つける。`gen-frontend.sh` は、フロントエンドのための API の TypeScript の型 `frontend/src/lib/api/<context>.gen.ts` を書く。文脈に画面を持たせるには、[画面を足す](add-a-screen.ja.md)に従う。
    ほかの文脈の API を呼ぶには、`internal/adapter/<other>/oapi-codegen.yaml` を足す。中身は Reservation の `adapter/facility/` と同じく、`client: true` と `models: true` である。`make gen` は、そのために `contracts/http/<other>.openapi.yaml` を読む。
    ワーカーは、Notification の `internal/app/events.go` のように、自分のモデル変換装置で各イベントのデータを読む。配信は少なくとも1回なので、処理した各イベントの id を、その効果と同じトランザクションの中で、一意制約のもとに記録する（TPL-0013）。
 
@@ -76,7 +76,7 @@
 |---|---|
 | API を持つ文脈の API の文書 | `make gen` と `gen-check-api`（`gen/no-document`） |
 | `handler.go` の操作 | コンパイラー（`lint-go` と `test-go`） |
-| 最新の生成コード | `gen-check-api`、`gen-check-sqlc` |
+| 最新の生成コード | `gen-check-api`、`gen-check-sqlc`、`gen-check-api-ts`（新しい API の文書の TypeScript の型がないときは `gen/missing`） |
 | 用語集、またはその行 | `lint-arch`（`arch/glossary`） |
 | 対訳 | `lint-i18n` |
 | 業務エラーの種類に対する problem、またはそのページ | `lint-go`（exhaustive）と、`problems_test.go` のテスト |
@@ -88,4 +88,4 @@
 | 受け取る側の AsyncAPI 文書、または `infra/local/main.tf` のその購読 | まだチェックはなく、レビューで見つける（TPL-0013）。購読がないことに `make smoke` が気づくのは、ワーカーの結果を待つときだけである |
 | 文脈の README | まだチェックはなく、レビューで見つける（TPL-0003） |
 
-<!-- i18n-source: add-a-context.md sha256:e3531963e0bc8b0ab9add7ac5fedf7a5d2857efe16cccf6f34b262c313a4eb8a -->
+<!-- i18n-source: add-a-context.md sha256:37f449261ac7500f7e48d769f6aa2a740785231f574a55ce8b7437d2018bf98b -->

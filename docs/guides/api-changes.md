@@ -10,3 +10,9 @@ When the change is intended, raise `info.version` of the document in the same pu
 oasdiff then accepts the breaking changes of that document, and the raised version shows the reviewer that the pull request breaks the contract on purpose.
 The reviewer decides whether every client can follow, and the clients in this repository, such as the frontend and the generated client of another context, change in the same pull request.
 The check compares with the merge base of `origin/main`, or of `CHECK_BASE` when it is set, as CI does. A new document has nothing to compare with, and passes.
+
+## Follow the change in the clients
+
+After a change to an API document, `make gen` regenerates the code on both sides of the contract: the Go server of the context and the clients of other contexts (oapi-codegen), and the TypeScript types of the frontend, `frontend/src/lib/api/<context>.gen.ts` (openapi-typescript).
+The type check of the frontend then names the code of the screens that no longer fits the types: `lint-frontend-types` fails at each call whose path, parameters, or body the document no longer allows, and at each use of a part of an answer that is gone.
+A breaking change updates those screens in the same pull request. `make e2e` shows whether the screens still work with the changed API.

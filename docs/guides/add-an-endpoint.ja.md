@@ -16,9 +16,9 @@ Facility のようにドメイン層のない補完の文脈では、手順3を�
    make gen
    ```
 
-   oapi-codegen が、文脈のサーバー `internal/adapter/http/api.gen.go` と、ほかの文脈にあるこの API のクライアントを書き直す。クライアントの例は、Reservation の `internal/adapter/facility/client.gen.go` である。
+   oapi-codegen が、文脈のサーバー `internal/adapter/http/api.gen.go` と、ほかの文脈にあるこの API のクライアントを書き直す。クライアントの例は、Reservation の `internal/adapter/facility/client.gen.go` である。openapi-typescript は、フロントエンドのための API の TypeScript の型 `frontend/src/lib/api/<context>.gen.ts` を書き直す。
 
-   確認：ビルドが `missing method <Operation>` で失敗する。`handler.go` が、操作を実装する型が生成された `StrictServerInterface` を満たすことを確かめているからである。`make check` は、これを `lint-go` と `test-go` で報告する。
+   確認：ビルドが `missing method <Operation>` で失敗する。`handler.go` が、操作を実装する型が生成された `StrictServerInterface` を満たすことを確かめているからである。`make check` は、これを `lint-go` と `test-go` で報告する。フロントエンドが呼ぶ操作を変えると、`lint-frontend-types` も失敗する。失敗するのは、文書に合わなくなった呼び出しのそれぞれである。それらの呼び出しは同じプルリクエストで直す。
 
 3. 中核の文脈では、`internal/domain/` に決まりを書く。新しい決まりは、現在時刻を含む値を受け取り、値・イベント・新しい `Kind` の `*domain.Error` を返す関数かメソッドである。その `Kind` は `Kinds()` に加える。テストは素の関数呼び出しで書く。
 
@@ -50,6 +50,8 @@ Facility のようにドメイン層のない補完の文脈では、手順3を�
 
    確認：エクスポートされた型の行が両方の用語集にない間（`arch/glossary`）と、対訳が古い間（`lint-i18n`）、`make check` は失敗する。
 
+   操作を画面に出すときは、[画面を足す](add-a-screen.ja.md)に従う。
+
 10. 仕上げる。
 
     ```sh
@@ -58,4 +60,4 @@ Facility のようにドメイン層のない補完の文脈では、手順3を�
     CHECK_SCOPE=changed make check-all   # PostgreSQL（Docker）を要するチェックを加える
     ```
 
-<!-- i18n-source: add-an-endpoint.md sha256:5c9b1f9e613cb91340e7606feb60986db3833b8c028282c8341216eaca0d57f0 -->
+<!-- i18n-source: add-an-endpoint.md sha256:93c03395346619cb543fc286c8677e25a3f9ec014cc748c7cffe87881eeb6f4c -->
