@@ -13,7 +13,7 @@ The template is built in milestones. The quality foundation comes first, so that
 | M0 | Quality foundation: pinned tools, `make check`, formatters and linters, security scans, CI, Git hooks, agent hooks, decision records | Done |
 | M1 | One core and one supporting bounded context, from OpenAPI through the use case and the domain to PostgreSQL | Done |
 | M2 | Events: outbox, EventBridge, SQS, and the local AWS emulator, with the Notification context | Done |
-| M3 | Next.js front end and end-to-end tests | Planned |
+| M3 | Next.js front end and end-to-end tests | Done |
 | M4 | Terraform and Terragrunt for stg and prd, and deployment | Planned |
 | M5 | Evaluation of the agent harness, property-based API tests, mutation tests | Planned |
 
@@ -47,13 +47,20 @@ make check   # fast checks; takes a few seconds
 | `make gen` | Regenerate generated files. |
 | `make check` | Fast checks, without the network. Run it before every commit. |
 | `make check-all` | Fast and slow checks, including those that need the local PostgreSQL and AWS Emulator. CI runs this. |
-| `make up` | Start the local system in Docker: PostgreSQL with every schema, AWS Emulator with the event bus and the queues, Mailpit, and every process of every context. `make down` stops it. |
+| `make up` | Start the local system in Docker: PostgreSQL with every schema, AWS Emulator with the event bus and the queues, Mailpit, every process of every context, and the frontend at <http://127.0.0.1:13000>. `make down` stops it. |
 | `make db-up` | Start the local PostgreSQL in Docker, and apply the schema of every context. |
 | `make help` | List the main targets. |
 
 A dev container in `.devcontainer/` gives the same environment without installing anything on your machine.
 
-The local system and `make check-all` need Docker. [Run the services locally](docs/guides/run-locally.md) starts the system, books a room through the APIs with curl, and shows the mail that the booking causes in Mailpit, at <http://127.0.0.1:18025>.
+The local system and `make check-all` need Docker. After `make up`, open <http://127.0.0.1:13000> to register a room and book it. [Run the services locally](docs/guides/run-locally.md) also books a room through the APIs with curl, and shows the mail that a booking causes in Mailpit.
+
+| Service | Address |
+|---|---|
+| The frontend | <http://127.0.0.1:13000> |
+| Mailpit, the mail of the local system | <http://127.0.0.1:18025> |
+| The APIs of Facility and Reservation | <http://127.0.0.1:18081>, <http://127.0.0.1:18082> |
+| PostgreSQL, AWS Emulator | `127.0.0.1:15432`, `https://localhost:19297` |
 
 ## Use the template
 
@@ -70,8 +77,8 @@ The local system and `make check-all` need Docker. [Run the services locally](do
 | Every file | Spelling, EditorConfig rules, secrets |
 | Go | Formatting, golangci-lint (including go vet), tests with the race detector; in `make check-all`, known vulnerabilities, the integration tests against PostgreSQL and AWS Emulator, and a smoke test of the whole local system |
 | Architecture of the backend | `lint-arch`: imports between contexts and layers, a domain without I/O, routes only from the API documents, schemas named in SQL, and the glossary of each context |
-| Generated code | The code generated from the API documents and from the SQL of each context is what the generators write now |
-| TypeScript and Next.js | Prettier, ESLint with import boundaries, type check, unused code |
+| Generated code | The Go code generated from the API documents and from the SQL of each context, and the TypeScript types generated from the API documents (`gen-check-api-ts`), are what the generators write now |
+| TypeScript and Next.js | Prettier, ESLint with import boundaries, type check, unused code, unit tests on the test runner of Node (`test-frontend`); in `make check-all`, the end-to-end test in a browser with Playwright (`e2e`) |
 | Shell and Dockerfiles | shfmt, shellcheck, hadolint |
 | GitHub Actions | actionlint, zizmor, ghalint, pinact |
 | Terraform and Terragrunt | Formatting, tflint, Trivy, and the module READMEs (terraform-docs); validation in `make check-all` |
@@ -87,9 +94,9 @@ The local system and `make check-all` need Docker. [Run the services locally](do
 
 ## Documents
 
-- [ARCHITECTURE.md](ARCHITECTURE.md): the map of the backend: its contexts and their processes, layers, the path of a request and of an event, and the database, and the checks that hold them in place.
+- [ARCHITECTURE.md](ARCHITECTURE.md): the map of the product: its contexts and their processes, layers, the frontend, the path of a request from a screen and of an event, and the database, and the checks that hold them in place.
 - [docs/contexts/](docs/contexts/): the README and the glossary of each bounded context.
-- [AGENTS.md](AGENTS.md): instructions for coding agents.
+- [AGENTS.md](AGENTS.md): instructions for coding agents, with those for the backend and the frontend in `backend/AGENTS.md` and `frontend/AGENTS.md`.
 - [docs/adr/](docs/adr/README.md): decision records.
 - [docs/guides/](docs/guides/): how to do recurring work.
 - [SECURITY.md](SECURITY.md): how to report a vulnerability.

@@ -1,13 +1,14 @@
 # アーキテクチャ
 
-バックエンドの地図である。区切られた文脈とそのプロセス、文脈の中の層、リクエストとイベントの流れ、データベース、そして構成を保つチェックを示す。
+製品の地図である。区切られた文脈とそのプロセス、文脈の中の層、それらを見せるフロントエンド、画面から API を通るリクエストの流れ、イベントの流れ、データベース、そして構成を保つチェックを示す。
 理由は決定の記録（[docs/adr/](docs/adr/README.ja.md)）に、手順はガイド（[docs/guides/](docs/guides/)）にある。
 
 ## 区切られた文脈
 
 ```mermaid
 flowchart LR
-    clients["クライアント"]
+    browser["ブラウザー"]
+    web["フロントエンド<br/>Next.js、唯一の公開の入口"]
     reservation["Reservation<br/>中核の業務領域"]
     facility["Facility<br/>補完の業務領域"]
     notification["Notification<br/>補完の業務領域"]
@@ -15,8 +16,9 @@ flowchart LR
     queue["SQS のキュー<br/>notification-events"]
     mail["メールサーバー"]
     db[("PostgreSQL 18<br/>文脈ごとのスキーマ")]
-    clients -- "reservation.openapi.yaml" --> reservation
-    clients -- "facility.openapi.yaml" --> facility
+    browser -- "ページとサーバー関数" --> web
+    web -- "reservation.openapi.yaml" --> reservation
+    web -- "facility.openapi.yaml" --> facility
     reservation -- "GET /rooms/{roomId}<br/>生成したクライアントで" --> facility
     reservation -- "イベント<br/>送信箱と中継を通して" --> bus
     bus -- "Notification のルール" --> queue
@@ -37,10 +39,11 @@ flowchart LR
 - Reservation は、予約のたびに会議室の定員・利用時間・タイムゾーンを必要とする。そこで、Facility の API の文書から oapi-codegen が生成したクライアントを使い、HTTP で Facility に問い合わせる。答えはアダプター `adapter/facility` が Reservation 自身の `domain.Room` に変換するので、Facility の型がユースケースやドメインに届くことはない（TPL-0005）。Facility が失敗したとき、または3秒以内に答えないとき、予約はステータス 503 と `Retry-After` ヘッダーで失敗する。
 - Reservation は、統合イベントで Notification に予約のことを知らせる（TPL-0013）。Reservation は、Notification があることを知らない。予約からメールまでのイベントの道のりは、[イベントの流れ](#イベントの流れ)で追う。
 - Notification には API がない。自分のキューから自分宛てのイベントを読んでメールを送る、ワーカーである。
+- `frontend/` のフロントエンドは文脈ではない。Facility と Reservation を、それぞれに1つの機能を割り当てて画面に見せる。それらの API を呼ぶのはフロントエンドのサーバーだけである（TPL-0014）。詳しくは[フロントエンド](#フロントエンド)で述べる。
 
 ## プロセス
 
-各プロセスは、その文脈のイメージから、文脈のコマンドかそのモードの1つで動く（TPL-0014）。
+文脈の各プロセスは、その文脈のイメージから、文脈のコマンドかそのモードの1つで動く（TPL-0014）。フロントエンドは専用のイメージから動く。
 
 | 文脈 | プロセス | コマンド | `compose.yaml` のサービス |
 |---|---|---|---|
@@ -48,10 +51,12 @@ flowchart LR
 | Reservation | API | `reservation` | `reservation` |
 | Reservation | 送信箱の中継（ワーカー） | `reservation relay` | `reservation-relay` |
 | Notification | キューからイベントを受け取る側（ワーカー） | `notification` | `notification` |
+| （なし） | フロントエンド。Next.js のサーバー | standalone のサーバー `frontend/server.js` を Node で動かす | `web` |
 
 - `platform/httpserver.Main` は、文脈のコマンドか、引数で名前を指定したモード（`httpserver.Mode`）か、ヘルスチェック（`<command> healthcheck`）を動かす。コマンドは設定を環境変数から読み、その変数の一覧は `backend/cmd/<context>/main.go` の先頭のコメントにある。
 - API は `platform/httpserver.Run` の上で動く。ワーカーは `platform/httpserver.RunWorker` の上で動き、仕事と並んで `GET /healthz` に答える。そのため、イメージのヘルスチェックは、API もワーカーも同じ方法で見張れる。ワーカーのヘルスチェックが示すのは、プロセスが動いていることだけである。データベースやブローカーに届かないワーカーは、正常のまま失敗をログに書き、試し直す。
 - 中継とワーカーは、`platform/awsconfig` で AWS SDK の設定を読む。設定はリージョンと、手元では AWS Emulator のエンドポイントとその CA である（TPL-0017）。
+- フロントエンドのイメージは `frontend/Dockerfile` がビルドする。中身は、`next build` の standalone の出力を distroless の Node に載せたものである。サーバーは、各 API のベース URL を `FACILITY_API_URL` と `RESERVATION_API_URL` から読む。そのヘルスチェック `GET /healthz` は 200 を返し、API を呼ばない。そのため、止まっている文脈があってもフロントエンドは再起動されない。イメージにシェルがないので、このチェックは Node が実行する（`healthcheck.mjs`）。
 
 ## 文脈の中の層
 
@@ -99,9 +104,77 @@ Notification に固有の決まりは、イベント1つにつきメールを1�
 
 `lint-arch` は、ディレクトリ `internal/domain/` があるかどうかで2つの種類を見分ける。`app` が自分の `adapter/postgres` を import してよいのは、このディレクトリのない文脈だけである。
 
+## フロントエンド
+
+`frontend/` は、App Router を使う Next.js 16 のアプリで、React 19 と TypeScript 6 で書く（TPL-0002）。
+ブラウザーは、このアプリとだけ通信する。アプリのサーバーは、ページを描き、フォームのサーバー関数を実行し、非公開のネットワークにある文脈の API を呼ぶ。呼び出しには、API の文書が型を付けたクライアントを使う（TPL-0006、TPL-0014）。そのため、どの API にも CORS は要らず、API のアドレスがブラウザーに届くこともない。
+
+```text
+frontend/src/
+├── app/                         ルート。各ページは機能を組み合わせ、リクエストのたびにデータを読む部分を <Suspense> で包む
+│   ├── page.tsx                 会議室の一覧（Facility）
+│   ├── rooms/new/               会議室を登録するフォーム（Facility）
+│   ├── rooms/[roomId]/          会議室（Facility）と、その1日分の予約と、予約するフォーム（Reservation）
+│   ├── reservations/[reservationId]/
+│   │                            予約（Reservation）とその会議室（Facility）と、予約を変えるフォーム
+│   ├── healthz/                 ヘルスチェック
+│   └── _compose/                ある文脈が渡すものを、別の文脈が必要とする形にする変換。Facility の会議室を
+│                                Reservation の Room にする
+├── features/<context>/          区切られた文脈ごとの機能。機能はほかの機能を import しない
+│   ├── server/                  outcome を通した、その文脈の API の呼び出し。server-only
+│   ├── actions.ts               フォームのサーバー関数
+│   ├── <name>.ts                純粋なロジック（フォームの読み取り、problem の種類ごとの文言など）。
+│   │                            その単体テストは <name>.test.ts
+│   └── components/              サーバーコンポーネントと、クライアントコンポーネントとしてのフォーム
+└── lib/
+    ├── api/                     <context>.gen.ts。各 API の文書から openapi-typescript が生成する型
+    ├── api/server/              API のクライアント（openapi-fetch）と outcome。server-only
+    ├── problem.ts               problem。その種類と、フォームの項目へのメッセージ
+    ├── input.ts、zoned-time.ts  フォームの値。タイムゾーンの中の日付と時刻
+    └── components/              Field、ProblemNotice、useFocusOnProblem
+```
+
+- ページは既定で静的であり、文脈のデータを読む部分は、それぞれ `<Suspense>` の内側であとからストリーミングされる（Cache Components）。`outcome` はリクエストを待つ（`connection()`）ので、ビルドのデータが静的なページに入ることはない。
+- API の呼び出しは、どれも `Result` になる。答えの値か、problem である。答えない API や、problem でないもので答える API も problem になるので、画面はどの失敗も同じ方法で表示する。
+- 画面は、`problemKind`（`docs/problems/` にある problem のページの名前）で文言を選び、リクエストの不正な部分をそれぞれの項目に表示する（`fieldErrors`）。title や detail は解析しない（TPL-0008）。
+- フォームは API の決まりに従う。予約は、フォームを描くときにサーバーが作る冪等キーを送る。フォームは、そのキーと、そのキーで送った予約のフィンガープリントを持ち続ける。そのため、同じ予約をもう一度送っても予約は1回だけで、同じフォームから別の予約を送ると新しいキーになる（`features/reservation/booking.ts`）。変更は、ページが表示したバージョンを `If-Match` で送り、バージョンのない変更は送らない。412 のときは、ページがメッセージと予約の今の状態を表示する。
+- 人は、会議室のタイムゾーンで時刻を読み、入力する。`lib/zoned-time.ts` が `Intl.DateTimeFormat` で、それと API の日時とを相互に変換する。日付のライブラリは使わない。`Temporal` も使わない。いまのブラウザーのすべてにあるわけではないからである。
+- CSS は素の CSS で、コンポーネントライブラリは使わず、サインインもない。デザインシステムと認証は、テンプレートをコピーしたチームに任せる。
+
+## 画面からのリクエストの流れ
+
+会議室のページは、会議室とその予約を表示する。人は、そのページのフォームで会議室を予約する。
+
+```mermaid
+sequenceDiagram
+    participant browser as ブラウザー
+    participant page as app/rooms/[roomId]
+    participant facility as features/facility
+    participant reservation as features/reservation
+    participant api as API
+    browser->>page: GET /rooms/{roomId}
+    page-->>browser: 静的な骨組みとフォールバック
+    page->>facility: outcome を通した getRoom(roomId)
+    facility->>api: Facility の GET /rooms/{roomId}
+    page->>page: reservationRoom（app/_compose）
+    page->>reservation: DayReservations と BookingSection(room)
+    reservation->>api: Reservation の GET /reservations
+    page-->>browser: ストリーミングされる部分。会議室、その予約、冪等キーを持つフォーム
+    browser->>reservation: 送信。サーバー関数 bookRoom(state, FormData)
+    reservation->>reservation: readBooking。リクエストと、それを送るキー
+    reservation->>api: Reservation の POST /reservations と Idempotency-Key
+    reservation-->>browser: /reservations/{id} へのリダイレクト、または problem を持つフォームの状態
+```
+
+1. Next.js は、ページの静的な骨組みをすぐに送る。レイアウト、リンク、各 `<Suspense>` のフォールバックである。その内側の部分はサーバーで描かれ、データがそろうとストリーミングされる。
+2. ページは、facility の機能を通して会議室を読み、`app/_compose/` でそれを Reservation の `Room` に変え、reservation の機能のコンポーネントに渡す。2つの機能が互いを import することはない。
+3. 各サーバーのモジュールは、`outcome` を通して API を呼び、`Result` を得る。呼び出しには `lib/api/server/clients.ts` の型付きのクライアントを使い、5秒でタイムアウトさせる。各 API のベース URL は環境変数から来る。
+4. フォームは、そのサーバー関数に POST する。サーバー関数には誰でも POST できる。サーバー関数は、フォームの各値を絞り込み、API を呼ぶ。そのあと、次のページへ移るか（`redirect`）、ページを読み直すか（`refresh`）、フォームが表示する状態を返す。状態は、入力された値、各項目へのメッセージ、フォーム全体へのメッセージである。
+5. 各 API の中では、リクエストは次の節の流れをたどる。
+
 ## リクエストの流れ
 
-`POST /reservations` は会議室を予約する。
+Reservation の API では、`POST /reservations` が会議室を予約する。
 
 ```mermaid
 sequenceDiagram
@@ -200,7 +273,7 @@ PostgreSQL 18 の1つのデータベースに、すべての文脈が入る（TP
 | `infra/local/` | 2つのモジュールを AWS Emulator に適用するルート。バス `contexts` と、Notification の購読を作る。このマシンの上のエンドポイントしか受け付けない |
 | `infra/local/aws-emulator/` | AWS Emulator のイメージの Dockerfile と、そのパッケージを確かめる公開鍵 |
 
-`make up` と `make smoke` は、`tools/scripts/aws.sh apply`（`make aws-apply`）で `infra/local/` を適用する。ほかのモジュールと、stg と prd のための Terragrunt のユニットは、インフラのマイルストーンで加わる。
+`make up`・`make smoke`・`make e2e` は、`tools/scripts/aws.sh apply`（`make aws-apply`）で `infra/local/` を適用する。ほかのモジュールと、stg と prd のための Terragrunt のユニットは、インフラのマイルストーンで加わる。
 
 ## 決まりと、それを守らせるもの
 
@@ -215,7 +288,8 @@ PostgreSQL 18 の1つのデータベースに、すべての文脈が入る（TP
 | 依存は内側を向く。`adapter` から `app`、`app` から `domain` へ向かい、アダプターどうしは import し合わない（TPL-0004） | `lint-arch` のルール `arch/layer` | `make check` |
 | ドメインは I/O をせず、時計を読まない（TPL-0004） | `lint-arch` のルール `arch/domain-purity`（標準ライブラリのパッケージの許可リスト）と `arch/domain-clock`（`time.Now` などを禁じる） | `make check` |
 | API の文書の各操作には、正しい型のハンドラーがある（TPL-0006） | Go のコンパイラー。oapi-codegen が生成する strict server のインターフェースを通して調べる | `make check` |
-| 生成コードは、生成器がいまの正から書く内容と同じである（TPL-0007 の層2） | oapi-codegen には `gen-check-api`、sqlc には `gen-check-sqlc` | `make check` |
+| 生成コードは、生成器がいまの正から書く内容と同じである（TPL-0007 の層2） | oapi-codegen には `gen-check-api`、sqlc には `gen-check-sqlc`、openapi-typescript には `gen-check-api-ts` | `make check` |
+| API の文書が許さないフロントエンドの呼び出しは、パス・パラメーター・本文のどれについても失敗する（TPL-0007 の層1） | TypeScript のコンパイラー。openapi-fetch が生成された `paths` から取る型で調べる（`lint-frontend-types`） | `make check` |
 | API の文書にない HTTP のルートはない（TPL-0007 の層3） | `lint-arch` のルール `arch/route-registration`。ルートを登録できるのは、生成コードと `platform/httpserver` だけである | `make check` |
 | API の文書に反するリクエストは、どのハンドラーにも届かない（TPL-0007） | `platform/httpserver` のリクエストの検証（kin-openapi） | 実行時 |
 | 各応答は、ステータス・ヘッダー・本文のすべてで API の文書に合う。problem も例外ではない（TPL-0007 の層4） | API のテストのクライアント `platform/apitest`。すべての応答を kin-openapi で検証する | `make check` |
@@ -239,7 +313,19 @@ PostgreSQL 18 の1つのデータベースに、すべての文脈が入る（TP
 | テーブルと列にはすべてコメントがあり、スキーマの文書は最新である（TPL-0023） | tbls（`lint-db-docs`） | `make check-all` |
 | 1つの会議室の確定した予約どうしは重ならない（TPL-0009） | 排他制約 `reservations_no_overlap`。Reservation の結合テストが、同時の予約で試す | 実行時・`make check-all` |
 | 文脈の用語集は、`domain` パッケージ（ないときは `app`）がエクスポートする型をすべて、英語と日本語の両方で挙げる（TPL-0003） | `lint-arch` のルール `arch/glossary` | `make check` |
+| フロントエンドの機能はほかの機能を import せず、`lib` は機能を import しない（TPL-0003） | ESLint。eslint-plugin-boundaries のルール `boundaries/dependencies`（`lint-frontend`） | `make check` |
+| API を呼ぶのは Next.js のサーバーだけである。`server/` の下のモジュールは `server-only` を import し、そのモジュールを import するクライアントコンポーネントはない（TPL-0014） | ESLint のルール `no-restricted-syntax`（`lint-frontend`）。クライアントコンポーネントが `server-only` を import したときの `next build` | `make check`・イメージのビルド |
+| フロントエンドのリンクは、存在するルートを指す | Next.js の型付きのルート。TypeScript のコンパイラーで調べる（`lint-frontend-types`） | `make check` |
+| どのページも、ビルドの時点で文脈のデータを描かない | リクエストを待つ `outcome`。ページがキャッシュしないデータを `<Suspense>` の外で読んだときの `next build` | イメージのビルド |
+| フロントエンドの純粋なロジック（フォーム、problem、タイムゾーンの中の時刻）は、そのテストのとおりに動く | Node のテストランナーで動く単体テスト（`test-frontend`） | `make check` |
+| 人がブラウザーで会議室を登録し、予約し、変更し、取り消し、メールを受け取る。拒まれた変更は画面の言葉で表示される（TPL-0008、TPL-0017） | `make e2e`。`frontend/e2e/` のシナリオを、Playwright と Chromium で手元のシステムに対して実行する | `make check-all` |
 
-次の決まりを守らせるチェックはまだないので、レビューで守る。文脈の業務領域の種類とその README（TPL-0003）、各主キーの型が `uuid` であること（TPL-0012）、受け取る側がそれぞれ受け取るものを AsyncAPI 文書で宣言すること（TPL-0013）である。
+次の決まりを守らせるチェックはまだないので、レビューで守る。
 
-<!-- i18n-source: ARCHITECTURE.md sha256:9feaf745c970dd8c73388a9aaf4aeb2b6d60d9ae5ae759cc3cc75320c8165a7d -->
+- 文脈の業務領域の種類とその README（TPL-0003）
+- 各主キーの型が `uuid` であること（TPL-0012）
+- 受け取る側がそれぞれ、受け取るものを AsyncAPI 文書で宣言すること（TPL-0013）
+- フロントエンドの機能が、自分の文脈の API だけを呼ぶこと（TPL-0003）
+- 画面が、problem の title や detail を解析しないこと（TPL-0008）
+
+<!-- i18n-source: ARCHITECTURE.md sha256:bd1f2a0b859d7d9a68a864e86ed2586c82731f22318e4853d375088d332095b1 -->

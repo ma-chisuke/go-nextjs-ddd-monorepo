@@ -13,7 +13,7 @@ Go の API と Next.js の画面を1つのリポジトリに置く製品のた�
 | M0 | 品質の基盤：道具のバージョンの固定、`make check`、整形と lint、セキュリティの検査、CI、Git フック、エージェントのフック、決定の記録 | 完了 |
 | M1 | 中核と補完の文脈を1つずつ。OpenAPI からユースケースとドメインを通って PostgreSQL まで | 完了 |
 | M2 | イベント：送信箱、EventBridge、SQS、手元の AWS エミュレーターと、文脈 Notification | 完了 |
-| M3 | Next.js の画面と、端から端までのテスト | 予定 |
+| M3 | Next.js のフロントエンドと、エンドツーエンドテスト | 完了 |
 | M4 | stg と prd の Terraform・Terragrunt と、デプロイ | 予定 |
 | M5 | エージェントのハーネスの評価、性質にもとづく API のテスト、ミューテーションテスト | 予定 |
 
@@ -47,13 +47,20 @@ make check   # 速いチェック。数秒で終わる
 | `make gen` | 生成物を作り直す。 |
 | `make check` | 速いチェック。ネットワークを使わない。コミットの前に必ず実行する。 |
 | `make check-all` | 速いチェックと遅いチェック。手元の PostgreSQL と AWS Emulator を要するチェックも含む。CI が実行する。 |
-| `make up` | 手元のシステムを Docker で起動する。すべてのスキーマを適用した PostgreSQL、イベントバスとキューを作った AWS Emulator、Mailpit、すべての文脈のすべてのプロセスである。`make down` で止める。 |
+| `make up` | 手元のシステムを Docker で起動する。すべてのスキーマを適用した PostgreSQL、イベントバスとキューを作った AWS Emulator、Mailpit、すべての文脈のすべてのプロセス、<http://127.0.0.1:13000> のフロントエンドである。`make down` で止める。 |
 | `make db-up` | 手元の PostgreSQL を Docker で起動し、すべての文脈のスキーマを適用する。 |
 | `make help` | 主なターゲットの一覧を出す。 |
 
 `.devcontainer/` の dev container を使うと、手元に何も入れずに同じ環境が手に入る。
 
-手元のシステムと `make check-all` には Docker が要る。[サービスを手元で動かす](docs/guides/run-locally.ja.md)では、システムを起動し、API を通して curl で会議室を予約する。そして、予約から生じるメールを Mailpit（<http://127.0.0.1:18025>）で見る。
+手元のシステムと `make check-all` には Docker が要る。`make up` のあと <http://127.0.0.1:13000> を開くと、会議室を登録して予約できる。[サービスを手元で動かす](docs/guides/run-locally.ja.md)では、API を通して curl でも会議室を予約し、予約から生じるメールを Mailpit で見る。
+
+| サービス | アドレス |
+|---|---|
+| フロントエンド | <http://127.0.0.1:13000> |
+| Mailpit（手元のシステムのメール） | <http://127.0.0.1:18025> |
+| Facility と Reservation の API | <http://127.0.0.1:18081>、<http://127.0.0.1:18082> |
+| PostgreSQL、AWS Emulator | `127.0.0.1:15432`、`https://localhost:19297` |
 
 ## テンプレートの使い方
 
@@ -70,8 +77,8 @@ make check   # 速いチェック。数秒で終わる
 | すべてのファイル | つづり、EditorConfig の決まり、秘密情報 |
 | Go | 整形、golangci-lint（go vet を含む）、race detector 付きのテスト。`make check-all` では、既知の脆弱性、PostgreSQL と AWS Emulator に対する結合テスト、手元のシステム全体のスモークテスト |
 | バックエンドの構成 | `lint-arch`。文脈と層の間の import、I/O をしないドメイン、API の文書からだけ作るルート、SQL に書いたスキーマの名前、文脈ごとの用語集 |
-| 生成コード | API の文書と各文脈の SQL から生成したコードが、生成器がいま書く内容と同じであること |
-| TypeScript と Next.js | Prettier、import の境界を含む ESLint、型の検査、使っていないコード |
+| 生成コード | API の文書と各文脈の SQL から生成した Go のコードと、API の文書から生成した TypeScript の型（`gen-check-api-ts`）が、生成器がいま書く内容と同じであること |
+| TypeScript と Next.js | Prettier、import の境界を含む ESLint、型の検査、使っていないコード、Node のテストランナーで動く単体テスト（`test-frontend`）。`make check-all` では、Playwright によるブラウザーでのエンドツーエンドテスト（`e2e`） |
 | シェルと Dockerfile | shfmt、shellcheck、hadolint |
 | GitHub Actions | actionlint、zizmor、ghalint、pinact |
 | Terraform と Terragrunt | 整形、tflint、Trivy、モジュールの README（terraform-docs）。validate は `make check-all` |
@@ -87,9 +94,9 @@ make check   # 速いチェック。数秒で終わる
 
 ## 文書
 
-- [ARCHITECTURE.ja.md](ARCHITECTURE.ja.md)：バックエンドの地図。文脈とそのプロセス、層、リクエストとイベントの流れ、データベースと、それらを保つチェック。
+- [ARCHITECTURE.ja.md](ARCHITECTURE.ja.md)：製品の地図。文脈とそのプロセス、層、フロントエンド、画面からのリクエストの流れとイベントの流れ、データベースと、それらを保つチェック。
 - [docs/contexts/](docs/contexts/)：区切られた文脈ごとの README と用語集。
-- [AGENTS.ja.md](AGENTS.ja.md)：コーディングエージェント向けの指示。
+- [AGENTS.ja.md](AGENTS.ja.md)：コーディングエージェント向けの指示。バックエンドとフロントエンドについての指示は、`backend/AGENTS.ja.md` と `frontend/AGENTS.ja.md` にある。
 - [docs/adr/](docs/adr/README.ja.md)：決定の記録。
 - [docs/guides/](docs/guides/)：繰り返す作業のやり方。
 - [SECURITY.ja.md](SECURITY.ja.md)：脆弱性の報告のしかた。
@@ -103,4 +110,4 @@ make check   # 速いチェック。数秒で終わる
 
 [MIT No Attribution](LICENSE)。表示を残さずに、テンプレートをコピーして自分のものにできる。
 
-<!-- i18n-source: README.md sha256:324e42a05ddce428329f67e7b4699d02795eb905ff47d28a62e8d24b64a797a7 -->
+<!-- i18n-source: README.md sha256:5b3e3c59872101cf101bac2bc16365717b79021a877019654761ba1bfe2f57fb -->
