@@ -8,6 +8,7 @@ import "server-only";
 import createClient, { type Client } from "openapi-fetch";
 
 import type { paths as FacilityPaths } from "../facility.gen";
+import type { paths as ReservationPaths } from "../reservation.gen";
 
 // How long one call to an API may take. A page waits for its data, so an API
 // that hangs must not hang the page with it.
@@ -35,4 +36,9 @@ function client<Paths extends object>(variable: string): Client<Paths> {
 /** The client of the Facility API. */
 export function facilityApi(): Client<FacilityPaths> {
   return client<FacilityPaths>("FACILITY_API_URL");
+}
+
+/** The client of the Reservation API. */
+export function reservationApi(): Client<ReservationPaths> {
+  return client<ReservationPaths>("RESERVATION_API_URL");
 }
