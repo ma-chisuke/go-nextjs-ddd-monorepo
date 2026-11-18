@@ -25,3 +25,28 @@ lint-contracts:
 # base comes from Git. See tools/scripts/contracts-breaking.sh.
 lint-contracts-breaking:
 	@$(TASK) $@ '$(FILES) "contracts/http/*.openapi.yaml" | tools/scripts/contracts-breaking.sh'
+
+# The JSON Schema of each event, contracts/events/<context>/<Name>.v<N>.json
+# (TPL-0013), with the Go tool in tools/cmd/events. The rules are in
+# docs/guides/event-changes.md.
+
+CHECK_TARGETS += lint-events lint-events-breaking
+
+# The files that the checks read, and the checks themselves.
+EVENT_SOURCES := "contracts/events/*" "tools/cmd/events/*" "tools/internal/events/*"
+
+# Each schema is well formed, and a message of the AsyncAPI document of its
+# context refers to it. A schema depends on that document, so any file in
+# scope starts a run over every schema, whatever the scope.
+lint-events:
+	@$(TASK) $@ 'if [ -n "$$($(FILES) $(EVENT_SOURCES))" ]; then \
+		env -u CHECK_SCOPE -u CHECK_FILES $(FILES) "contracts/events/*.json" | (cd tools && go run ./cmd/events -root "$(CURDIR)" lint); fi'
+
+# Each schema in scope against the same file at the base commit, as
+# lint-contracts-breaking does, and every schema of the base must still exist.
+# A deleted file is never in scope, so a change that only deletes a schema is
+# caught by a run over every file, such as `make check` without a scope.
+# See tools/scripts/events-breaking.sh.
+lint-events-breaking:
+	@$(TASK) $@ 'if [ -n "$$($(FILES) $(EVENT_SOURCES))" ]; then \
+		$(FILES) "contracts/events/*.json" | tools/scripts/events-breaking.sh; fi'
