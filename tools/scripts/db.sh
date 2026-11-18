@@ -20,7 +20,8 @@
 # pgschema connects as the role <context>_owner.
 #
 # The connection is the local one unless the environment says otherwise:
-#   PGHOST (127.0.0.1), POSTGRES_PORT (55432), PGDATABASE (app)
+#   PGHOST (127.0.0.1), POSTGRES_PORT (55432), PGDATABASE (app; `init`
+#   creates a database that does not exist yet)
 #   DB_OWNER_PASSWORD_<CONTEXT>   password of <context>_owner (default: its name)
 #   PGSCHEMA_PLAN_USER/PASSWORD   a role that may create schemas in the database
 #                                 where pgschema validates the desired state
@@ -137,7 +138,27 @@ apply() {
   done
 }
 
+# The database of the local system exists from the first start of the server.
+# Another one, such as the database of the integration tests, is created when
+# it is first used.
+create_database() {
+  case "$database" in
+    *[!a-z0-9_]* | [0-9]* | "")
+      echo "db: PGDATABASE=$database is not a name of lowercase letters, digits, and underscores" >&2
+      exit 1
+      ;;
+  esac
+  local exists
+  exists=$(docker compose exec -T postgres psql --username postgres --dbname postgres --quiet --tuples-only --no-align \
+    --command "SELECT 1 FROM pg_database WHERE datname = '$database'")
+  if [ "$exists" != "1" ]; then
+    docker compose exec -T postgres psql --username postgres --dbname postgres --quiet \
+      --set ON_ERROR_STOP=1 --command "CREATE DATABASE $database" > /dev/null
+  fi
+}
+
 init() {
+  create_database
   # The image runs these files only when it creates the data directory;
   # running them again brings an older local database up to date.
   psql_file db/bootstrap.sql
