@@ -22,6 +22,20 @@ type IdempotencyKey struct {
 	CreatedAt time.Time
 }
 
+// The integration events of Reservation, stored with the change that they report, until the relay has published them and some time after (TPL-0013).
+type OutboxRow struct {
+	// The id of the event, a UUID version 7, as in its envelope. The relay publishes the events in the order of their id.
+	ID uuid.UUID
+	// The CloudEvents type of the event, such as reservation.ReservationConfirmed.v1, for people who read the table.
+	EventType string
+	// The whole CloudEvents envelope of the event, as the relay publishes it.
+	Payload []byte
+	// When the change that the event reports was stored.
+	CreatedAt time.Time
+	// When the relay published the event. Null while the event waits.
+	PublishedAt *time.Time
+}
+
 // Reservations of meeting rooms, confirmed and cancelled.
 type Reservation struct {
 	// The id of the reservation, a UUID version 7.

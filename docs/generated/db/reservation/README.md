@@ -4,6 +4,7 @@
 
 | Name | Columns | Comment | Type |
 | ---- | ------- | ------- | ---- |
+| [reservation.outbox](reservation.outbox.md) | 5 | The integration events of Reservation, stored with the change that they report, until the relay has published them and some time after (TPL-0013). | BASE TABLE |
 | [reservation.reservations](reservation.reservations.md) | 10 | Reservations of meeting rooms, confirmed and cancelled. | BASE TABLE |
 | [reservation.idempotency_keys](reservation.idempotency_keys.md) | 4 | The Idempotency-Key of each booking, so that a repeated request books nothing new. | BASE TABLE |
 
@@ -14,6 +15,13 @@ erDiagram
 
 "reservation.idempotency_keys" |o--|| "reservation.reservations" : "FOREIGN KEY (reservation_id) REFERENCES reservations(id)"
 
+"reservation.outbox" {
+  uuid id
+  text event_type
+  jsonb payload
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone published_at
+}
 "reservation.reservations" {
   uuid id
   uuid room_id

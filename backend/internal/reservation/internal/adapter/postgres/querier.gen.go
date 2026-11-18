@@ -6,18 +6,26 @@ package postgres
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
 
 type Querier interface {
+	DeletePublishedEvents(ctx context.Context, before time.Time) (int64, error)
 	GetIdempotencyKey(ctx context.Context, key string) (GetIdempotencyKeyRow, error)
 	GetReservation(ctx context.Context, id uuid.UUID) (GetReservationRow, error)
 	InsertIdempotencyKey(ctx context.Context, arg InsertIdempotencyKeyParams) error
+	InsertOutboxEvent(ctx context.Context, arg InsertOutboxEventParams) error
 	InsertReservation(ctx context.Context, arg InsertReservationParams) (int32, error)
 	// One page of reservations in the order of (starts_at, id), after the given
 	// pair. A filter that is null selects every reservation.
 	ListReservations(ctx context.Context, arg ListReservationsParams) ([]ListReservationsRow, error)
+	// Up to batch_size events that wait, the oldest first, locked until the end
+	// of the transaction. The events that another relay holds are left out, so
+	// two relays never take the same event at once.
+	LockUnpublishedEvents(ctx context.Context, batchSize int32) ([]LockUnpublishedEventsRow, error)
+	MarkEventsPublished(ctx context.Context, arg MarkEventsPublishedParams) (int64, error)
 	// The same test as the exclusion constraint reservations_no_overlap, so that
 	// it can use the index of the constraint.
 	Overlaps(ctx context.Context, arg OverlapsParams) (bool, error)

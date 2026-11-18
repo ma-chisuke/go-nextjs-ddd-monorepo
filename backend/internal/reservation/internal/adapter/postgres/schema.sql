@@ -42,10 +42,29 @@ CREATE TABLE idempotency_keys (
     CONSTRAINT idempotency_keys_reservation_id_fkey FOREIGN KEY (reservation_id) REFERENCES reservations (id)
 );
 
+-- The integration events of Reservation, written in the transaction of the
+-- change that they report. The relay publishes them, and then marks them
+-- (TPL-0013).
+CREATE TABLE outbox (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    event_type text NOT NULL,
+    payload jsonb NOT NULL,
+    created_at timestamptz NOT NULL,
+    published_at timestamptz,
+    CONSTRAINT outbox_pkey PRIMARY KEY (id)
+);
+
+-- The relay takes the events that wait, in the order of their id.
+CREATE INDEX outbox_unpublished_id_idx ON outbox (id) WHERE (published_at IS NULL);
+
+-- The relay deletes the events that were published long ago.
+CREATE INDEX outbox_published_at_idx ON outbox (published_at) WHERE (published_at IS NOT NULL);
+
 -- The runtime role reads and writes rows, and nothing else. pgschema manages
 -- privileges, so each table states its own.
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE reservations TO reservation_runtime;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE idempotency_keys TO reservation_runtime;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE outbox TO reservation_runtime;
 
 COMMENT ON TABLE reservations IS 'Reservations of meeting rooms, confirmed and cancelled.';
 COMMENT ON COLUMN reservations.id IS 'The id of the reservation, a UUID version 7.';
@@ -64,3 +83,10 @@ COMMENT ON COLUMN idempotency_keys.reservation_id IS 'The reservation that the r
 COMMENT ON COLUMN idempotency_keys.key IS 'The key that the client sent. Unique.';
 COMMENT ON COLUMN idempotency_keys.fingerprint IS 'The SHA-256 of the content of the request, to tell a repeat from another request with the same key.';
 COMMENT ON COLUMN idempotency_keys.created_at IS 'When the key was stored.';
+
+COMMENT ON TABLE outbox IS 'The integration events of Reservation, stored with the change that they report, until the relay has published them and some time after (TPL-0013).';
+COMMENT ON COLUMN outbox.id IS 'The id of the event, a UUID version 7, as in its envelope. The relay publishes the events in the order of their id.';
+COMMENT ON COLUMN outbox.event_type IS 'The CloudEvents type of the event, such as reservation.ReservationConfirmed.v1, for people who read the table.';
+COMMENT ON COLUMN outbox.payload IS 'The whole CloudEvents envelope of the event, as the relay publishes it.';
+COMMENT ON COLUMN outbox.created_at IS 'When the change that the event reports was stored.';
+COMMENT ON COLUMN outbox.published_at IS 'When the relay published the event. Null while the event waits.';
