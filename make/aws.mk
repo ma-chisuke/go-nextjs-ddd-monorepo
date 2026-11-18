@@ -23,6 +23,6 @@ aws-apply: ## Create the event bus and the queues in the running AWS Emulator
 	@$(AWS) apply
 
 # The adapters for EventBridge and SQS run against the emulator in the tests
-# behind the build tag `integration` (make/db.mk), and the smoke test sends
-# its events through it (make/stack.mk).
-test-integration smoke: | aws-server
+# behind the build tag `integration` (make/db.mk), and the smoke test and the
+# end-to-end test send their events through it (make/stack.mk).
+test-integration smoke e2e: | aws-server
