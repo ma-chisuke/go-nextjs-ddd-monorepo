@@ -23,6 +23,12 @@ const config: NextConfig = {
 
   reactStrictMode: true,
   poweredByHeader: false,
+
+  // `next dev` would otherwise write a block of its own into AGENTS.md, which
+  // people own here and the prose checks read. frontend/AGENTS.md tells
+  // agents what that block says: read the documentation that comes with the
+  // installed Next.js, in node_modules/next/dist/docs/.
+  agentRules: false,
 };
 
 export default config;
