@@ -40,4 +40,17 @@ Facility はイベントを発行せず、購読もしない。
 
 ない。
 
-<!-- i18n-source: README.md sha256:5b4603f68bb93b47c18afa45d2f30995fd3ba6170ebdeffefdcb3bfdee6d7d40 -->
+## 画面
+
+フロントエンドは、機能 `frontend/src/features/facility/` で会議室を見せる。この機能は、Next.js のサーバーからだけこの API を呼ぶ（TPL-0014）。
+
+| ページ | 見せるもの | 操作 |
+|---|---|---|
+| `/` | 会議室の一覧。名前の順に並び、それぞれが自分のページへのリンクを持つ | `listRooms`。最大100件の1ページ |
+| `/rooms/new` | 会議室を登録するフォーム。タイムゾーンは、Next.js のサーバーが知っているものから選ぶ | `registerRoom` |
+| `/rooms/{roomId}` | 会議室の名前・定員・利用時間・タイムゾーン。その下に Reservation の予約がある | `getRoom` |
+
+- フォームは、room-name-taken を名前についてのメッセージとして表示する。invalid-opening-hours は閉まる時刻の項目に、unknown-time-zone はタイムゾーンの項目に表示する（`registration.ts`）。ほかの problem は、title と detail をそのまま表示する。
+- 存在しない会議室では、`frontend/src/app/rooms/[roomId]/not-found.tsx` のページを表示する。
+
+<!-- i18n-source: README.md sha256:4b60719d4c6d5c6758eec208a43dd8c978e1cb585adedbd661900d7d90c58d19 -->

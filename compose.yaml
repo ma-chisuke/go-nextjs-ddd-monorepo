@@ -3,8 +3,8 @@
 #
 #   make up         start PostgreSQL and bring every schema up to date, start
 #                   AWS Emulator and create the event bus and the queues in
-#                   it, then build and start Mailpit and the services of
-#                   every context
+#                   it, then build and start Mailpit, the services of every
+#                   context, and the frontend (http://127.0.0.1:13000)
 #   make down       stop everything; the data of PostgreSQL stays
 #   make db-up      start PostgreSQL and bring every schema up to date
 #   make db-down    stop it and delete its data

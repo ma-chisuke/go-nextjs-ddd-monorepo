@@ -26,7 +26,7 @@ Then decide the kind of subdomain, and whether the context answers requests or o
    - `internal/adapter/http/`, in a context with an API: `oapi-codegen.yaml` unchanged, `handler.go`, `problems.go`, and `problems_test.go`;
    - `internal/adapter/postgres/`: `schema.sql`, `queries/`, and `sqlc.yaml`, whose settings `database`, `analyzer`, and `rules`, and the rule `no-unfiltered-write` at its end, stay as they are, because `lint-sqlc` relies on them.
 
-   Leave out the generated `*.gen.go` files, and run `make gen`. For a context with an API, `gen-backend.sh` finds its API document from the directory `adapter/http/` and the name of the context.
+   Leave out the generated `*.gen.go` files, and run `make gen`. For a context with an API, `gen-backend.sh` finds its API document from the directory `adapter/http/` and the name of the context, and `gen-frontend.sh` writes the TypeScript types of the API for the frontend, `frontend/src/lib/api/<context>.gen.ts`. To give the context screens, follow [Add a screen](add-a-screen.md).
    To call the API of another context, add `internal/adapter/<other>/oapi-codegen.yaml` with `client: true` and `models: true`, as in Reservation's `adapter/facility/`. `make gen` reads `contracts/http/<other>.openapi.yaml` for it.
    A worker reads the data of each event in an anticorruption layer of its own, as `internal/app/events.go` of Notification does, and records the id of each event that it handled under a unique constraint, in the transaction of its effect, because delivery is at least once (TPL-0013).
 
@@ -76,7 +76,7 @@ Then decide the kind of subdomain, and whether the context answers requests or o
 |---|---|
 | The API document of a context with an API | `make gen` and `gen-check-api` (`gen/no-document`) |
 | An operation in `handler.go` | The compiler, in `lint-go` and `test-go` |
-| Generated code that is current | `gen-check-api`, `gen-check-sqlc` |
+| Generated code that is current | `gen-check-api`, `gen-check-sqlc`, `gen-check-api-ts` (`gen/missing` for the TypeScript types of a new API document) |
 | A row of the glossary, or a glossary | `lint-arch` (`arch/glossary`) |
 | A translation | `lint-i18n` |
 | A problem for a kind of business error, or its page | `lint-go` (exhaustive), and the test in `problems_test.go` |

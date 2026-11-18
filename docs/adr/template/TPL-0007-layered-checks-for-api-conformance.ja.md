@@ -71,14 +71,16 @@ date: 2026-11-17
 層3は、`lint-arch` のルール `arch/route-registration` である。
 層4は API のテストのクライアント `backend/internal/platform/apitest` であり、すべての応答を kin-openapi で検証する。テストのリクエストはどれも `platform/httpserver` のリクエストの検証を通るので、それも層4に加わる。
 層6は `lint-contracts-breaking`、層7は `lint-contracts` である。
-まだないのは、Schemathesis を加えるマイルストーンで加わる層5と、Next.js の画面とともに加わる層1と層2の TypeScript の側である。`lint-frontend-types` はすでにあり、最初の TypeScript のファイルができた時点で検査を始める。
+フロントエンドのマイルストーンから、層1と層2は TypeScript の側も検査する。Next.js のアプリは openapi-fetch を通して API を呼び、openapi-fetch は openapi-typescript が各文書から生成する型を受け取る（TPL-0006）。そのため、文書の許さない呼び出しがあれば、`lint-frontend-types` は失敗する。自己テストは、Facility の文書が宣言していないクエリパラメーターで、これを確かめる（`case_lint_frontend_types__api`）。これらの型の層2は `gen-check-api-ts` である。
+まだないのは、Schemathesis を加えるマイルストーンで加わる層5である。
+フロントエンドは、API の答えを型のとおりに読み、実行時には検証しない。本番が応答を検証しないのと同じである。応答は、各 API のテストで層4が検査する。そのうえで、エンドツーエンドテスト（`make check-all` の `make e2e`）が、画面を本物の API に対して動かす。
 
 次の表は、各層を動かすターゲットである。「予定」と書いたターゲットはまだなく、作るときに名前を変えることもある。
 
 | 層 | Make のターゲット | 呼び出し元 |
 |---|---|---|
 | 1. コンパイル時 | Go は `lint-go` と `test-go`。`tsc --noEmit` は `lint-frontend-types` | `make check` |
-| 2. 生成物の更新漏れ | `gen-check-api`。oapi-codegen をもう一度実行し、結果がコミットしたコードと違えば失敗する | `make check` |
+| 2. 生成物の更新漏れ | `gen-check-api`。oapi-codegen をもう一度実行し、結果がコミットしたコードと違えば失敗する。`gen-check-api-ts` は、openapi-typescript について同じことをする | `make check` |
 | 3. 文書にない入口の禁止 | `lint-arch` のルール `arch/route-registration` | `make check` |
 | 4. テストでの検証 | `test-go`。`platform/apitest` のクライアントを通す | `make check` |
 | 5. 生成した入力 | `test-api`（予定） | `make check-all` |
@@ -120,4 +122,4 @@ date: 2026-11-17
 - [oasdiff](https://github.com/oasdiff/oasdiff)
 - [Redocly CLI](https://redocly.com/docs/cli)
 
-<!-- i18n-source: TPL-0007-layered-checks-for-api-conformance.md sha256:533157c5d5dc0896f8a0cead94aafc475347877bd4503cb85789140a0e11f7b1 -->
+<!-- i18n-source: TPL-0007-layered-checks-for-api-conformance.md sha256:b32defa75e3a8d65f7670552ed574400856e0f7e1fb962e2864551c808b02e80 -->

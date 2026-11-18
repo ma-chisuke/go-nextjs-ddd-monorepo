@@ -39,3 +39,16 @@ The database holds the first three rules as constraints of `rooms` as well. Only
 ## What Facility needs from other contexts
 
 Nothing.
+
+## Screens
+
+The frontend shows rooms with the feature `frontend/src/features/facility/`, which calls this API from the server of Next.js only (TPL-0014).
+
+| Page | What it shows | Operations |
+|---|---|---|
+| `/` | The rooms, in the order of their names, each with a link to its page | `listRooms`, one page of up to 100 rooms |
+| `/rooms/new` | The form that registers a room. The time zone is a choice from the zones that the server of Next.js knows | `registerRoom` |
+| `/rooms/{roomId}` | The name, the capacity, the opening hours, and the time zone of the room, above the reservations of Reservation | `getRoom` |
+
+- The form shows room-name-taken as a notice about the name, invalid-opening-hours at the closing time, and unknown-time-zone at the time zone (`registration.ts`). Any other problem shows its title and detail as they are.
+- A room that does not exist shows the page of `frontend/src/app/rooms/[roomId]/not-found.tsx`.

@@ -57,6 +57,7 @@ HTTP のアダプターは、こうしたエラーをそれぞれステータス
 - 悪い点：各 `type` の URI には、同じアドレスにあり続けるページが要る。テンプレートをコピーしたチームは URI を自分のサイトに向け直す必要があり、各ページには日本語の対訳も要る（TPL-0021）。
 - 悪い点：操作が文書の宣言したステータスだけで答えることを、Go の型は証明しない。oapi-codegen の strict server は各操作の `application/problem+json` の応答に型を付けるが、操作は problem details をエラーとして、どのステータスででも返せるからである。代わりに、テストでの応答の検証（TPL-0007 の層4）が、テストの送るリクエストについてこれを証明する。
 - 悪い点：標準は拡張のメンバーの形を決めていないので、`errors` はテンプレートが自分で定める。クライアントは、その部分をテンプレートの文書から学ぶことになる。
+- 悪い点：フロントエンドに見えるのは problem の本文だけである。`frontend/src/lib/api/server/outcome.ts` の `outcome` は、答えのヘッダー（facility-unavailable の `Retry-After` など）を捨てる。そのため画面は、どれだけ待てばよいかを言えない。
 
 ### 確認の方法
 
@@ -65,6 +66,13 @@ HTTP のアダプターは、こうしたエラーをそれぞれステータス
 - `redocly.yaml` のルール `rule/problem-details-only` は、OpenAPI の文書にある 4xx と 5xx の応答のメディアタイプを調べる。`application/problem+json` 以外があれば失敗する（TPL-0007 の層7）。このルールは `lint-contracts` が実行する。
 - `lint-go` のリンター exhaustive は、表に case のない業務エラーの種類があると失敗する。各文脈の HTTP のアダプターにあるテスト `problems_test.go` は、専用の problem に対応しない種類があると失敗する。`docs/problems/` のページか、その対訳の欠けた problem があっても失敗する。
 - API のテストは、`backend/internal/platform/apitest` のクライアントを通して、すべての応答を文書と照らし合わせて検証する（TPL-0007 の層4）。そのため、problem details でないエラーの本文や、操作が宣言していないステータスは、それを返したテストで失敗する。
+
+フロントエンドはすべての API のクライアントであり、この記録のとおりに problem を読む。
+
+- `outcome` は、API の呼び出しをそれぞれ値か problem に変える。答えない API や、problem でないもので答える API も problem になるので、画面はどの失敗も同じ方法で表示する。
+- `frontend/src/lib/problem.ts` の `problemKind` は、problem の種類を `type` から取り出す。種類は `docs/problems/` にあるそのページの名前で、たとえば `room-already-booked` である。画面はその名前で文言を選び、知らない problem は `title` と `detail` をそのまま表示する。
+- `fieldErrors` は、`errors` の各項目の `pointer` をフォームの項目に対応づける。そのため画面は、誤った項目のところにメッセージを表示する。
+- `problem.ts` と、各機能の文言（`registration.test.ts`、`problems.test.ts`）の単体テストが、これらの対応を確かめる。画面が `title` や `detail` を解析しないことを守るチェックはなく、レビューで守る。
 
 ## 選択肢の長所と短所
 
@@ -95,4 +103,4 @@ HTTP のアダプターは、こうしたエラーをそれぞれステータス
 - [RFC 9457: Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457.html)
 - [RFC 6901: JavaScript Object Notation (JSON) Pointer](https://www.rfc-editor.org/rfc/rfc6901.html)
 
-<!-- i18n-source: TPL-0008-errors-as-rfc-9457-problem-details.md sha256:bb3a789ddcf9d2403ccf009b6ea58aeefadb131a472e8977db98335ac9ec66bc -->
+<!-- i18n-source: TPL-0008-errors-as-rfc-9457-problem-details.md sha256:38767779dc8f0135f25a1b2f1f34d453a98c42daa20270384d5a6dc8e1f609a8 -->

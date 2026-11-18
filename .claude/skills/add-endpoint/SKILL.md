@@ -10,8 +10,8 @@ Follow `docs/guides/add-an-endpoint.md`. It has the steps, the files, and the ch
 ## Steps
 
 1. Read the README of the context in `docs/contexts/<context>/`: whether it is core (domain model) or supporting (transaction script) decides which layers you touch.
-2. Change the API document first, and run `make gen` before you write any Go. Never edit `*.gen.go`.
-3. If the change breaks an existing client, read `docs/guides/api-changes.md` before you go on.
+2. Change the API document first, and run `make gen` before you write any Go. It regenerates the Go server, the clients of other contexts, and the TypeScript types of the frontend (`frontend/src/lib/api/<context>.gen.ts`). Never edit `*.gen.go` or `*.gen.ts`.
+3. If the change breaks an existing client, read `docs/guides/api-changes.md` before you go on. `make check` then fails in `lint-frontend-types` at each call of the frontend that the change breaks: fix those screens in the same change.
 4. Follow the guide step by step.
 5. Verify, before you finish:
    - every status that the operation can answer is declared in the API document, and the API tests send a request for each problem;
@@ -19,3 +19,4 @@ Follow `docs/guides/add-an-endpoint.md`. It has the steps, the files, and the ch
    - each newly exported type of `domain` (or of `app` in a supporting context) has a row in both glossaries;
    - the table of operations in the README of the context, and its translation, name the operation.
 6. Run `make fmt`, then `make check`.
+7. If a screen is to show the operation, continue with the skill `add-screen`.

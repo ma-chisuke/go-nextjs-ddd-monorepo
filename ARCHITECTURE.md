@@ -1,13 +1,14 @@
 # Architecture
 
-The map of the backend: its bounded contexts and their processes, the layers inside each, the path of a request and of an event, the database, and the checks that keep the structure in place.
+The map of the product: its bounded contexts and their processes, the layers inside each, the frontend that shows them, the path of a request from a screen through an API, the path of an event, the database, and the checks that keep the structure in place.
 The reasons are in the decision records ([docs/adr/](docs/adr/README.md)), and the procedures in the guides ([docs/guides/](docs/guides/)).
 
 ## Bounded contexts
 
 ```mermaid
 flowchart LR
-    clients["Clients"]
+    browser["Browser"]
+    web["Frontend<br/>Next.js, the one public entry"]
     reservation["Reservation<br/>core subdomain"]
     facility["Facility<br/>supporting subdomain"]
     notification["Notification<br/>supporting subdomain"]
@@ -15,8 +16,9 @@ flowchart LR
     queue["SQS queue<br/>notification-events"]
     mail["Mail server"]
     db[("PostgreSQL 18<br/>a schema per context")]
-    clients -- "reservation.openapi.yaml" --> reservation
-    clients -- "facility.openapi.yaml" --> facility
+    browser -- "pages and Server Functions" --> web
+    web -- "reservation.openapi.yaml" --> reservation
+    web -- "facility.openapi.yaml" --> facility
     reservation -- "GET /rooms/{roomId}<br/>through a generated client" --> facility
     reservation -- "events, through<br/>its outbox and relay" --> bus
     bus -- "the rule of Notification" --> queue
@@ -37,10 +39,11 @@ flowchart LR
 - Reservation needs the capacity, the opening hours, and the time zone of a room for each booking. It asks Facility over HTTP, through a client that oapi-codegen generates from Facility's API document. Its adapter `adapter/facility` translates the answer into Reservation's own `domain.Room`, so no type of Facility reaches its use cases or its domain (TPL-0005). When Facility fails, or does not answer within 3 seconds, the booking fails with status 503 and a `Retry-After` header.
 - Reservation tells Notification about bookings through integration events (TPL-0013), and does not know that Notification exists. [The path of an event](#the-path-of-an-event) follows one from the booking to the mail.
 - Notification has no API. It is a worker that reads the events for it from its own queue, and sends mail.
+- The frontend, in `frontend/`, is not a context. It shows Facility and Reservation in screens, with one feature for each, and only its server calls their APIs (TPL-0014). [The frontend](#the-frontend) describes it.
 
 ## Processes
 
-Each process runs from the image of its context, with the command of the context or one of its modes (TPL-0014).
+Each process of a context runs from the image of its context, with the command of the context or one of its modes (TPL-0014). The frontend runs from an image of its own.
 
 | Context | Process | Command | Service in `compose.yaml` |
 |---|---|---|---|
@@ -48,10 +51,12 @@ Each process runs from the image of its context, with the command of the context
 | Reservation | The API | `reservation` | `reservation` |
 | Reservation | The relay of its outbox, a worker | `reservation relay` | `reservation-relay` |
 | Notification | The consumer of its queue, a worker | `notification` | `notification` |
+| (none) | The frontend: the server of Next.js | `frontend/server.js`, the standalone server, on Node | `web` |
 
 - `platform/httpserver.Main` runs the command of a context, a mode named by its argument (`httpserver.Mode`), or the health check (`<command> healthcheck`). A command reads its configuration from the environment, and the comment at the top of `backend/cmd/<context>/main.go` lists the variables.
 - An API runs on `platform/httpserver.Run`. A worker runs on `platform/httpserver.RunWorker`, which serves `GET /healthz` next to the work, so the health check of the image watches an API and a worker the same way. The health check of a worker says only that the process runs: a worker that cannot reach its database or its broker stays healthy, logs the failure, and tries again.
 - The relay and the worker read the configuration of the AWS SDK with `platform/awsconfig`: the region, and locally the endpoint of AWS Emulator and its CA (TPL-0017).
+- `frontend/Dockerfile` builds the image of the frontend: the standalone output of `next build` on distroless Node. The server reads the base URL of each API from `FACILITY_API_URL` and `RESERVATION_API_URL`. Its health check, `GET /healthz`, answers 200 and calls no API, so a context that is down does not restart the frontend. Node runs the check (`healthcheck.mjs`), because the image has no shell.
 
 ## Layers inside a context
 
@@ -98,9 +103,77 @@ Its use case is not called by an operation of an API but by the consumer of its 
 
 `lint-arch` tells the two kinds apart by the directory `internal/domain/`: only in a context without it may `app` import its own `adapter/postgres`.
 
+## The frontend
+
+`frontend/` is a Next.js 16 app with the App Router, React 19, and TypeScript 6 (TPL-0002).
+The browser talks to it alone. Its server renders the pages, runs the Server Functions of the forms, and calls the APIs of the contexts on the private network, through clients that the API documents type (TPL-0006, TPL-0014). So no API needs CORS, and no address of an API reaches the browser.
+
+```text
+frontend/src/
+├── app/                         the routes: each page composes features, and wraps what reads live data in <Suspense>
+│   ├── page.tsx                 the rooms (Facility)
+│   ├── rooms/new/               the form that registers a room (Facility)
+│   ├── rooms/[roomId]/          a room (Facility), its reservations on one day, and the form that books it (Reservation)
+│   ├── reservations/[reservationId]/
+│   │                            a reservation (Reservation) with its room (Facility), and the forms that change it
+│   ├── healthz/                 the health check
+│   └── _compose/                what one context gives, turned into what another needs: a room of Facility
+│                                into the Room of Reservation
+├── features/<context>/          one feature per bounded context; a feature never imports another
+│   ├── server/                  the calls to the API of the context, through outcome; server-only
+│   ├── actions.ts               the Server Functions of the forms
+│   ├── <name>.ts                pure logic, such as reading a form and the words for each kind of problem,
+│   │                            with its unit tests in <name>.test.ts
+│   └── components/              server components, and the forms as client components
+└── lib/
+    ├── api/                     <context>.gen.ts: the types that openapi-typescript generates from each API document
+    ├── api/server/              the clients of the APIs (openapi-fetch), and outcome; server-only
+    ├── problem.ts               problems: their kind, and the messages for the fields of a form
+    ├── input.ts, zoned-time.ts  the values of a form; dates and times of day in a time zone
+    └── components/              Field, ProblemNotice, and useFocusOnProblem
+```
+
+- A page is static by default, and each part that reads data of the contexts streams in behind `<Suspense>` (Cache Components). `outcome` waits for the request (`connection()`), so no data of the build reaches a static page.
+- Every call to an API becomes a `Result`: the value of the answer, or a problem. An API that does not answer, or that answers with something other than a problem, becomes a problem too, so a screen shows every failure in one way.
+- A screen chooses its words by `problemKind`, the name of the page of the problem in `docs/problems/`, and shows the invalid parts of a request at their fields (`fieldErrors`). It never parses a title or a detail (TPL-0008).
+- The forms follow the rules of the APIs. A booking sends an Idempotency-Key that the server makes when it renders the form. The form keeps the key with a fingerprint of the booking that went out with it, so the same booking, sent again, books once, and another booking from the same form gets a new key (`features/reservation/booking.ts`). A change sends the version that the page showed in `If-Match`, and nothing goes out without one; on 412, the page shows a notice and the reservation as it is now.
+- A person reads and enters times in the time zone of the room, and `lib/zoned-time.ts` converts them to and from the instants of the APIs with `Intl.DateTimeFormat`. It uses no date library, and not `Temporal`, which not every current browser has.
+- The CSS is plain, with no component library, and there is no sign-in: the template leaves the design system and the authentication to the team that copies it.
+
+## The path of a request from a screen
+
+The page of a room shows the room and its reservations, and a person books the room with the form on that page:
+
+```mermaid
+sequenceDiagram
+    participant browser as Browser
+    participant page as app/rooms/[roomId]
+    participant facility as features/facility
+    participant reservation as features/reservation
+    participant api as The APIs
+    browser->>page: GET /rooms/{roomId}
+    page-->>browser: the static shell, with fallbacks
+    page->>facility: getRoom(roomId), through outcome
+    facility->>api: GET /rooms/{roomId} of Facility
+    page->>page: reservationRoom (app/_compose)
+    page->>reservation: DayReservations and BookingSection(room)
+    reservation->>api: GET /reservations of Reservation
+    page-->>browser: the streamed parts: the room, its reservations, and the form with an Idempotency-Key
+    browser->>reservation: submit: the Server Function bookRoom(state, FormData)
+    reservation->>reservation: readBooking: the request, and the key to send it with
+    reservation->>api: POST /reservations of Reservation, with Idempotency-Key
+    reservation-->>browser: redirect to /reservations/{id}, or the state of the form with the problem
+```
+
+1. Next.js sends the static shell of the page at once: the layout, the links, and the fallback of each `<Suspense>`. The parts inside render on the server and stream in when their data is there.
+2. The page reads the room through the facility feature, turns it into the `Room` of Reservation in `app/_compose/`, and hands it to the components of the reservation feature. The two features never import each other.
+3. Each server module calls the API through `outcome`, with the typed client of `lib/api/server/clients.ts` and a timeout of 5 seconds, and gets a `Result`. The base URL of each API comes from the environment.
+4. A form posts to its Server Function, which anyone can post to. The function narrows each value of the form, and calls the API. It then goes to the next page (`redirect`), reads the page again (`refresh`), or returns the state that the form shows: the values, a message at each field, and a notice about the whole form.
+5. In each API, the request takes the path of the next section.
+
 ## The path of a request
 
-`POST /reservations` books a room:
+In the API of Reservation, `POST /reservations` books a room:
 
 ```mermaid
 sequenceDiagram
@@ -199,7 +272,7 @@ One PostgreSQL 18 database holds every context (TPL-0009). `db/bootstrap.sql` cr
 | `infra/local/` | The root that applies both modules to AWS Emulator: the bus `contexts`, and the subscription of Notification. It accepts only an endpoint on this machine |
 | `infra/local/aws-emulator/` | The Dockerfile of the image of AWS Emulator, with the public key that checks its package |
 
-`make up` and `make smoke` apply `infra/local/` with `tools/scripts/aws.sh apply` (`make aws-apply`). The other modules and the Terragrunt units for stg and prd arrive with the infrastructure milestone.
+`make up`, `make smoke`, and `make e2e` apply `infra/local/` with `tools/scripts/aws.sh apply` (`make aws-apply`). The other modules and the Terragrunt units for stg and prd arrive with the infrastructure milestone.
 
 ## Rules and what enforces them
 
@@ -214,7 +287,8 @@ Each rule below holds because a check fails when a change breaks it.
 | Dependencies point inward, from `adapter` to `app` to `domain`, and adapters do not import each other (TPL-0004) | `lint-arch` rule `arch/layer` | `make check` |
 | The domain does no I/O and reads no clock (TPL-0004) | `lint-arch` rules `arch/domain-purity`, an allow-list of standard library packages, and `arch/domain-clock`, against `time.Now` and the like | `make check` |
 | Each operation of an API document has a handler with the right types (TPL-0006) | The Go compiler, through the strict server interface that oapi-codegen generates | `make check` |
-| Generated code is what the generators write from the sources now (TPL-0007, layer 2) | `gen-check-api` for oapi-codegen, `gen-check-sqlc` for sqlc | `make check` |
+| Generated code is what the generators write from the sources now (TPL-0007, layer 2) | `gen-check-api` for oapi-codegen, `gen-check-sqlc` for sqlc, `gen-check-api-ts` for openapi-typescript | `make check` |
+| A call of the frontend that the API document does not allow fails, in its path, its parameters, or its body (TPL-0007, layer 1) | The TypeScript compiler, on the types that openapi-fetch takes from the generated `paths` (`lint-frontend-types`) | `make check` |
 | No HTTP route exists outside the API document (TPL-0007, layer 3) | `lint-arch` rule `arch/route-registration`: only generated code and `platform/httpserver` register routes | `make check` |
 | A request that breaks the API document reaches no handler (TPL-0007) | The request validation of `platform/httpserver`, with kin-openapi | Run time |
 | Each response matches the API document: its status, its headers, and its body, problems included (TPL-0007, layer 4) | `platform/apitest`, the client of the API tests, which validates every response with kin-openapi | `make check` |
@@ -238,5 +312,17 @@ Each rule below holds because a check fails when a change breaks it.
 | Each table and column has a comment, and the schema documents are current (TPL-0023) | tbls (`lint-db-docs`) | `make check-all` |
 | Two confirmed reservations of one room never overlap (TPL-0009) | The exclusion constraint `reservations_no_overlap`, tried with concurrent bookings by the integration tests of Reservation | Run time, `make check-all` |
 | The glossary of a context lists each exported type of its `domain` package, or of `app` in a context without one, in both languages (TPL-0003) | `lint-arch` rule `arch/glossary` | `make check` |
+| A feature of the frontend imports no other feature, and `lib` imports no feature (TPL-0003) | ESLint, rule `boundaries/dependencies` of eslint-plugin-boundaries (`lint-frontend`) | `make check` |
+| Only the server of Next.js calls the APIs: a module under `server/` imports `server-only`, and no client component imports such a module (TPL-0014) | ESLint, rule `no-restricted-syntax` (`lint-frontend`); `next build`, when a client component imports `server-only` | `make check`, build of the image |
+| A link of the frontend leads to a route that exists | The typed routes of Next.js, through the TypeScript compiler (`lint-frontend-types`) | `make check` |
+| No page renders data of the contexts at build time | `outcome`, which waits for the request; `next build`, when a page reads uncached data outside `<Suspense>` | Build of the image |
+| The pure logic of the frontend does what its tests say: forms, problems, and times in a time zone | Unit tests on the test runner of Node (`test-frontend`) | `make check` |
+| A person registers a room, books it, reschedules, and cancels in a browser, and gets the mails; a refused change shows in the words of the screen (TPL-0008, TPL-0017) | `make e2e`: the scenarios of `frontend/e2e/`, with Playwright in Chromium, against the local system | `make check-all` |
 
-No check enforces these rules yet, so review does: the kind of subdomain of a context and its README (TPL-0003), the type `uuid` of each primary key (TPL-0012), and an AsyncAPI document of each consumer that declares what it consumes (TPL-0013).
+No check enforces these rules yet, so review does:
+
+- the kind of subdomain of a context and its README (TPL-0003);
+- the type `uuid` of each primary key (TPL-0012);
+- an AsyncAPI document of each consumer that declares what it consumes (TPL-0013);
+- a feature of the frontend that calls the API of its own context only (TPL-0003);
+- a screen that never parses the title or the detail of a problem (TPL-0008).

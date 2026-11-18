@@ -46,9 +46,11 @@ date: 2026-11-17
 - AWS は AWS Emulator を RPM と deb のパッケージとして公開しており、コンテナイメージは公開していない。テンプレートは、自分の Dockerfile `infra/local/aws-emulator/Dockerfile` でイメージをビルドする。ダイジェストで固定した Amazon Linux 2023 minimal の上に、固定したバージョンの RPM パッケージを入れる。入れる前に、アーキテクチャごとにパッケージの SHA-256 を確かめ、さらに `rpm` が、リポジトリに置いた AWS の公開鍵 `signing-key.asc` でパッケージの署名を確かめる（TPL-0024）。
 - AWS Emulator は、既定でテレメトリーを送る。イメージは `EMULATOR_TELEMETRY=off` を設定する。
 - AWS Emulator はデータをメモリにしか持たない。そのため、手元の環境は、エミュレーターが起動するたびにイベントバス・キュー・ルールを作る。
-- 手元の環境は、AWS で使う予定の Terraform のモジュール `infra/modules/event-bus` と `infra/modules/event-subscription` を、エミュレーターに適用する。そのため、手元のバス・キュー・ルールは AWS と同じコードから作られる（TPL-0015）。これらを適用するルート `infra/local/` は、このマシンの上のエンドポイントしか受け付けない。適用するのは `tools/scripts/aws.sh apply`（`make aws-apply`）で、`make up` と `make smoke` がこれを実行する。このスクリプトは Terraform の state をリポジトリの外に置き、エミュレーターが再起動していれば捨てる。
+- 手元の環境は、AWS で使う予定の Terraform のモジュール `infra/modules/event-bus` と `infra/modules/event-subscription` を、エミュレーターに適用する。そのため、手元のバス・キュー・ルールは AWS と同じコードから作られる（TPL-0015）。これらを適用するルート `infra/local/` は、このマシンの上のエンドポイントしか受け付けない。適用するのは `tools/scripts/aws.sh apply`（`make aws-apply`）で、`make up`・`make smoke`・`make e2e` がこれを実行する。このスクリプトは Terraform の state をリポジトリの外に置き、エミュレーターが再起動していれば捨てる。
 - エミュレーターは、ポート 9297 で HTTPS を提供する。証明書は起動のたびに作り、名前は `localhost` と `127.0.0.1` だけである。その証明書には、エミュレーターが状態のディレクトリに書く CA が署名する。ホストは、`tools/scripts/aws.sh server` でその CA を受け取る（`.cache/aws-emulator/ca.pem`）。サービスのコンテナは、CA の入ったボリュームをマウントする。そして `AWS_ENDPOINT_SERVER_NAME=localhost` で、証明書に書かれた名前を知る。サービスはその名前を確かめ、確認を省かない（`platform/awsconfig`。`AWS_ENDPOINT_URL` なしにこの変数を設定すると拒む）。エミュレーターは、CA のファイルを所有者だけが読める形で書く。そのため、エミュレーターはサービスと同じユーザー 65532 で動く。
 - エミュレーターはリクエストの署名を確かめない（`--auth off`）。起動のたびに新しい認証情報を作るからである。ポートは、ループバックアドレスにだけ公開する。
+- Docker Compose のどのサービスも、ポートをループバックアドレスにだけ、32768 より小さい番号で公開する。PostgreSQL は 15432、AWS Emulator は 19297、Mailpit は 18025、Facility は 18081、Reservation は 18082、フロントエンドは 13000 である。32768 以上のポートは、Linux と macOS が自分で割り当てる。外へ向かう接続にも割り当てる。手元の PostgreSQL への接続を保っているテストが、サービスがこれから公開するポートを先に使い、サービスが起動に失敗したことがある。ポートが 55432 から 59297 の間にあった頃、これで CI が1日に2回、別々のポートで失敗した。
+- `make up` がエミュレーターを新しく起動したときは、その CA のボリュームをマウントするサービスを再起動し、新しい CA を読ませる。ほかの方法でエミュレーターが再起動したときは、人が再起動する（[サービスを手元で動かす](../../guides/run-locally.ja.md)）。
 - テンプレートが頼る動きには、それぞれ CI で動くテストがある。エミュレーターのあるバージョンがその動きをしなくなれば、テストが失敗する（確認の方法を参照）。
 - 手元のシステムには、Secrets Manager や SES を呼ぶものがない。サービスは秘密情報を環境変数から読み、AWS では ECS がその環境変数を埋める（TPL-0014）。Notification はメールを Mailpit に送る。そのため、手元の環境は秘密情報を作らず、Secrets Manager と SES のテストも置かない。
 
@@ -65,21 +67,21 @@ date: 2026-11-17
 - 良い点：手元のバス・キュー・ルールは、AWS で使う予定のモジュールから作られる。
 - 悪い点：公開は2026年11月11日であり、短い間に大きく変わる可能性がある。テストが確かめるのはテンプレートが頼る動きだけであり、AWS との違いもすでに1つ見つかっている。存在しないバスへのイベントを、エミュレーターは受け付けて捨てる。そのため中継は、起動のときに自分のバスがあることを確かめる（`Publisher.Ready`、TPL-0013）。
 - 悪い点：再起動すると状態が消えるので、手元の環境は毎回 AWS のリソースを作り直す必要がある。起動後の最初の apply には1分ほどかかる。AWS の provider は SQS のキューを1つ作るたびに25秒ほど待ち、購読1つにつきキューは2つあるからである。モジュール `event-subscription` は、キューのポリシーをキューの引数として設定する。ポリシーを別のリソースにすると、もう1回待つからである。
-- 悪い点：CA はエミュレーターが起動するたびに変わる。エミュレーターが再起動したら、それを呼ぶサービスも再起動し、ホストも CA をもう一度コピーする必要がある。
+- 悪い点：CA はエミュレーターが起動するたびに変わる。エミュレーターが再起動したら、それを呼ぶサービスも再起動し、ホストも CA をもう一度コピーする必要がある。エミュレーターを新しく起動した `make up` は、この2つを行う。`make up` によらない再起動のあとは、人が行う。
 - 悪い点：イメージを Dockerfile から手元でビルドするので、どのマシンでも最初の起動に手順とビルドの時間が加わる。
 - 悪い点：エミュレーターのバージョンを更新する Renovate のルールは、まだない。更新するには、Dockerfile のバージョンと2つのチェックサムを手で変える（TPL-0025）。
 - 悪い点：エミュレーターは AWS そのものではない。権限・クォータ・遅延が違いうるので、本物のサービスで初めて動かす場所は、引き続き stg である。
 
 ### 確認の方法
 
-Docker Compose は、PostgreSQL 18、AWS Emulator、Mailpit と、各文脈のプロセスを動かす。プロセスは、Facility と Reservation の API、Reservation の中継、Notification のワーカーである。`make up` がこれらを起動する。
+Docker Compose は、PostgreSQL 18、AWS Emulator、Mailpit、各文脈のプロセス、Next.js を動かす。プロセスは、Facility と Reservation の API、Reservation の中継、Notification のワーカーである。Next.js は `frontend/Dockerfile` からビルドするサービス `web` で、<http://127.0.0.1:13000> にある。`make up` がこれらを起動する。
 システムのプロセスは、すべて Compose の中で動く。ホストから適用するのは、スキーマと AWS のリソースだけである。適用するのは `tools/scripts/db.sh` と `tools/scripts/aws.sh` で、使う pgschema と Terraform は `mise.toml` が固定したものである。こうして、それぞれの固定を1か所に保つ（TPL-0010、TPL-0022）。
-Next.js は、そのマイルストーンでシステムに加わる。
 
-次のテストが、エミュレーターの動きを確かめ続ける。どちらも `make check-all` で動くので、CI でも動く。
+次のテストが、エミュレーターの動きを確かめ続ける。どれも `make check-all` で動くので、CI でも動く。
 
 - `platform/awsevents` の結合テスト（`awsevents_integration_test.go`。`make test-integration` で動く）は、発行側と受け取る側をエミュレーターに対して動かす。カスタムのバスのルールは、`events.amazonaws.com` を許すポリシーを持つ SQS のキューへ、イベントの `detail` を届ける。ハンドラーが失敗し続けるイベントと、イベントではないメッセージは、`maxReceiveCount` 回受け取られたあとでデッドレターキューに移る。AWS が予約した `source` のエントリーには、`PutEvents` がステータス 200 と失敗したエントリーで答え、発行側はそれをエラーとして報告する。`Publisher.Ready` は、バスがあるかどうかを答える。
 - `make smoke` は、Terraform で `infra/local/` を適用してシステムを起動する。そして予約を作って変更し、取り消したうえで、3通のメールを Mailpit で待つ。
+- `make e2e` も同じやり方でシステムを起動する。そしてブラウザーの中の人が会議室を登録し、予約し、変更して取り消す。テストは、3通のメールを Mailpit で待つ。
 
 ## 選択肢の長所と短所
 
@@ -130,4 +132,4 @@ Next.js は、そのマイルストーンでシステムに加わる。
 - Terraform は、AWS の provider 6.73.0 で `infra/local/` をエミュレーターに適用できる。provider は、SQS のキューを1つ作るたびに25秒ほど待つ。
 - Secrets Manager（秘密情報の作成と読み出し）と SES v2 の `SendEmail` は、手での確認で動いた。
 
-<!-- i18n-source: TPL-0017-aws-emulator-for-local-development.md sha256:1285b19c99f77333b87e0d0f3c2e987b2928a1f0838fd13dffdae9292976a711 -->
+<!-- i18n-source: TPL-0017-aws-emulator-for-local-development.md sha256:6c6c0fa4f1821d14e756b8d2978e284ab63eb1dbb1f014e0029ec8d9605f9be4 -->

@@ -69,4 +69,18 @@ Reservation は、予約と変更のたびに、会議室の定員・利用時�
 - コマンドは、Facility のベース URL を `FACILITY_API_URL` から読む。
 - アダプターのテストは、Facility の偽物を相手に動く。偽物は、アダプターが送る各リクエストと、偽物自身が返す各答えを、Facility の API の文書に照らして検証する。そのため、アダプターが追従していない変更がその文書に入ると、このテストが失敗する。
 
-<!-- i18n-source: README.md sha256:7a50eaf25d71de82c44ab05d040dbe894ca9b4898587903e30b72dfed34e682d -->
+## 画面
+
+フロントエンドは、機能 `frontend/src/features/reservation/` で会議室を予約する。この機能は、Next.js のサーバーからだけこの API を呼ぶ（TPL-0014）。機能は、会議室を自分の言葉で知る（`room.ts`）。ページが Facility から会議室を得て、`frontend/src/app/_compose/` がそれをその言葉に変える。ここで `adapter/facility` がすることと同じである。
+
+| ページ | 見せるもの | 操作 |
+|---|---|---|
+| `/rooms/{roomId}` | 会議室のタイムゾーンでの、ある日付の予約。前後の日付へのリンクと、その日付に会議室を予約するフォームがある | `listReservations`、`bookRoom` |
+| `/reservations/{reservationId}` | 予約とその会議室。確定している間は、予約を変更するフォームと取り消すフォームがある | `getReservation`、`rescheduleReservation`、`cancelReservation` |
+
+- 人は、会議室のタイムゾーンで時間帯を読み、入力する。`period.ts` がそれを API の日時に変え、そのタイムゾーンの時計が飛ばす時刻であれば、そう伝える。
+- 予約するフォームは、フォームを描くときに Next.js のサーバーが作る `Idempotency-Key` を送る。フォームは、そのキーと、そのキーで送った予約のフィンガープリントを持ち続ける。同じ予約をもう一度送っても予約は1回だけで、同じフォームから別の予約を送ると新しいキーになる（`booking.ts`）。
+- 変更するフォームと取り消すフォームは、ページが表示したバージョンを `If-Match` で送る。precondition-failed か reservation-cancelled のときは、ページがメッセージと予約の今の状態を表示する（`changes.ts`）。
+- 人が対処できる problem の種類には、それぞれ専用の文言がある。関係する項目があれば、文言はその項目に出る（`problems.ts`）。ほかの problem は、title と detail をそのまま表示する。
+
+<!-- i18n-source: README.md sha256:7ccc9a86e690bed20d83a3a66063496eb512ae03f745a5c4fcec1d586f79f875 -->

@@ -170,5 +170,22 @@
 | subject（メールの） | 件名 |
 | body（メールの） | 本文 |
 | sender（メールの） | 差出人 |
+| frontend | フロントエンド |
+| screen | 画面 |
+| page（アプリの、1つの URL にあるもの） | ページ |
+| feature（ディレクトリ `frontend/src/features/<context>/`） | 機能 |
+| form | フォーム |
+| field（フォームの） | 項目 |
+| hidden field（フォームの） | 隠し項目 |
+| browser | ブラウザー |
+| build（アプリやイメージの） | ビルド |
+| server component、client component | サーバーコンポーネント、クライアントコンポーネント |
+| Server Function（Next.js の） | サーバー関数 |
+| stream（ページの一部を） | ストリーミングする |
+| shell（ページの静的な部分） | 骨組み |
+| fingerprint（予約の） | フィンガープリント |
+| end-to-end test | エンドツーエンドテスト |
+| scenario（エンドツーエンドテストの） | シナリオ |
+| headless mode（ブラウザーの） | ヘッドレスモード |
 
-<!-- i18n-source: translation.md sha256:731a27f3d21191b41ac6fb090c91251ca13506cc32eb17ae55aa8629eedd5915 -->
+<!-- i18n-source: translation.md sha256:d3833662ffd0dd64afae73e3c28682e794219dc9cdb7c3f07406be9123929436 -->

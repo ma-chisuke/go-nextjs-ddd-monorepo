@@ -9,6 +9,7 @@
 # A CLAUDE.md only imports the AGENTS.md next to it.
 CLAUDE.md
 backend/CLAUDE.md
+frontend/CLAUDE.md
 
 # Generated.
 CHANGELOG.md

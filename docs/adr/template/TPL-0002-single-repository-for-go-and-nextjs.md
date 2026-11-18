@@ -72,14 +72,15 @@ Review enforces the layout: no check fails yet when a top-level directory is add
 These parts exist now:
 
 - `make check` and `make check-all` run every check of the repository. `lefthook.yml` calls the same targets, narrowed to the staged files before a commit (`CHECK_SCOPE=staged`), so a hook and a manual run with the same scope give the same result.
-- `pnpm-workspace.yaml` lists `frontend` as the only package of the workspace. So far, `frontend/` holds the configuration of its checks only.
+- `pnpm-workspace.yaml` lists `frontend` as the only package of the workspace. Since the frontend milestone, `frontend/` holds the Next.js app. `make gen` writes its types from the same API documents as the Go code (TPL-0006), so a change to a document, the Go code, and the screens that the change breaks land in one pull request, and `make check` sees all of them.
+- The frontend installs its dependencies from the lockfile at the root of the repository, `pnpm-lock.yaml`. So its image builds from the root (`frontend/Dockerfile`), and `frontend/Dockerfile.dockerignore` names the few paths that enter the build: the files of the workspace and `frontend/`.
 - The CI workflows (TPL-0018) call the same targets. The job that runs `make check` checks every file; the job that adds the slow checks of `make check-all` narrows them to the changed files on a pull request (`CHECK_SCOPE=changed`).
 - `backend/` and `contracts/` hold the bounded contexts and their contracts, since the first bounded context.
 - `infra/` holds the Terraform modules that the local environment shares with AWS, and `infra/local/`, which applies them to AWS Emulator (TPL-0015, TPL-0017), since the events milestone.
 
 These parts arrive later:
 
-- The Next.js app in `frontend/` arrives with its milestone, and the other Terraform modules and the Terragrunt configurations in `infra/` with the deployment.
+- The other Terraform modules and the Terragrunt configurations in `infra/` arrive with the deployment.
 
 ## Pros and Cons of the Options
 

@@ -93,7 +93,7 @@ AWS の上で、文脈どうしが統合イベントを確実に発行し受け�
 - Reservation の結合テストが、次のことを確かめる。ストアは変更のイベントをその変更と一緒に書き、拒んだ変更のイベントは書かない。2つの中継が同じイベントを取ることはない。読めない行があっても、ほかの行は止まらない。
 - Notification の結合テストは、1つのイベントを2回（同時の2回も含む）配信し、メールが1通であることを確かめる。
 - `platform/awsevents` の結合テストは、発行側と受け取る側を AWS Emulator に対して動かす。イベントはルールとキューを通って受け取る側のハンドラーに届き、ハンドラーが失敗し続けるイベントはデッドレターキューに移る。このテストは `make test-integration` で動き、`make check-all` と CI に含まれる。
-- `make smoke` は、手元のシステムで予約を作り、変更し、取り消す。そして、送信箱・中継・バス・キュー・Notification のワーカーを通って届く3通のメールを、Mailpit で待つ。
+- `make smoke` は、手元のシステムで予約を作り、変更し、取り消す。そして、送信箱・中継・バス・キュー・Notification のワーカーを通って届く3通のメールを、Mailpit で待つ。`make e2e` は、同じことをブラウザーの画面から行う。
 
 ## 選択肢の長所と短所
 
@@ -134,4 +134,4 @@ AWS の上で、文脈どうしが統合イベントを確実に発行し受け�
 - [AsyncAPI 3.0](https://www.asyncapi.com/docs/reference/specification/v3.0.0)
 - [送信箱のパターン（transactional outbox）](https://microservices.io/patterns/data/transactional-outbox.html)
 
-<!-- i18n-source: TPL-0013-events-with-outbox-cloudevents-eventbridge-sqs.md sha256:6a479641ab3512104427d438a1f194013b6c34f73cdebed4054dc8852b2061d9 -->
+<!-- i18n-source: TPL-0013-events-with-outbox-cloudevents-eventbridge-sqs.md sha256:fa9aad849205074e9a6b86aa1a952e5476d116ce6908553afb8b9ea5d7ae5c21 -->

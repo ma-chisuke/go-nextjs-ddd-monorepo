@@ -95,7 +95,10 @@ date: 2026-11-17
 
 `backend/internal/` の下のディレクトリ（`platform/` を除く）のうち、`docs/contexts/` の下に README のないものがあると失敗するチェックは、まだ作っていない。作るまでは、レビューで守る。
 
-画面も同じ単位で分ける。`lint-frontend` が実行する eslint-plugin-boundaries が、`frontend/src/features/` の下の機能どうしを分けておく。ある機能が別の機能を import することはない。ルールはすでに `frontend/eslint.config.mjs` にあり、最初の画面ができた時点で働き始める。
+画面も同じ単位で分ける。画面を持つ文脈にはそれぞれ機能 `frontend/src/features/<context>/` があり、その API の呼び出し、サーバー関数、純粋なロジック、コンポーネントを収める。機能を組み合わせるのは `frontend/src/app/` のページである。ある文脈が渡すものを別の文脈が必要とする形にするのは `frontend/src/app/_compose/` で、バックエンドのアダプター `adapter/facility` と同じ役目を持つ。たとえば会議室のページは、Facility の会議室を Reservation の言葉にして Reservation に渡す。
+
+- `lint-frontend` が実行する eslint-plugin-boundaries が、機能どうしを分けておく。機能はほかの機能を import せず、`frontend/src/lib/` はどの機能も import しない（`frontend/eslint.config.mjs` のルール `boundaries/dependencies`）。自己テストは、Facility のサーバーのモジュールを import する機能で、このルールを確かめる（`case_lint_frontend`）。
+- 機能が自分の文脈の API だけを呼ぶことを守るチェックはない。`frontend/src/lib/api/server/clients.ts` は、すべての API のクライアントをすべての機能に与える。これはレビューで守る。
 
 ## 選択肢の長所と短所
 
@@ -128,4 +131,4 @@ date: 2026-11-17
 - Vlad Khononov『ドメイン駆動設計をはじめよう』（オライリー・ジャパン）の10章：業務領域の種類ごとに実装のパターンを選ぶ経験則。原書は "Learning Domain-Driven Design"（O'Reilly、2021）の "Design Heuristics" の章である。
 - 同書の1章：中核・補完・一般の業務領域。
 
-<!-- i18n-source: TPL-0003-split-by-bounded-context.md sha256:e8fd14e447aff61979a9839398fd3fee052244c15c168979ce8a748c4498db63 -->
+<!-- i18n-source: TPL-0003-split-by-bounded-context.md sha256:d6e6f40aedd659e11e5461d607771529699942a121a96121c97a1df03082c60d -->

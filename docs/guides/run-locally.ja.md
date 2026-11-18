@@ -1,6 +1,6 @@
 # サービスを手元で動かす
 
-このガイドでは、手元のシステムを起動し、API を通して curl で会議室を予約する。そして、その予約について Notification が送るメールを見る。
+このガイドでは、手元のシステムを起動し、ブラウザーと、API を通した curl とで会議室を予約する。そして、その予約について Notification が送るメールを見る。
 要るのは、Docker と、`make setup` で入れる道具である。
 
 ## システムを起動する
@@ -14,7 +14,8 @@ make up
 1. PostgreSQL 18。`db/bootstrap.sql` と `db/local.sql` を実行し、各文脈の `schema.sql` を適用する（`tools/scripts/db.sh up`）。
 2. AWS Emulator。`infra/local/aws-emulator/Dockerfile` からビルドする（TPL-0017）。
 3. イベントバス `contexts` と、Notification のキュー（デッドレターキューとルールも含む）。Terraform が `infra/local/` からエミュレーターの中に作る（`tools/scripts/aws.sh apply`）。エミュレーターの起動後の最初の apply には1分ほどかかる。AWS の provider が、キューを1つ作るたびに25秒ほど待つからである。変更のない apply は数秒で終わる。
-4. Mailpit と、すべての文脈のすべてのプロセス。プロセスは `backend/Dockerfile` からビルドする。Facility と Reservation の API、Reservation の中継（`reservation relay`）、Notification のワーカー（`notification`）である。`make up` は、それぞれが正常になるまで待つ。
+4. Mailpit と、すべての文脈のすべてのプロセスと、フロントエンド。プロセスは `backend/Dockerfile` から、フロントエンドは `frontend/Dockerfile` からビルドする。プロセスは、Facility と Reservation の API、Reservation の中継（`reservation relay`）、Notification のワーカー（`notification`）である。`make up` は、それぞれが正常になるまで待つ。
+5. 手順2でエミュレーターが新しく起動した場合は、エミュレーターを呼ぶサービスの再起動。新しい CA を読ませるためである（[AWS Emulator が再起動したとき](#aws-emulator-が再起動したとき)）。
 
 起動には `make up` を使い、`docker compose up` だけでは起動しない。スキーマと AWS のリソースは、mise が固定した pgschema と Terraform で、ホストから適用する。中継は、自分のバスがなければ起動しない。
 
@@ -27,14 +28,26 @@ make up
 | Mailpit の Web の画面 | `http://127.0.0.1:18025` | `MAILPIT_PORT` |
 | Facility | `http://127.0.0.1:18081` | `FACILITY_PORT` |
 | Reservation | `http://127.0.0.1:18082` | `RESERVATION_PORT` |
+| フロントエンド（`web`） | `http://127.0.0.1:13000` | `WEB_PORT` |
 
 中継とワーカーは、ポートを公開しない。Mailpit は、ポート 1025 の SMTP をほかのコンテナからだけ受け付ける。
 
 公開するポートは、どれも 32768 より小さい。変数で選ぶポートも、そうするとよい。32768 以上のポートは、Linux と macOS が自分で割り当てる。外へ向かう接続にも割り当てる。そのため、PostgreSQL への接続を保っているテストが、サービスがこれから公開するポートを先に使っていることがある。そのときサービスは「address already in use」で起動に失敗する。
 
-確認：`curl -i http://127.0.0.1:18081/healthz` と `curl -i http://127.0.0.1:18082/healthz` が `204 No Content` を返す。`docker compose ps` は、すべてのサービスを healthy と示す。
+確認：`curl -i http://127.0.0.1:18081/healthz` と `curl -i http://127.0.0.1:18082/healthz` が `204 No Content` を返す。`curl -i http://127.0.0.1:13000/healthz` は `200 OK` を返す。`docker compose ps` は、すべてのサービスを healthy と示す。
 
-## 会議室を予約する
+## ブラウザーで会議室を予約する
+
+ブラウザーが使うサービスは、フロントエンドだけである。API を呼ぶのはフロントエンドのサーバーで、ブラウザーはそのサーバーとだけ通信する（TPL-0014）。
+
+1. <http://127.0.0.1:13000> を開く。最初の画面は Facility の会議室の一覧である。
+2. 「Register a room」を選び、名前・定員・利用時間・タイムゾーンを入れて会議室を登録する。続いて新しい会議室のページが開く。会議室と、そのタイムゾーンでの1日分の予約と、会議室を予約するフォームがある。
+3. 「Next day」を選び、時間帯・参加人数・主催者のメールアドレスを入れて、「Book the room」を選ぶ。続いて予約のページが開き、予約を変更するフォームと取り消すフォームがある。
+4. 予約を変更し、それから取り消す。どちらのフォームも、ページが表示している予約のバージョンを送る。古くなったページ（2つ目のタブなど）からの変更にはメッセージが出て、ページは予約の今の状態を表示する。
+
+これらの変更のメールも Mailpit に届く。下の呼び出しについて[メールを見る](#メールを見る)が説明するとおりである。
+
+## API を通して会議室を予約する
 
 1. Facility に会議室を登録する。
 
@@ -135,15 +148,15 @@ AWS Emulator は状態をメモリにしか持たず、起動のたびに新し�
    make aws-apply
    ```
 
-   `make up` もこれを行うが、すでに動いているサービスは再起動しない。
 2. エミュレーターを呼ぶサービスを再起動し、新しい CA を読ませる。
 
    ```sh
    docker compose restart reservation-relay notification
    ```
 
+エミュレーターを新しく起動したときは、`make up` がこの2つの手順を行う。`docker compose restart aws` など、ほかの方法でエミュレーターが再起動したときは、手で行う。
 その間、イベントは送信箱で待つので、失われない。中継は、発行できるようになった時点でそれらを発行する。
-`make aws-server` は、ほかのサービスを起動せずにエミュレーターだけを起動し、その CA をコピーする。結合テストはこれを使い、`make test-integration` と `make smoke` は動く前にエミュレーターを起動する。
+`make aws-server` は、ほかのサービスを起動せずにエミュレーターだけを起動し、その CA をコピーする。テストはこれを使い、`make test-integration`・`make smoke`・`make e2e` は動く前にエミュレーターを起動する。
 
 ## API をソースから動かす
 
@@ -171,7 +184,7 @@ HTTP_ADDR=127.0.0.1:8082 \
 mise exec -- go run ./cmd/reservation
 ```
 
-[会議室を予約する](#会議室を予約する)の呼び出しは、これらのポート `8081` と `8082` に対してもそのまま使える。`make up` の中継とワーカーが動いていれば、これらの予約のイベントも Mailpit に届く。中継は同じ送信箱を読むからである。
+[API を通して会議室を予約する](#api-を通して会議室を予約する)の呼び出しは、これらのポート `8081` と `8082` に対してもそのまま使える。`make up` の中継とワーカーが動いていれば、これらの予約のイベントも Mailpit に届く。中継は同じ送信箱を読むからである。
 
 中継をソースから動かすには、`tools/scripts/aws.sh` の環境変数でエミュレーターに向ける。
 
@@ -187,17 +200,32 @@ mise exec -- go run ./cmd/reservation relay
 
 1つの送信箱の上で複数の中継が動けるので、この中継と `make up` の中継はイベントを分け合う。Notification のワーカーは Mailpit に SMTP で送る必要があり、そこに届くのはコンテナだけなので、ワーカーは `make up` で動かす。
 
+## フロントエンドをソースから動かす
+
+イメージをビルドせずにフロントエンドの変更を見るには、Next.js の開発サーバーを、手元のシステムの API に対して動かす。
+
+```sh
+make frontend-dev
+```
+
+開発サーバーは、フロントエンドを <http://127.0.0.1:3000> で配信し、ソースが変わるとページを読み込み直す。呼ぶ API は、[システムを起動する](#システムを起動する)の表のポートか、`FACILITY_PORT` と `RESERVATION_PORT` が示すポートにあるものである。ソースから動かした API を呼ぶには、ベース URL を設定する。`FACILITY_API_URL=http://127.0.0.1:8081 RESERVATION_API_URL=http://127.0.0.1:8082 make frontend-dev` のようにする。
+
 ## テスト用のデータベース
 
 `make test-integration` は、ビルドタグ `integration` の付いたテストを、同じ PostgreSQL にある専用のデータベース `app_test` で動かす。`tools/scripts/db.sh init` が、すべてのスキーマとともにこれを作る。手元のシステムはデータベース `app` を使う。そのため、動いているシステムの中継がテストの書いた送信箱のイベントを取ることはなく、テストがシステムの行に出会うこともない。
 
-## スモークテストと、止め方
+## スモークテスト、エンドツーエンドテスト、止め方
 
 `make smoke` は、サービスが動いていなければ起動し、HTTP で Facility と Reservation をまたぐ予約を1件通す。そして、すべての応答を2つの API の文書と突き合わせ、その予約の3通のメールを Mailpit で待つ。`make check-all` がこれを実行する。
 
+`make e2e` は、同じやり方でサービスを起動し、`frontend/e2e/` のシナリオを Playwright でブラウザーに実行させる。主なシナリオでは、人が会議室を登録して予約し、それを変更してから取り消し、3通のメールを受け取る。ほかの3つのシナリオは、フォームが拒むものを送る。送るのは、予約済みの時間帯と、古くなったページからの変更と、入力していないフォームである。`make check-all` はこれも実行する。ブラウザーは Chromium で、Playwright のバージョンが指すビルドを使う。最初の実行が、それを `.cache/ms-playwright/` にダウンロードする。`make setup` はダウンロードしない。
+
 ```sh
 make smoke
+make e2e
 ```
+
+2つのテストはそれぞれ、自分が起動したサービスを止め、前から動いていたサービス（`make up` のサービスなど）は残す。`make check-all` のように2つが同時に動くときは、後のテストが先のテストを待つ。
 
 `make down` はすべてのコンテナを止め、PostgreSQL のデータは残す。AWS Emulator の状態と Mailpit のメールは消える。PostgreSQL のデータを消すのは `make db-down` である。
 
@@ -209,4 +237,4 @@ AWS Emulator のバージョンを更新する Renovate のルールはまだな
 2. `EMULATOR_VERSION` と、2つのチェックサム `EMULATOR_SHA256_ARM64` と `EMULATOR_SHA256_AMD64` を変える。各パッケージ（`aarch64` 用と `x86_64` 用）のチェックサムは、`curl --location <パッケージの URL> | shasum -a 256` で得る。パッケージの URL は、Dockerfile の `RUN` 命令にある。
 3. `make up` でイメージをビルドしてエミュレーターのコンテナを作り直し、`CHECK_SCOPE=changed make check-all` を実行する。新しいバージョンがテンプレートの頼る動きを続けているかは、`platform/awsevents` の結合テストと `make smoke` でわかる。パッケージがチェックサムや AWS の署名に合わなければ、ビルドが失敗する。
 
-<!-- i18n-source: run-locally.md sha256:35f47f284a6fa226c8e2d7a9d93df74c9bc34d3f81b5f771b3420b14fab1e8f9 -->
+<!-- i18n-source: run-locally.md sha256:e7f392051129650e7758c1f8b697e2805b5aaf2e4546ee3626587aaaa9e3ced2 -->

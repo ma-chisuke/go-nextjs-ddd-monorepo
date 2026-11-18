@@ -55,7 +55,7 @@ The rules are as follows.
 - Bad, because an automatic merge is only as safe as the checks. A patch release that breaks behavior that the tests do not cover is merged without a person.
 - Bad, because the Renovate app needs write access to the repository to push branches and open pull requests, which makes it one more party to trust.
 - Bad, because a mistake in the configuration can quietly stop the updates for one kind of pin, and the schema cannot tell.
-- Bad, because a pin that no manager of Renovate reads is not updated. The version of AWS Emulator and the checksums of its package, in build arguments of `infra/local/aws-emulator/Dockerfile`, are such a pin: a person updates them by hand (TPL-0017).
+- Bad, because a pin that no manager of Renovate reads is not updated. The version of AWS Emulator and the checksums of its package, in build arguments of `infra/local/aws-emulator/Dockerfile`, are such a pin: a person updates them by hand (TPL-0017). The version of pnpm and the checksum of its package, in the `ADD` of `frontend/Dockerfile`, are another: the group `pnpm` of `renovate.json` moves `mise.toml`, `package.json`, and `pnpm-lock.yaml`, and a person changes the Dockerfile in the same pull request (TPL-0024).
 
 ### Confirmation
 

@@ -90,6 +90,8 @@ The tests of Reservation validate every event that it publishes against the sche
 Notification reads the events in its anticorruption layer, `internal/app/events.go`, and its tests turn every example of the schemas, read as files, into a mail.
 A change to a schema that either side does not follow fails the tests of that side, and `lint-events-breaking` fails on a change that the consumers of a version could not read.
 
+The frontend combines two contexts on one screen as this record expects: the page of a room calls the API of Facility and the API of Reservation, each through the feature of its context, and turns the room of Facility into the words of Reservation in `frontend/src/app/_compose/` (TPL-0003). The calls use types generated from the API documents, so a change to a document that breaks a call of a screen fails the type check of the frontend (TPL-0007).
+
 ## Pros and Cons of the Options
 
 ### HTTP APIs and integration events, with no direct dependency

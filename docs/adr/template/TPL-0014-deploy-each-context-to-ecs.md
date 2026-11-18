@@ -49,7 +49,9 @@ The rules are as follows.
 - Every process serves `GET /healthz`, a worker too (`httpserver.RunWorker`), so the health check command of the image, `<command> healthcheck`, watches every process the same way. The health check of a worker says only that the process runs. A worker that cannot reach its database or its broker stays healthy and tries again, because a restart would not bring them back.
 - A service reads its configuration from environment variables, its secrets included, such as the password in `DATABASE_URL` (`platform/config`). In AWS, the task definition fills the secrets from Secrets Manager, so the code calls no AWS API to read them.
 - Each context has its own container image, built from `backend/cmd/<context>/`. The Go module stays one.
-- Next.js runs on ECS on Fargate as well.
+- Next.js runs on ECS on Fargate as well, from an image of its own, `frontend/Dockerfile`.
+- Only the server of Next.js calls the APIs of the contexts. The browser talks to Next.js alone, so no API needs CORS, and no address of an API reaches the browser. The clients of the APIs live in `frontend/src/lib/api/server/clients.ts`, which imports `server-only`, and the server reads the base URL of each API from the environment (`FACILITY_API_URL`, `RESERVATION_API_URL`), so one image runs in every environment.
+- The health check of the frontend, `GET /healthz`, calls no API, as that of a context calls no other service: a context that is down must not make the platform restart the frontend. It answers 200 with a body, not 204, because Next.js renders the answer at build time. The image has no shell, so Node runs the check (`frontend/healthcheck.mjs`), in Docker Compose and in ECS.
 - Requests enter through Amazon ECS Gateway. The APIs of the contexts attach to a private gateway, and the Terraform code writes the access type `PRIVATE` explicitly instead of relying on a default. Only Next.js is public.
 - Services use the network mode `awsvpc`, which ECS Gateway requires. They do not use ECS Express Mode, because services in Express Mode cannot connect to ECS Gateway.
 
@@ -71,6 +73,8 @@ Since M1, each context has an image of its own, and nothing yet runs it on ECS.
 - `backend/Dockerfile` builds the image of the context that the build argument `CONTEXT` names, from `backend/cmd/<context>/`, so a new context needs no Dockerfile of its own and the Go module stays one.
 - `make smoke`, part of `make check-all`, runs every process of every context as a separate container in Docker Compose: the APIs of Facility and Reservation, the relay of Reservation (`reservation relay`, from the image of Reservation), and the worker of Notification. It books a room across the APIs over HTTP, and waits for the mails that the events of the booking cause. The contexts run as separate processes and reach each other only through their APIs and their events.
 - The binary in each image checks its own health (`<command> healthcheck`), for an API and for a worker alike, which is the command that the health check of an ECS task will run. The tests of `httpserver.RunWorker` check that a worker answers the health check while it runs.
+- Since the frontend milestone, the frontend has an image of its own too, and Docker Compose runs it as the service `web`, which reaches the APIs through the network of Compose, as it will reach them through the private network. `make e2e` drives it in a browser, and one of its tests checks that the health check answers.
+- `lint-frontend` fails on a module under `frontend/src/**/server/` that does not import `server-only`, and on a client component that imports such a module (`no-restricted-syntax`). The build of Next.js fails when a client component imports `server-only`.
 
 The following checks arrive with the infrastructure milestone.
 
