@@ -25,7 +25,8 @@ for dir in "$@"; do
     had_lock=true
   fi
   export TF_DATA_DIR="$cache/data/$dir"
-  if ! out=$(terraform -chdir="$dir" init -backend=false -no-color 2>&1); then
+  # One init at a time: the smoke test runs one too (terraform-init.sh).
+  if ! out=$("$root/tools/scripts/terraform-init.sh" "$dir" -backend=false 2>&1); then
     printf '%s\n' "$out"
     status=1
   elif ! terraform -chdir="$dir" validate -json -no-color \
