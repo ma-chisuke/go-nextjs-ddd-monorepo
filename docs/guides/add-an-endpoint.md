@@ -25,7 +25,7 @@ In a supporting context such as Facility, which has no domain layer, skip step 3
    Check: `make check` fails when the domain imports a package outside its allow-list (`arch/domain-purity`) or reads the clock (`arch/domain-clock`).
 
 4. Write the use case in `internal/app/`.
-   In a core context, it is a method of `Reservations` in a file of its own: it loads what the domain needs through the ports of `ports.go`, calls the domain, and stores the result. A new need from outside becomes a method of a port, which an adapter implements.
+   In a core context, it is a method of `Reservations` in a file of its own: it loads what the domain needs through the ports of `ports.go`, calls the domain, and stores the result with the domain events that the domain returned, which the store writes to the outbox in the same transaction. A new type of domain event needs an integration event and its contract first: follow [Change an event](event-changes.md#add-an-event). A new need from outside becomes a method of a port, which an adapter implements.
    In a supporting context, it is a method that checks its input and calls the generated queries.
    An error of the use case that is not a rule of the domain is an `*app.Error` of a new `app.Kind`, which you add to `app.Kinds()`.
 

@@ -81,6 +81,23 @@ Each finding names the JSON pointer of the place, what it was, and what it is. T
 
    Check: `lint-contracts` lints the document, and `lint-events` fails until the message refers to the schema.
 
-3. In the tests of the publisher, pass each event that it produces, built with `event.New` and the type `event.Type("<context>", "<Name>", 1)`, through `eventtest.AssertMatchesContract` (`backend/internal/platform/event/eventtest`). It fails the test when the data does not match the schema of its type, formats included.
+3. In the publisher, map the domain event to the integration event: a case in `integrationEvent` of `adapter/postgres/events.go`, with a struct for its data, built with `event.New` and the type `event.Type("<context>", "<Name>", 1)`. In the tests of the publisher, pass each event that it produces through `eventtest.AssertMatchesContract` (`backend/internal/platform/event/eventtest`). It fails the test when the data does not match the schema of its type, formats included.
+
+   `backend/internal/reservation/internal/adapter/postgres/events_test.go` is the example. It holds a sample of each type of domain event, passes each through the mapping and `AssertMatchesContract`, and fails when the domain gains a type of event without a sample. The store refuses a change whose domain event has no mapping.
 
    Check: `test-go`.
+
+4. In each consumer that handles the event, read its data in the anticorruption layer of the consumer, and turn every example of the schema into what the consumer does with it. `backend/internal/notification/internal/app/events_test.go` is the example: it reads the schemas as files, so a new example reaches it. Then add the event to the subscription of the consumer, as [Subscribe to events](#subscribe-to-events) describes.
+
+   Check: `test-go`.
+
+## Subscribe to events
+
+A new consumer subscribes without a change to the publisher (TPL-0013). It needs the following, in the form of Notification:
+
+1. Its AsyncAPI document, `contracts/events/<context>.asyncapi.yaml`, with a `receive` operation for each event that it consumes. Its channel refers to the channel of the publisher, such as `$ref: ./reservation.asyncapi.yaml#/channels/reservationEvents`, and each operation to a message of that channel, as in `contracts/events/notification.asyncapi.yaml`. `lint-contracts` lints it; no check reports a consumer without one.
+2. Its subscription in `infra/local/main.tf`: a call of the module `infra/modules/event-subscription` with the name of the context, the bus `module.event_bus.name`, the `source` of each publisher (`/contexts/<publisher>`), and the `type` of each event. The module creates the queue `<context>-events`, its dead-letter queue `<context>-events-dlq`, and the rule that sends the envelope of each selected event to the queue. `make aws-apply` applies it to AWS Emulator. In AWS, the subscription will live in the unit of the consumer.
+3. Its handler and its command: `NewHandler` in `module.go` returns an `event.Handler`, and `cmd/<context>` runs the consumer of `platform/awsevents` with it ([Add a context](add-a-context.md), step 3). The handler is idempotent: it records the id of each event that it handled under a unique constraint, in the transaction of its effect, and returns nil for an event of a type that it does not handle.
+4. Its service in `compose.yaml`, in the form of `notification`, with `EVENTS_QUEUE_URL` set to `https://sqs.us-east-1.amazonaws.com/000000000000/<context>-events`: the emulator names its queues as AWS does, and answers for that URL on its own endpoint.
+
+Check: `make up` starts the worker, and `make check-all` runs its integration tests. `make smoke` covers the subscription only if it waits for what the worker does, as it waits for the mail of Notification.
