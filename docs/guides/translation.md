@@ -15,8 +15,9 @@ This guide tells you how to keep the two in step.
 
   `make i18n-stamp` writes this line for every translation. Run it after you have brought the Japanese text up to date, never before.
 - `make check` fails when a document has no translation, or when the hash in a translation differs from the English file.
-- Code, comments, commit messages, and the descriptions in OpenAPI documents are in English only.
+- Code, comments, commit messages, and the descriptions in the contracts (OpenAPI and AsyncAPI documents, and the JSON Schemas of events) are in English only.
 - Files under `.claude/` and `.github/` are instructions for tools, and are in English only. The one exception is the Japanese writing norm in `.claude/skills/japanese-tech-writing/`, a third-party file kept as it is.
+- The README of a Terraform module in `infra/modules/` has a translation of its prose only. terraform-docs writes the lists of inputs, outputs, and resources from the descriptions in the code, which are in English, so those lists are in the English file only.
 
 ## How to write the Japanese text
 
@@ -150,3 +151,22 @@ Use these Japanese terms. The table grows when a new term appears; add the term 
 | smoke test | スモークテスト |
 | worktree (Git) | ワークツリー |
 | allowance (of a dangerous statement, in `schema-changes.allow`) | 許可 |
+| worker (a process that serves no requests) | ワーカー |
+| mode (of a command) | モード |
+| handle (an event) | 処理する |
+| event bus | イベントバス |
+| queue | キュー |
+| emulator | エミュレーター |
+| entry (of EventBridge, in `PutEvents`) | エントリー |
+| long polling (SQS) | ロングポーリング |
+| visibility timeout (SQS) | 可視性タイムアウト |
+| certificate (TLS) | 証明書 |
+| unique constraint | 一意制約 |
+| unit test | 単体テスト |
+| mail | メール |
+| mail server | メールサーバー |
+| mailer | メーラー |
+| recipient (of a mail) | 宛先 |
+| subject (of a mail) | 件名 |
+| body (of a mail) | 本文 |
+| sender (of a mail) | 差出人 |

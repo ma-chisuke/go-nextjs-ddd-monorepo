@@ -72,6 +72,8 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 | テーブルと列のコメント、およびスキーマの文書 | tbls | `lint-db-docs`（check-all） |
 | OpenAPI と AsyncAPI の文書 | Redocly CLI（`@redocly/cli`） | `lint-contracts` |
 | OpenAPI の文書の互換性を壊す変更 | oasdiff | `lint-contracts-breaking` |
+| イベントの JSON Schema（その形、例、それを参照する AsyncAPI 文書のメッセージ。TPL-0013） | このリポジトリの events コマンド（`tools/cmd/events`） | `lint-events` |
+| イベントの JSON Schema の互換性を壊す変更 | このリポジトリの events コマンド | `lint-events-breaking` |
 | Markdown の整形と構造 | markdownlint-cli2 | `lint-md` |
 | 英語の文章 | Vale（Google のスタイル） | `lint-prose-en` |
 | 日本語の文章 | textlint | `lint-prose-ja` |
@@ -170,4 +172,4 @@ Schemathesis は、それを加えるマイルストーンで加わる（TPL-000
 - `make help` が主なターゲットを一覧にし、`make/<area>.mk` が領域ごとのターゲットを持つ。
 - これらの道具の固定は TPL-0022 に、Trivy と GitHub の側のスキャナーを選んだ理由は TPL-0024 にある。
 
-<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:4bc27230ee5b502be8acedd440d3c85966c08ddb2caacc8b5e075a2e488c8c9e -->
+<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:36554164f33d6101adeadacc86f8361d696661d00d6580d94b2a0c688441332a -->

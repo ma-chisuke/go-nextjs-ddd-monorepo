@@ -81,8 +81,25 @@
 
    確認：`lint-contracts` が文書を lint する。`lint-events` は、メッセージがスキーマを参照するまで失敗する。
 
-3. 発行側のテストで、発行側が作る各イベントを `eventtest.AssertMatchesContract`（`backend/internal/platform/event/eventtest`）に通す。イベントは、`event.New` と型 `event.Type("<context>", "<Name>", 1)` で作る。データがその型のスキーマに形式まで含めて合わなければ、テストは失敗する。
+3. 発行側で、ドメインイベントを統合イベントに詰め替える。`adapter/postgres/events.go` の `integrationEvent` に case を足し、そのデータの構造体を書く。イベントは、`event.New` と型 `event.Type("<context>", "<Name>", 1)` で作る。発行側のテストでは、発行側が作る各イベントを `eventtest.AssertMatchesContract`（`backend/internal/platform/event/eventtest`）に通す。データがその型のスキーマに形式まで含めて合わなければ、テストは失敗する。
+
+   手本は `backend/internal/reservation/internal/adapter/postgres/events_test.go` である。このテストは、ドメインイベントの種類ごとに見本を持ち、それぞれを詰め替えと `AssertMatchesContract` に通す。見本のない種類のイベントがドメインに加わると、このテストは失敗する。詰め替えのないドメインイベントを含む変更は、ストアが拒む。
 
    確認：`test-go`。
 
-<!-- i18n-source: event-changes.md sha256:b18b1975cde89f3b13ae7449243c4ebec27cb16d4a5a4fc98cf7fdede04db0c5 -->
+4. そのイベントを処理する各受け取る側で、受け取る側のモデル変換装置でデータを読む。そして、スキーマのすべての例を、受け取る側がそれぞれについて行うことに変えるテストを書く。手本は `backend/internal/notification/internal/app/events_test.go` である。このテストはスキーマをファイルとして読むので、新しい例もそのまま試される。そのうえで、[イベントを購読する](#イベントを購読する)のとおりに、受け取る側の購読にそのイベントを足す。
+
+   確認：`test-go`。
+
+## イベントを購読する
+
+新しい受け取る側は、発行側を変えずに購読できる（TPL-0013）。Notification と同じ形で、次のものを用意する。
+
+1. 受け取る側の AsyncAPI 文書 `contracts/events/<context>.asyncapi.yaml`。受け取るイベントごとに、`receive` の操作を書く。チャネルは発行側のチャネルを参照し（たとえば `$ref: ./reservation.asyncapi.yaml#/channels/reservationEvents`）、各操作はそのチャネルのメッセージを参照する。形は `contracts/events/notification.asyncapi.yaml` にならう。`lint-contracts` がこれを lint する。この文書のない受け取る側を報告するチェックはない。
+2. `infra/local/main.tf` の購読。モジュール `infra/modules/event-subscription` を呼ぶ。渡すのは、文脈の名前、バス `module.event_bus.name`、各発行側の `source`（`/contexts/<publisher>`）、各イベントの `type` である。モジュールが作るのは、キュー `<context>-events` とそのデッドレターキュー `<context>-events-dlq`、そしてルールである。ルールは、選んだイベントの封筒をキューへ送る。`make aws-apply` が、これを AWS Emulator に適用する。AWS では、購読は受け取る側のユニットが持つ予定である。
+3. ハンドラーとコマンド。`module.go` の `NewHandler` は `event.Handler` を返し、`cmd/<context>` はそれを使って `platform/awsevents` の受け取る側を動かす（[文脈を足す](add-a-context.ja.md)の手順3）。ハンドラーは冪等にする。処理した各イベントの id を、その効果と同じトランザクションの中で、一意制約のもとに記録する。処理しない種類のイベントには nil を返す。
+4. `compose.yaml` のサービス。形は `notification` にならい、`EVENTS_QUEUE_URL` を `https://sqs.us-east-1.amazonaws.com/000000000000/<context>-events` にする。エミュレーターはキューに AWS と同じ形の名前を付け、その URL に自分のエンドポイントで答える。
+
+確認：`make up` がワーカーを起動し、`make check-all` がその結合テストを実行する。`make smoke` が購読まで確かめるのは、Notification のメールを待つように、ワーカーの結果を待つときだけである。
+
+<!-- i18n-source: event-changes.md sha256:44953cbfd923e158bd901576e787d8c60a49d8ab010bf5847f372bc33a55c699 -->

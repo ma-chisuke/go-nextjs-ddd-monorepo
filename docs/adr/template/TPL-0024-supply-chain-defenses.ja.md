@@ -83,12 +83,20 @@ Trivy は、ロックファイルをもとに、既知の脆弱性と、禁止�
 - private vulnerability reporting を使えば、脆弱性を公開せずに報告できる。
 - Dependabot は、脆弱な依存について警告を出す。プルリクエストは開かず、更新は Renovate が担う（TPL-0025）。
 
-コンテナはコードやインフラと一緒に入り、次の決まりに従う。
+コンテナは、次の決まりに従う。
 
 - ベースイメージは最小限のものを選び、ダイジェストで固定する。
 - コンテナは root 以外のユーザーで動かす。
 - Trivy がすべてのイメージをスキャンし、その SBOM を書く。
 - ビルドには、GitHub の artifact attestations で来歴を付ける。
+
+手元の環境は、製品が出荷しないソフトウェアも動かし、それも固定する（TPL-0017）。
+
+- Mailpit は、`compose.yaml` でダイジェストで固定する。バージョンは最新のリリースではなく v1.33.1 にした。Mailpit を加えた時点で、最新のリリースは公開から1日しか経っておらず、ほかの更新が待つ3日に満たなかったからである。
+- AWS Emulator は、`infra/local/aws-emulator/Dockerfile` で3つの方法で固定する。パッケージのバージョン、アーキテクチャごとのパッケージの SHA-256、そして AWS の署名である。署名は、`rpm` が `signing-key.asc` の公開鍵で確かめる。ベースイメージはダイジェストで固定し、ユーザー 65532 で動かす。
+- Terraform の AWS の provider は、`infra/local/.terraform.lock.hcl` で、4つのプラットフォームのハッシュとともに固定する。
+
+AWS SDK for Go v2 は `backend/go.mod` のモジュールであり、前に述べた Go のモジュールの決まりに従う。
 
 この決定には、最初の計画と違う点が2つある。どちらも意図したものである。
 
@@ -105,6 +113,7 @@ Trivy は、ロックファイルをもとに、既知の脆弱性と、禁止�
 - 悪い点：来歴を公開していない道具もある。それらについては、`mise.lock` はチェックサムしか記録しない（gitleaks・shellcheck・Vale など）。チェックサムが示すのは、どのマシンもロックしたときと同じファイルを受け取ることだけであり、そのファイルが作者のビルドしたものであることまでは示さない。
 - 悪い点：このリポジトリは、Go のモジュールにも `mise.toml` の道具にも待ちの期間を設けていない。人が手で足したバージョンは、`go get` でも `mise.toml` でもすぐに入る。待つのは、Renovate が提案する更新だけである（TPL-0025）。
 - 悪い点：GitHub の守りのいくつかは、ファイルではなく設定である。`make github-settings` がそれらを `docs/guides/github-settings.md` と比べるが、`make check` からは見えない。
+- 悪い点：AWS Emulator のバージョンを更新する Renovate のルールは、まだない。人が Dockerfile のバージョンと2つのチェックサムを手で変えるので、3日の待ちも働かない（TPL-0025）。
 
 ### 確認の方法
 
@@ -113,8 +122,9 @@ Trivy は、ロックファイルをもとに、既知の脆弱性と、禁止�
 - `make check-all` は `scan-deps` と `vuln-go` を実行する。
 - `trivy-action` と `setup-trivy` を使うワークフローがないことは、レビューで確かめる。これを守らせるチェックはない。
 - CodeQL と Scorecard は、ワークフローとして動く。シークレットスキャン・プッシュ保護・private vulnerability reporting・Dependabot alerts は、リポジトリの設定である。`make github-settings` がこれらを有効にし、`docs/guides/github-settings.md` と違うものがあれば報告する。
-- コンテナについては、`make check` が `lint-image-pins` と `scan-config` を実行する。`lint-image-pins` はダイジェストのないベースイメージで失敗し、`scan-config` の Trivy のチェックは root で動くイメージの Dockerfile で失敗する。サービスのイメージ（`backend/Dockerfile`）は、distroless static のユーザー `nonroot` で動く。
-- `make check-all` は `scan-images` を実行し、すべてのサービスのイメージに既知の脆弱性がないかを Trivy でスキャンする。`make sbom` は、イメージごとに CycloneDX の SBOM を `dist/sbom/` に書く。
+- コンテナについては、`make check` が `lint-image-pins` と `scan-config` を実行する。`lint-image-pins` はダイジェストのないベースイメージで失敗し、`scan-config` の Trivy のチェックは root で動くイメージの Dockerfile で失敗する。どちらも AWS Emulator の Dockerfile も調べる。サービスのイメージ（`backend/Dockerfile`）は、distroless static のユーザー `nonroot` で動く。
+- パッケージがチェックサムか署名に合わなければ、AWS Emulator のイメージのビルドは失敗する。
+- `make check-all` は `scan-images` を実行し、すべての文脈のイメージに既知の脆弱性がないかを Trivy でスキャンする。`make sbom` は、それらのイメージごとに CycloneDX の SBOM を `dist/sbom/` に書く。どちらも AWS Emulator のイメージは対象にしない。これは手元の環境の道具であり、出荷されないからである。
 - GitHub の artifact attestations による来歴は、イメージを公開するワークフローと一緒に、インフラのマイルストーンで入る。そのワークフローは、`make sbom` の SBOM にも attestation を付ける。
 
 ## 選択肢の長所と短所
@@ -147,4 +157,4 @@ Trivy は、ロックファイルをもとに、既知の脆弱性と、禁止�
 - [OpenSSF Scorecard](https://github.com/ossf/scorecard)
 - 道具の固定は TPL-0022 に、1つの関心事に道具を1つだけ使う決まりは TPL-0023 に、更新は TPL-0025 にある。
 
-<!-- i18n-source: TPL-0024-supply-chain-defenses.md sha256:82be00628a2a24256eb9039cc58832b7ede9cf0d2afc5717c42eabb08c755bf9 -->
+<!-- i18n-source: TPL-0024-supply-chain-defenses.md sha256:49190113342cd607266486b6e2894843e1fd7296ad39861034d21458d686773d -->

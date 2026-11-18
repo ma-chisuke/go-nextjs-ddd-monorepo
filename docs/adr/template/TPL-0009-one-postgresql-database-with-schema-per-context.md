@@ -66,6 +66,8 @@ The following checks enforce this decision.
 - `lint-arch`, with the rule `arch/schema-reference`, fails when the `schema.sql` or a query of a context names the schema of another context, as a foreign key across contexts would.
 - The integration tests of each context (`test-integration`, in `make check-all`) connect as its runtime role, and assert that it can neither read the schema of another context, nor change its own schema, nor create objects in `public`.
 
+The integration tests run on a database of their own on the local server, `app_test`, which `tools/scripts/db.sh init` creates with every schema. The local system (`make up`, `make smoke`) uses the database `app`. So a test never meets the rows of the running system, and the relay of the system never takes an event that a test wrote to an outbox.
+
 ## Pros and Cons of the Options
 
 ### One PostgreSQL 18 database, with a schema and roles for each context

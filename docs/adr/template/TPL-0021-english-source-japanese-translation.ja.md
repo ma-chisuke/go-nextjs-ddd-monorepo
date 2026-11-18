@@ -41,7 +41,8 @@ date: 2026-11-17
 - `foo.md` は英語で、これが原文である。`foo.ja.md` はその日本語の対訳で、同じディレクトリに置く。
 - 2つのファイルは同じコミットで変える。
 - 対訳の最後の行に、訳した英語版のファイルの SHA-256 ハッシュを書く。この行は `make i18n-stamp` が書く。
-- コード・コメント・コミットメッセージ・OpenAPI の文書の説明は、英語だけで書く。
+- コード・コメント・コミットメッセージと、契約（OpenAPI と AsyncAPI の文書、イベントの JSON Schema）の説明は、英語だけで書く。
+- `infra/modules/` にある Terraform のモジュールの README は、地の文だけを訳す。入力・出力・リソースの一覧は、terraform-docs がコードの中の説明から書く。その説明は英語なので、一覧は英語版にだけ置く。
 - `.claude/` と `.github/` の下のファイルは道具への指示なので、英語だけで書く。ただし、第三者のファイル（日本語の文章規範など）は、公開されたときの言語のまま置く。
 - 英語の文章は Vale が Google の開発者向け文書のスタイルに照らして検査し、日本語の文章は textlint が検査する。日本語の文章規範はリポジトリに置き（`.claude/skills/japanese-tech-writing/`）、対訳はそれに従う。
 
@@ -61,7 +62,7 @@ date: 2026-11-17
 - `make check` はターゲット `lint-i18n` を実行する。`lint-i18n` は、対訳のない文書があるとき、または対訳に書かれたハッシュが英語版のハッシュと違うときに失敗する。
 - `make check` は、英語の Markdown に Vale を（`lint-prose-en`）、日本語の Markdown に textlint を（`lint-prose-ja`）実行する。
 - 意味は、サブエージェント `translation-reviewer` が対訳と原文を比べて確かめ、その見落としはレビューで補う。
-- コード・コメント・コミットメッセージ・OpenAPI の説明が英語であることは、レビューで確かめる。言語を守らせるチェックはない。
+- コード・コメント・コミットメッセージと契約の説明が英語であることは、レビューで確かめる。言語を守らせるチェックはない。
 
 ## 選択肢の長所と短所
 
@@ -105,4 +106,4 @@ date: 2026-11-17
 - [Vale](https://vale.sh/)・[Google developer documentation style guide](https://developers.google.com/style)・[textlint](https://textlint.org/)
 - スキル `sync-translation` とサブエージェント `translation-reviewer` は、TPL-0020 のハーネスの一部である。
 
-<!-- i18n-source: TPL-0021-english-source-japanese-translation.md sha256:7ad6bb6eec82486ee93bd701460a281b5dc5561f6c889802728a9ced821126bb -->
+<!-- i18n-source: TPL-0021-english-source-japanese-translation.md sha256:36c6d31c25f8ec46c7cb64a25f201678d68c65980386f28d08e37b833e651cfa -->

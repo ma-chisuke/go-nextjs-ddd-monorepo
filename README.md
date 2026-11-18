@@ -12,7 +12,7 @@ The template is built in milestones. The quality foundation comes first, so that
 |---|---|---|
 | M0 | Quality foundation: pinned tools, `make check`, formatters and linters, security scans, CI, Git hooks, agent hooks, decision records | Done |
 | M1 | One core and one supporting bounded context, from OpenAPI through the use case and the domain to PostgreSQL | Done |
-| M2 | Events: outbox, EventBridge, SQS, and the local AWS emulator | Planned |
+| M2 | Events: outbox, EventBridge, SQS, and the local AWS emulator, with the Notification context | Done |
 | M3 | Next.js front end and end-to-end tests | Planned |
 | M4 | Terraform and Terragrunt for stg and prd, and deployment | Planned |
 | M5 | Evaluation of the agent harness, property-based API tests, mutation tests | Planned |
@@ -46,13 +46,14 @@ make check   # fast checks; takes a few seconds
 | `make fmt` | Format files. |
 | `make gen` | Regenerate generated files. |
 | `make check` | Fast checks, without the network. Run it before every commit. |
-| `make check-all` | Fast and slow checks, including those that need the local PostgreSQL. CI runs this. |
+| `make check-all` | Fast and slow checks, including those that need the local PostgreSQL and AWS Emulator. CI runs this. |
+| `make up` | Start the local system in Docker: PostgreSQL with every schema, AWS Emulator with the event bus and the queues, Mailpit, and every process of every context. `make down` stops it. |
 | `make db-up` | Start the local PostgreSQL in Docker, and apply the schema of every context. |
 | `make help` | List the main targets. |
 
 A dev container in `.devcontainer/` gives the same environment without installing anything on your machine.
 
-The local database and `make check-all` need Docker. [Run the services locally](docs/guides/run-locally.md) starts the database and the two services, and books a room through their APIs with curl.
+The local system and `make check-all` need Docker. [Run the services locally](docs/guides/run-locally.md) starts the system, books a room through the APIs with curl, and shows the mail that the booking causes in Mailpit, at <http://127.0.0.1:58025>.
 
 ## Use the template
 
@@ -67,15 +68,16 @@ The local database and `make check-all` need Docker. [Run the services locally](
 | Area | Checks |
 |---|---|
 | Every file | Spelling, EditorConfig rules, secrets |
-| Go | Formatting, golangci-lint (including go vet), tests with the race detector; known vulnerabilities and the integration tests against PostgreSQL in `make check-all` |
+| Go | Formatting, golangci-lint (including go vet), tests with the race detector; in `make check-all`, known vulnerabilities, the integration tests against PostgreSQL and AWS Emulator, and a smoke test of the whole local system |
 | Architecture of the backend | `lint-arch`: imports between contexts and layers, a domain without I/O, routes only from the API documents, schemas named in SQL, and the glossary of each context |
 | Generated code | The code generated from the API documents and from the SQL of each context is what the generators write now |
 | TypeScript and Next.js | Prettier, ESLint with import boundaries, type check, unused code |
 | Shell and Dockerfiles | shfmt, shellcheck, hadolint |
 | GitHub Actions | actionlint, zizmor, ghalint, pinact |
-| Terraform and Terragrunt | Formatting, tflint, Trivy; validation and module documents in `make check-all` |
+| Terraform and Terragrunt | Formatting, tflint, Trivy, and the module READMEs (terraform-docs); validation in `make check-all` |
 | SQL | squawk; in `make check-all`, squawk on the DDL of each schema change (`lint-sql-plan`), every query prepared against its schema (`lint-sqlc`), and the comments and documents of each schema (`lint-db-docs`) |
 | OpenAPI and AsyncAPI | Redocly; breaking changes against the base branch with oasdiff (`lint-contracts-breaking`) |
+| JSON Schemas of events | Their form, their examples, and their messages in the AsyncAPI documents (`lint-events`); breaking changes against the base branch (`lint-events-breaking`) |
 | YAML, JSON, and TOML | Prettier, yamllint, taplo, JSON Schema validation of configuration files |
 | Markdown | markdownlint, links, English style (Vale), Japanese style (textlint) |
 | Documents | Format of decision records, their index, and translations that match their English source |
@@ -85,7 +87,7 @@ The local database and `make check-all` need Docker. [Run the services locally](
 
 ## Documents
 
-- [ARCHITECTURE.md](ARCHITECTURE.md): the map of the backend: its contexts, layers, and database, and the checks that hold them in place.
+- [ARCHITECTURE.md](ARCHITECTURE.md): the map of the backend: its contexts and their processes, layers, the path of a request and of an event, and the database, and the checks that hold them in place.
 - [docs/contexts/](docs/contexts/): the README and the glossary of each bounded context.
 - [AGENTS.md](AGENTS.md): instructions for coding agents.
 - [docs/adr/](docs/adr/README.md): decision records.

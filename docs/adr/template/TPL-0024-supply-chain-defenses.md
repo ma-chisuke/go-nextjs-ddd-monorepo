@@ -83,12 +83,20 @@ For the repository, the template uses these services on GitHub.
 - Private vulnerability reporting lets people report a vulnerability without making it public.
 - Dependabot raises alerts for vulnerable dependencies. It opens no pull requests: updates come from Renovate (TPL-0025).
 
-For containers, which arrive with the code and the infrastructure, these rules apply.
+For containers, these rules apply.
 
 - Base images are minimal and pinned by digest.
 - Containers run as a user other than root.
 - Trivy scans every image and writes its SBOM.
 - Builds get provenance through GitHub artifact attestations.
+
+The local environment runs software that the product does not ship, and pins it too (TPL-0017).
+
+- Mailpit is pinned by digest in `compose.yaml`, at v1.33.1 rather than the newest release. That release was one day old when Mailpit was added, younger than the three days that the other updates wait.
+- AWS Emulator is pinned three ways in `infra/local/aws-emulator/Dockerfile`: by the version of its package, by the SHA-256 of the package for each architecture, and by the signature of AWS, which `rpm` checks against the public key in `signing-key.asc`. Its base image is pinned by digest, and it runs as the user 65532.
+- The AWS provider of Terraform is locked with its hashes for four platforms in `infra/local/.terraform.lock.hcl`.
+
+The AWS SDK for Go v2 is a module in `backend/go.mod`, under the rules for Go modules above.
 
 Two parts of this decision differ from the first plan, on purpose.
 
@@ -105,6 +113,7 @@ Two parts of this decision differ from the first plan, on purpose.
 - Bad, because some tools publish no provenance. For them, `mise.lock` records only a checksum (gitleaks, shellcheck, and Vale among them). A checksum shows that every machine gets the file that was locked, not that the file is what its author built.
 - Bad, because the repository sets no wait for Go modules or for the tools in `mise.toml`. A version that a person adds by hand, with `go get` or in `mise.toml`, arrives at once, and only the updates that Renovate proposes wait (TPL-0025).
 - Bad, because several defenses on GitHub are settings, not files. `make github-settings` compares them with `docs/guides/github-settings.md`, but `make check` cannot see them.
+- Bad, because no Renovate rule updates the version of AWS Emulator yet. A person changes the version and the two checksums in its Dockerfile by hand, and no wait of three days applies (TPL-0025).
 
 ### Confirmation
 
@@ -113,8 +122,9 @@ Two parts of this decision differ from the first plan, on purpose.
 - `make check-all` runs `scan-deps` and `vuln-go`.
 - Review confirms that no workflow uses `trivy-action` or `setup-trivy`. No check enforces it.
 - CodeQL and Scorecard run as workflows. Secret scanning, push protection, private vulnerability reporting, and Dependabot alerts are settings of the repository: `make github-settings` turns them on, and reports any that differ from `docs/guides/github-settings.md`.
-- For containers, `make check` runs `lint-image-pins`, which fails on a base image without a digest, and `scan-config`, whose Trivy checks fail a Dockerfile whose image runs as root. The images of the services (`backend/Dockerfile`) run as the user `nonroot` of distroless static.
-- `make check-all` runs `scan-images`, which scans the image of every service with Trivy for known vulnerabilities. `make sbom` writes a CycloneDX SBOM of each image to `dist/sbom/`.
+- For containers, `make check` runs `lint-image-pins`, which fails on a base image without a digest, and `scan-config`, whose Trivy checks fail a Dockerfile whose image runs as root. Both check the Dockerfile of AWS Emulator too. The images of the services (`backend/Dockerfile`) run as the user `nonroot` of distroless static.
+- The build of the image of AWS Emulator fails when the package does not match its checksum or its signature.
+- `make check-all` runs `scan-images`, which scans the image of every context with Trivy for known vulnerabilities. `make sbom` writes a CycloneDX SBOM of each of those images to `dist/sbom/`. Neither covers the image of AWS Emulator, a tool of the local environment that nothing ships.
 - Provenance through GitHub artifact attestations arrives with the workflow that publishes the images, in the infrastructure milestone. That workflow attests the SBOMs of `make sbom` too.
 
 ## Pros and Cons of the Options

@@ -24,6 +24,8 @@ Notification はイベントを発行しない。受け取るのは、[`contract
 | `reservation.ReservationConfirmed.v1` | [`ReservationConfirmed.v1.json`](../../../contracts/events/reservation/ReservationConfirmed.v1.json) | 予約が確定したことを、時間帯と参加人数を添えて、メールで主催者に知らせる。Reservation は予約を変更したときにもこのイベントを発行するので、変更のたびに、新しい時間帯を書いた同じ種類のメールがもう1通届く。 |
 | `reservation.ReservationCancelled.v1` | [`ReservationCancelled.v1.json`](../../../contracts/events/reservation/ReservationCancelled.v1.json) | 予約が取り消されたことを、メールで主催者に知らせる。 |
 
+ワーカーは、コマンド `notification` である（TPL-0014）。ワーカーは、`EVENTS_QUEUE_URL` が指す SQS のキュー `notification-events` からイベントを読む。このキューには、Notification のルールが、この2種類のイベントをイベントバスから選んで送る。キューと、そのデッドレターキュー `notification-events-dlq` と、ルールは、モジュール `infra/modules/event-subscription` が作る。手元では、`infra/local/main.tf` がこのモジュールを呼ぶ。
+
 ほかの種類のイベントは、ログに残して無視し、処理したものとして扱う。
 この2種類のイベントでも、データが契約を破っているもの（主催者のアドレスがないものなど）の処理は失敗する。そのイベントはもう一度届き、最後の試行のあと、ブローカーが Notification のデッドレターキューに移す。
 
@@ -38,7 +40,7 @@ Notification はイベントを発行しない。受け取るのは、[`contract
 ## サンプルとしての制約
 
 - メールは、会議室を id で示し、時間帯を UTC で書く。イベントには会議室の名前もタイムゾーンも含まれないからである。製品では、それらを加えた新しいバージョンのイベントを発行するか、メールを送るたびに Facility へ問い合わせることになる。
-- メーラーは、手元の環境の Mailpit に、認証も TLS もない素の SMTP で送る。クラウドのメールサービスには、`Mailer` の別のアダプターが要る。
+- メーラーは、手元の環境の Mailpit に、認証も TLS もない素の SMTP で送る。AWS では、メールは Amazon SES を通る。そのための `Mailer` の別のアダプターは、インフラのマイルストーンで加わる。
 
 ## ほかの文脈から必要とするもの
 
@@ -46,4 +48,4 @@ Notification はイベントを発行しない。受け取るのは、[`contract
 - Facility からは何も必要としない。
 - SMTP を受け付けるメールサーバーが要る。そのアドレスと、メールの差出人のアドレスは、コマンドが渡す。
 
-<!-- i18n-source: README.md sha256:172d7f863cbc0d5fa747332261ba7758bd11eb48d7f685329aa089650bfb2e9d -->
+<!-- i18n-source: README.md sha256:7aecec5c7fbfd1c9c42b90b954e66e63a2b7f3f170886d93ef665f2defaf9590 -->

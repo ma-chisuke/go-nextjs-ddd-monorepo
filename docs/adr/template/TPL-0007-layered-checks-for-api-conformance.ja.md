@@ -87,6 +87,8 @@ date: 2026-11-17
 
 層6は、同じ変更で文書の `info.version` を上げたとき、互換性を壊す変更を受け入れる。1.0 未満ではマイナーバージョンを、1.0 以降はメジャーバージョンを上げる。指摘を受けた人に向けて、[API を変更する](../../guides/api-changes.ja.md)がこの方法を説明している。
 
+これらの層が対象にするのは、OpenAPI の文書である。イベントの契約（JSON Schema と AsyncAPI の文書）には、同じ種類のチェックが別にあり、TPL-0013 が挙げている。文書には `lint-contracts`、スキーマには `lint-events`、互換性には `lint-events-breaking` を使い、テストがすべてのイベントをそのスキーマで検証する。
+
 ## 選択肢の長所と短所
 
 ### 層に分けたチェック。各層は、前の層が捕まえられないものを捕まえる
@@ -118,4 +120,4 @@ date: 2026-11-17
 - [oasdiff](https://github.com/oasdiff/oasdiff)
 - [Redocly CLI](https://redocly.com/docs/cli)
 
-<!-- i18n-source: TPL-0007-layered-checks-for-api-conformance.md sha256:af529d369096162f03853ca790a4dc75722bbfd80d68255d08f55b23825a1612 -->
+<!-- i18n-source: TPL-0007-layered-checks-for-api-conformance.md sha256:533157c5d5dc0896f8a0cead94aafc475347877bd4503cb85789140a0e11f7b1 -->

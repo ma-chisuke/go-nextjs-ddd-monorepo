@@ -25,8 +25,9 @@ The reason for a rule is in the decision record that the rule cites ([docs/adr/]
 |---|---|
 | `backend/` | Go API, one module. `internal/<context>/` per bounded context. Read [backend/AGENTS.md](backend/AGENTS.md) before you change it. |
 | `frontend/` | Next.js. `src/features/<context>/` per bounded context. |
-| `contracts/` | OpenAPI documents and event schemas. The source of generated code. |
-| `db/`, `infra/` | Database bootstrap; Terraform and Terragrunt. |
+| `contracts/` | OpenAPI documents in `http/`; AsyncAPI documents and the JSON Schema of each event in `events/`. The source of generated code and of the contract tests. |
+| `db/` | Database bootstrap. |
+| `infra/` | Terraform: `modules/`, and `local/`, which applies them to AWS Emulator. Terragrunt arrives with the deployment. |
 | `tools/` | Checks and generators of this repository (Go module, scripts). |
 | `make/` | One file of make targets per area. |
 | `docs/adr/` | Decision records. `template/` belongs to the template. |
