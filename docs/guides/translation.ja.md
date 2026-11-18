@@ -15,8 +15,9 @@
 
   `make i18n-stamp` が、すべての対訳にこの行を書く。実行するのは日本語の本文を直したあとであり、直す前には実行しない。
 - 対訳のない文書があるとき、または対訳に書かれたハッシュが英語版と違うとき、`make check` は失敗する。
-- コード・コメント・コミットメッセージ・OpenAPI の説明は英語だけで書く。
+- コード・コメント・コミットメッセージと、契約（OpenAPI と AsyncAPI の文書、イベントの JSON Schema）の説明は英語だけで書く。
 - `.claude/` と `.github/` の下のファイルは道具への指示なので、英語だけで書く。例外は `.claude/skills/japanese-tech-writing/` の日本語の文章規範だけである。これは第三者のファイルで、元のまま置いている。
+- `infra/modules/` にある Terraform のモジュールの README は、地の文だけを訳す。入力・出力・リソースの一覧は、terraform-docs がコードの中の説明から書く。その説明は英語なので、一覧は英語版にだけ置く。
 
 ## 日本語の書き方
 
@@ -150,5 +151,21 @@
 | smoke test | スモークテスト |
 | worktree（Git の） | ワークツリー |
 | allowance（`schema-changes.allow` に書く、危険な文の） | 許可 |
+| worker（リクエストに答えないプロセス） | ワーカー |
+| mode（コマンドの） | モード |
+| handle（イベントを） | 処理する |
+| event bus | イベントバス |
+| queue | キュー |
+| emulator | エミュレーター |
+| certificate（TLS の） | 証明書 |
+| unique constraint | 一意制約 |
+| unit test | 単体テスト |
+| mail | メール |
+| mail server | メールサーバー |
+| mailer | メーラー |
+| recipient（メールの） | 宛先 |
+| subject（メールの） | 件名 |
+| body（メールの） | 本文 |
+| sender（メールの） | 差出人 |
 
-<!-- i18n-source: translation.md sha256:bb45d0e35e11312b5b2a0dcf2da9e48d8e749bad5768051df89d68066f684d4b -->
+<!-- i18n-source: translation.md sha256:93e86b1c09e1de786278547dec0cde05c385c6be1f7a6d9fbf04ce4d9ff0fbee -->

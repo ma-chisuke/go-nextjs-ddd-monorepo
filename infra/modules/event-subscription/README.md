@@ -6,7 +6,7 @@ Everything here belongs to the consumer, so adding a consumer changes nothing in
 The queue receives the CloudEvents envelope alone, as the publisher wrote it (the input path `$.detail`).
 A message that the consumer could not handle `max_receive_count` times moves to the dead-letter queue, so it does not hold up the rest and is not lost.
 
-The local environment applies this module to AWS Emulator (`infra/local/`), and the environments in AWS use the same module.
+The local environment applies this module to AWS Emulator (`infra/local/`). The environments in AWS will use the same module, from the infrastructure milestone on (TPL-0015).
 
 terraform-docs writes the lists of inputs, outputs, and resources below from the code. The descriptions in the code are in English, so the lists are in this English version only.
 
