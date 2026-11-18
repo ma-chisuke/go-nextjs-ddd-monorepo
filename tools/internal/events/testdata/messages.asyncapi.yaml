@@ -1,0 +1,41 @@
+asyncapi: 3.0.0
+channels:
+  rooms:
+    messages:
+      inline:
+        name: facility.RoomOpened.v1
+        payload:
+          $ref: ./facility/RoomOpened.v1.json
+      shared:
+        $ref: "#/components/messages/cleaned"
+components:
+  messages:
+    cleaned:
+      name: facility.RoomCleaned.v1
+      payload:
+        $ref: "#/components/schemas/cleaned"
+    looped:
+      name: facility.RoomLooped.v1
+      payload:
+        $ref: "#/components/schemas/loop"
+    escaped:
+      name: facility.RoomEscaped.v1
+      payload:
+        $ref: "#/components/schemas/a~1b"
+    remote:
+      name: facility.RoomRemote.v1
+      payload:
+        $ref: https://example.com/RoomRemote.v1.json
+  schemas:
+    cleaned:
+      allOf:
+        - type: object
+        - properties:
+            data:
+              $ref: ./facility/RoomCleaned.v1.json#/properties
+    loop:
+      allOf:
+        - $ref: "#/components/schemas/loop"
+        - $ref: ../events/facility/RoomLooped.v1.json
+    a/b:
+      $ref: ./facility/RoomEscaped.v1.json

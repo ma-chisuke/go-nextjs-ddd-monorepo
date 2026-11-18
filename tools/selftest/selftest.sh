@@ -1244,6 +1244,142 @@ case_lint_contracts__asyncapi() {
   passes
 }
 
+# The event schemas of Reservation, which pass as they are.
+events_dir=contracts/events/reservation
+confirmed=$events_dir/ReservationConfirmed.v1.json
+cancelled=$events_dir/ReservationCancelled.v1.json
+
+case_lint_events() {
+  # A property without a description.
+  run sed -i.orig -e '/"description": "The number of people/d' "$confirmed"
+  fails "$confirmed:28: [events/description] the property attendees at /properties/attendees has no description"
+  run git checkout -- "$confirmed"
+  drop "$confirmed.orig"
+  passes
+}
+
+case_lint_events__file_name() {
+  # A name that is not in UpperCamelCase. (One that differs from an existing
+  # file only in case would be that file on macOS.)
+  run cp "$cancelled" "$events_dir/reservation-moved.v1.json"
+  fails "$events_dir/reservation-moved.v1.json:1: [events/file-name]"
+  drop "$events_dir/reservation-moved.v1.json"
+  passes
+}
+
+case_lint_events__compile() {
+  run sed -i.orig -e 's/"type": "integer"/"type": "integr"/' "$confirmed"
+  fails "$confirmed:30: [events/compile] the schema breaks the rules of JSON Schema 2020-12 at /properties/attendees/type"
+  run git checkout -- "$confirmed"
+  drop "$confirmed.orig"
+  passes
+}
+
+case_lint_events__examples() {
+  # An example that breaks a bound, then one that breaks a format.
+  run sed -i.orig -e 's/"attendees": 4/"attendees": 0/' "$confirmed"
+  fails "$confirmed:46: [events/examples] example 0 does not match the schema at /attendees"
+  run git checkout -- "$confirmed"
+  run sed -i.orig -e 's/"startsAt": "2026-11-20T01:00:00Z"/"startsAt": "tomorrow"/' "$confirmed"
+  fails "$confirmed:44: [events/examples] example 0 does not match the schema at /startsAt"
+  run git checkout -- "$confirmed"
+  drop "$confirmed.orig"
+  passes
+}
+
+case_lint_events__closed() {
+  run sed -i.orig -e 's/"type": "object",/"type": "object", "additionalProperties": false,/' "$confirmed"
+  fails "$confirmed:5: [events/closed]"
+  run git checkout -- "$confirmed"
+  drop "$confirmed.orig"
+  passes
+}
+
+case_lint_events__asyncapi() {
+  # A schema that no message refers to: a copy of ReservationCancelled under
+  # another name.
+  local moved=$events_dir/ReservationMoved.v1.json
+  sed -e 's/"title": "ReservationCancelled"/"title": "ReservationMoved"/' "$COPY/$cancelled" | put "$moved"
+  fails "$moved:1: [events/asyncapi] no message of contracts/events/reservation.asyncapi.yaml is named reservation.ReservationMoved.v1"
+  drop "$moved"
+  # A message whose payload refers to another schema.
+  run sed -i.orig -e 's|: ./reservation/ReservationCancelled.v1.json|: ./reservation/ReservationConfirmed.v1.json|' \
+    contracts/events/reservation.asyncapi.yaml
+  fails 'contracts/events/reservation.asyncapi.yaml:73: [events/asyncapi] the message reservation.ReservationCancelled.v1 does not refer'
+  run git checkout -- contracts/events/reservation.asyncapi.yaml
+  drop contracts/events/reservation.asyncapi.yaml.orig
+  passes
+}
+
+# A change to the AsyncAPI document alone checks the schemas, which depend on it.
+case_lint_events__scope() {
+  run sed -i.orig -e 's|name: reservation.ReservationCancelled.v1|name: reservation.ReservationCanceled.v1|' \
+    contracts/events/reservation.asyncapi.yaml
+  drop contracts/events/reservation.asyncapi.yaml.orig
+  fails "$cancelled:1: [events/asyncapi]" CHECK_SCOPE=changed CHECK_BASE=HEAD
+  run git checkout -- contracts/events/reservation.asyncapi.yaml
+  passes CHECK_SCOPE=changed CHECK_BASE=HEAD
+}
+
+# A small event schema. $1: the required properties. $2: the type of the
+# property floor, or "none" to leave it out. $3: more properties, each after a
+# comma. $4: the description of the event.
+sample_event() {
+  local floor=''
+  if [ "$2" != none ]; then
+    floor=",
+    \"floor\": { \"description\": \"The floor of the room.\", \"type\": \"$2\" }"
+  fi
+  put contracts/events/sample/RoomCleaned.v1.json << EOF
+{
+  "\$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RoomCleaned",
+  "description": "${4:-A room was cleaned.}",
+  "type": "object",
+  "required": $1,
+  "properties": {
+    "roomId": { "description": "The id of the room.", "type": "string", "format": "uuid" }$floor${3:-}
+  },
+  "examples": [{ "roomId": "0193a6f0-1a2b-7c3d-8e4f-5a6b7c8d9e0f", "floor": 2 }]
+}
+EOF
+}
+
+case_lint_events_breaking() {
+  local sample=contracts/events/sample/RoomCleaned.v1.json
+  sample_event '["roomId", "floor"]' integer
+  # A schema that is new since the base has nothing to compare with.
+  passes CHECK_BASE=HEAD
+  run git add "$sample"
+  commit 'add the sample event'
+  passes CHECK_BASE=HEAD
+  sample_event '["roomId"]' none
+  fails "$sample:7: [events/property-removed] the property floor at /properties/floor was removed since" CHECK_BASE=HEAD
+  prints 'publish the change as a new version, RoomCleaned.v2.json, and keep this file as it was'
+  sample_event '["roomId"]' integer
+  fails "$sample:6: [events/required-removed] /required no longer names \"floor\"" CHECK_BASE=HEAD
+  sample_event '["roomId", "floor"]' number
+  fails "$sample:9: [events/keyword-changed] /properties/floor/type changed from \"integer\" to \"number\"" CHECK_BASE=HEAD
+  # An added optional property and a changed description keep the promise.
+  sample_event '["roomId", "floor"]' integer ',
+    "wing": { "description": "The wing of the building.", "type": "string" }' 'A room was cleaned, and is ready again.'
+  passes CHECK_BASE=HEAD
+  # Without a base (no origin/main in the copy), nothing is compared.
+  sample_event '["roomId"]' none
+  passes
+}
+
+case_lint_events_breaking__deleted() {
+  drop "$cancelled"
+  fails "$cancelled:1: [events/schema-deleted] the schema of reservation.ReservationCancelled.v1 existed at" CHECK_BASE=HEAD
+  # A renamed schema is a deleted one.
+  run git checkout -- "$cancelled"
+  run git mv "$cancelled" "$events_dir/ReservationCanceled.v1.json"
+  fails "$cancelled:1: [events/schema-deleted]" CHECK_BASE=HEAD
+  run git mv "$events_dir/ReservationCanceled.v1.json" "$cancelled"
+  passes CHECK_BASE=HEAD
+}
+
 good_frontend() {
   put frontend/src/lib/format.ts << 'EOF'
 export function formatCapacity(capacity: number): string {

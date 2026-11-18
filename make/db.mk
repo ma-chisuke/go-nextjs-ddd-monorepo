@@ -30,9 +30,11 @@ db-server:
 test-integration selftest gen-db-docs: | db-server
 
 # The tests behind the build tag `integration`: the queries, the constraints,
-# and the privileges of the roles, against a real PostgreSQL (TPL-0009).
+# and the privileges of the roles, against a real PostgreSQL (TPL-0009), and
+# the adapters for EventBridge and SQS against AWS Emulator (TPL-0017), which
+# make/aws.mk starts.
 test-integration:
-	@$(TASK) $@ 'if [ -n "$$($(FILES) $(GO_GLOBS) "*.sql" "compose.yaml")" ]; then $(DB) init > /dev/null && for m in $(GO_MODULES); do (cd "$$m" && go test -tags integration -race -shuffle=on ./...) || exit 1; done; fi'
+	@$(TASK) $@ 'if [ -n "$$($(FILES) $(GO_GLOBS) "*.sql" "compose.yaml" $(AWS_SOURCES))" ]; then $(DB) init > /dev/null && eval "$$($(AWS) env)" && for m in $(GO_MODULES); do (cd "$$m" && go test -tags integration -race -shuffle=on ./...) || exit 1; done; fi'
 
 # The schema documents of each context in docs/generated/db/<context>/,
 # written by tbls from a scratch database. Not part of `make gen`, which needs
