@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-# Validate each Terraform module given as an argument: `terraform init` without
-# a backend, then `terraform validate`. One finding per line.
+# Validate and test each Terraform module given as an argument: `terraform
+# init` without a backend, `terraform validate`, and, for a module with test
+# files (tests/*.tftest.hcl), `terraform test`. One finding per line.
 #
 # Usage: terraform-validate.sh <module directory>...
+#
+# The tests of the modules plan against a mock of the AWS provider
+# (`mock_provider`), so they need no account and create nothing.
 #
 # Run from the root of the repository. Provider plugins and the working data of
 # Terraform live in .cache/terraform. A dependency lock file that
@@ -40,6 +44,10 @@ for dir in "$@"; do
     status=1
   elif ! terraform -chdir="$dir" validate -json -no-color \
     | jq -r --arg dir "$dir/" -f "$root/tools/terraform/findings.jq"; then
+    status=1
+  elif [ -n "$(find "$dir" -maxdepth 2 -name "*.tftest.hcl" -print -quit)" ] \
+    && ! terraform -chdir="$dir" test -json -no-color \
+    | jq -r --arg dir "$dir/" -f "$root/tools/terraform/test-findings.jq"; then
     status=1
   fi
   if [ "$had_lock" = false ]; then
