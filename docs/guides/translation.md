@@ -157,6 +157,9 @@ Use these Japanese terms. The table grows when a new term appears; add the term 
 | event bus | イベントバス |
 | queue | キュー |
 | emulator | エミュレーター |
+| entry (of EventBridge, in `PutEvents`) | エントリー |
+| long polling (SQS) | ロングポーリング |
+| visibility timeout (SQS) | 可視性タイムアウト |
 | certificate (TLS) | 証明書 |
 | unique constraint | 一意制約 |
 | unit test | 単体テスト |

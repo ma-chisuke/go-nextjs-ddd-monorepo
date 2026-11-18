@@ -24,6 +24,8 @@ Notification publishes no event. It consumes these events of Reservation, as [`c
 | `reservation.ReservationConfirmed.v1` | [`ReservationConfirmed.v1.json`](../../../contracts/events/reservation/ReservationConfirmed.v1.json) | Sends the organizer a mail that the reservation is confirmed, with its period and attendees. Reservation publishes this event again when a reservation is rescheduled, so a rescheduling sends another such mail, with the new period. |
 | `reservation.ReservationCancelled.v1` | [`ReservationCancelled.v1.json`](../../../contracts/events/reservation/ReservationCancelled.v1.json) | Sends the organizer a mail that the reservation is cancelled. |
 
+The worker is the command `notification` (TPL-0014). It reads the events from the SQS queue that `EVENTS_QUEUE_URL` names, `notification-events`, into which a rule of Notification selects these two types from the event bus. The module `infra/modules/event-subscription` creates the queue, its dead-letter queue `notification-events-dlq`, and the rule; locally, `infra/local/main.tf` calls it.
+
 An event of any other type is logged and ignored, and counts as handled.
 An event of one of these types whose data breaks its contract, such as one without the address of the organizer, fails: it comes again, and after the last attempt the broker sets it aside in the dead-letter queue of Notification.
 
@@ -38,7 +40,7 @@ An event of one of these types whose data breaks its contract, such as one witho
 ## Known limits of the sample
 
 - A mail shows the room by its id and the period in UTC, because the events carry neither the name of the room nor its time zone. A product would add them to the events, in a new version of each, or ask Facility for each mail.
-- The mailer speaks plain SMTP, without authentication or TLS, to Mailpit in the local environment. A mail service in the cloud needs another adapter of `Mailer`.
+- The mailer speaks plain SMTP, without authentication or TLS, to Mailpit in the local environment. In AWS, the mail will go through Amazon SES, with another adapter of `Mailer` that arrives with the infrastructure milestone.
 
 ## What Notification needs from other contexts
 

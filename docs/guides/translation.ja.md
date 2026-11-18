@@ -157,6 +157,9 @@
 | event bus | イベントバス |
 | queue | キュー |
 | emulator | エミュレーター |
+| entry（EventBridge の `PutEvents` の） | エントリー |
+| long polling（SQS の） | ロングポーリング |
+| visibility timeout（SQS の） | 可視性タイムアウト |
 | certificate（TLS の） | 証明書 |
 | unique constraint | 一意制約 |
 | unit test | 単体テスト |
@@ -168,4 +171,4 @@
 | body（メールの） | 本文 |
 | sender（メールの） | 差出人 |
 
-<!-- i18n-source: translation.md sha256:93e86b1c09e1de786278547dec0cde05c385c6be1f7a6d9fbf04ce4d9ff0fbee -->
+<!-- i18n-source: translation.md sha256:731a27f3d21191b41ac6fb090c91251ca13506cc32eb17ae55aa8629eedd5915 -->

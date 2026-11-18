@@ -1,7 +1,7 @@
 # Reservation
 
 Reservation is responsible for the bookings of meeting rooms: it books a room for a period, reschedules a reservation, and cancels it, and it never lets two confirmed reservations of one room overlap.
-It is not responsible for the rooms themselves: it asks Facility about a room each time it needs one, and keeps no copy. Telling the organizer about a booking belongs to Notification, from milestone M2.
+It is not responsible for the rooms themselves: it asks Facility about a room each time it needs one, and keeps no copy. Telling the organizer about a booking belongs to Notification, which learns of it from the events of Reservation.
 The words below are those of the [glossary](glossary.md).
 
 ## Kind of subdomain
@@ -37,6 +37,7 @@ Reservation publishes two integration events. [`contracts/events/reservation.asy
 
 - Each change of the domain returns its domain event, `ReservationConfirmed` or `ReservationCancelled`. The store turns it into the integration event, a CloudEvents envelope whose `subject` is the id of the reservation, and writes it to the table `outbox` in the transaction of the change (TPL-0013). So an event is stored if and only if its change commits. A refused change stores no event, and neither does a booking that comes again with its idempotency key.
 - The relay of the platform (`internal/platform/outbox`) reads the outbox in the order of the event ids, which is close to the order of the changes, hands each event to the broker, and then marks it as published. `NewRelay` in `module.go` builds it for a broker. Several relays can run at once, and each event goes to the one that takes it first.
+- The relay runs as a process of its own, `reservation relay`: the command of Reservation with the argument `relay`, from the image of the API (TPL-0014). It publishes to the EventBridge bus that `EVENT_BUS_NAME` names, through `platform/awsevents`, and refuses to start when that bus does not exist.
 - Delivery is at least once. When a relay stops after it handed an event to the broker and before it marked the event, the event is published again, with the same `id`. Events of one reservation can also arrive out of order. A consumer records the `id` of each event that it handled, and looks at `time` when the order matters.
 - The relay deletes a published event from the outbox after a retention period, seven days by default.
 - No event is dropped silently. A domain event that has no integration event fails the change. An event of the outbox that cannot be read stays there and is logged as an error, and the relay goes on with the other events.

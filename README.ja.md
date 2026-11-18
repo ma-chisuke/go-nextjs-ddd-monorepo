@@ -12,7 +12,7 @@ Go の API と Next.js の画面を1つのリポジトリに置く製品のた�
 |---|---|---|
 | M0 | 品質の基盤：道具のバージョンの固定、`make check`、整形と lint、セキュリティの検査、CI、Git フック、エージェントのフック、決定の記録 | 完了 |
 | M1 | 中核と補完の文脈を1つずつ。OpenAPI からユースケースとドメインを通って PostgreSQL まで | 完了 |
-| M2 | イベント：送信箱、EventBridge、SQS、手元の AWS エミュレーター | 予定 |
+| M2 | イベント：送信箱、EventBridge、SQS、手元の AWS エミュレーターと、文脈 Notification | 完了 |
 | M3 | Next.js の画面と、端から端までのテスト | 予定 |
 | M4 | stg と prd の Terraform・Terragrunt と、デプロイ | 予定 |
 | M5 | エージェントのハーネスの評価、性質にもとづく API のテスト、ミューテーションテスト | 予定 |
@@ -46,13 +46,14 @@ make check   # 速いチェック。数秒で終わる
 | `make fmt` | ファイルを整形する。 |
 | `make gen` | 生成物を作り直す。 |
 | `make check` | 速いチェック。ネットワークを使わない。コミットの前に必ず実行する。 |
-| `make check-all` | 速いチェックと遅いチェック。手元の PostgreSQL を要するチェックも含む。CI が実行する。 |
+| `make check-all` | 速いチェックと遅いチェック。手元の PostgreSQL と AWS Emulator を要するチェックも含む。CI が実行する。 |
+| `make up` | 手元のシステムを Docker で起動する。すべてのスキーマを適用した PostgreSQL、イベントバスとキューを作った AWS Emulator、Mailpit、すべての文脈のすべてのプロセスである。`make down` で止める。 |
 | `make db-up` | 手元の PostgreSQL を Docker で起動し、すべての文脈のスキーマを適用する。 |
 | `make help` | 主なターゲットの一覧を出す。 |
 
 `.devcontainer/` の dev container を使うと、手元に何も入れずに同じ環境が手に入る。
 
-手元のデータベースと `make check-all` には Docker が要る。[サービスを手元で動かす](docs/guides/run-locally.ja.md)では、データベースと2つのサービスを起動し、それらの API を通して curl で会議室を予約する。
+手元のシステムと `make check-all` には Docker が要る。[サービスを手元で動かす](docs/guides/run-locally.ja.md)では、システムを起動し、API を通して curl で会議室を予約する。そして、予約から生じるメールを Mailpit（<http://127.0.0.1:58025>）で見る。
 
 ## テンプレートの使い方
 
@@ -67,15 +68,16 @@ make check   # 速いチェック。数秒で終わる
 | 分野 | チェック |
 |---|---|
 | すべてのファイル | つづり、EditorConfig の決まり、秘密情報 |
-| Go | 整形、golangci-lint（go vet を含む）、race detector 付きのテスト。既知の脆弱性と、PostgreSQL に対する結合テストは `make check-all` |
+| Go | 整形、golangci-lint（go vet を含む）、race detector 付きのテスト。`make check-all` では、既知の脆弱性、PostgreSQL と AWS Emulator に対する結合テスト、手元のシステム全体のスモークテスト |
 | バックエンドの構成 | `lint-arch`。文脈と層の間の import、I/O をしないドメイン、API の文書からだけ作るルート、SQL に書いたスキーマの名前、文脈ごとの用語集 |
 | 生成コード | API の文書と各文脈の SQL から生成したコードが、生成器がいま書く内容と同じであること |
 | TypeScript と Next.js | Prettier、import の境界を含む ESLint、型の検査、使っていないコード |
 | シェルと Dockerfile | shfmt、shellcheck、hadolint |
 | GitHub Actions | actionlint、zizmor、ghalint、pinact |
-| Terraform と Terragrunt | 整形、tflint、Trivy。validate とモジュールの文書は `make check-all` |
+| Terraform と Terragrunt | 整形、tflint、Trivy、モジュールの README（terraform-docs）。validate は `make check-all` |
 | SQL | squawk。`make check-all` では、スキーマの変更ごとの DDL に対する squawk（`lint-sql-plan`）、スキーマに対するすべてのクエリの prepare（`lint-sqlc`）、各スキーマのコメントと文書（`lint-db-docs`） |
 | OpenAPI と AsyncAPI | Redocly。oasdiff による、ベースブランチと比べた互換性を壊す変更（`lint-contracts-breaking`） |
+| イベントの JSON Schema | その形、例、AsyncAPI 文書のメッセージ（`lint-events`）。ベースブランチと比べた互換性を壊す変更（`lint-events-breaking`） |
 | YAML・JSON・TOML | Prettier、yamllint、taplo、設定ファイルの JSON Schema による検証 |
 | Markdown | markdownlint、リンク、英語の文体（Vale）、日本語の文体（textlint） |
 | 文書 | 決定の記録の形式とその一覧、英語版と一致する対訳 |
@@ -85,7 +87,7 @@ make check   # 速いチェック。数秒で終わる
 
 ## 文書
 
-- [ARCHITECTURE.ja.md](ARCHITECTURE.ja.md)：バックエンドの地図。文脈・層・データベースと、それらを保つチェック。
+- [ARCHITECTURE.ja.md](ARCHITECTURE.ja.md)：バックエンドの地図。文脈とそのプロセス、層、リクエストとイベントの流れ、データベースと、それらを保つチェック。
 - [docs/contexts/](docs/contexts/)：区切られた文脈ごとの README と用語集。
 - [AGENTS.ja.md](AGENTS.ja.md)：コーディングエージェント向けの指示。
 - [docs/adr/](docs/adr/README.ja.md)：決定の記録。
@@ -101,4 +103,4 @@ make check   # 速いチェック。数秒で終わる
 
 [MIT No Attribution](LICENSE)。表示を残さずに、テンプレートをコピーして自分のものにできる。
 
-<!-- i18n-source: README.md sha256:a9b3affb52767408cea86ab13726fe70692c0004f2a7401df1782b633ebd66d6 -->
+<!-- i18n-source: README.md sha256:d3ef113700455036e69e03b081c1a6cccd7af749f3530581d8279401daaab860 -->
