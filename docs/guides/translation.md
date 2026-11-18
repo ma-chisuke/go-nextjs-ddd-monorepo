@@ -170,3 +170,20 @@ Use these Japanese terms. The table grows when a new term appears; add the term 
 | subject (of a mail) | 件名 |
 | body (of a mail) | 本文 |
 | sender (of a mail) | 差出人 |
+| frontend | フロントエンド |
+| screen | 画面 |
+| page (of the app, at one URL) | ページ |
+| feature (a directory `frontend/src/features/<context>/`) | 機能 |
+| form | フォーム |
+| field (of a form) | 項目 |
+| hidden field (of a form) | 隠し項目 |
+| browser | ブラウザー |
+| build (of the app or of an image) | ビルド |
+| server component, client component | サーバーコンポーネント、クライアントコンポーネント |
+| Server Function (Next.js) | サーバー関数 |
+| stream (a part of a page) | ストリーミングする |
+| shell (the static part of a page) | 骨組み |
+| fingerprint (of a booking) | フィンガープリント |
+| end-to-end test | エンドツーエンドテスト |
+| scenario (of the end-to-end test) | シナリオ |
+| headless mode (of a browser) | ヘッドレスモード |
