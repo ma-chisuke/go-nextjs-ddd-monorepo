@@ -8,13 +8,13 @@
 #                          and wait until each one is healthy
 #        stack.sh down     stop and remove the containers; the data of
 #                          PostgreSQL stays
-#        stack.sh build    build the image of every service that compose.yaml
-#                          builds from this repository
+#        stack.sh build    build the image of the service of every context
+#                          (the services that compose.yaml builds from backend/)
 #        stack.sh images   print "<service> <image>" for each of those services
 #        stack.sh smoke    with PostgreSQL running (db.sh server), apply every
-#                          schema, start the services that compose.yaml
-#                          builds, run the smoke test against them, and stop
-#                          the services that were not running before
+#                          schema, start the services of the contexts, run the
+#                          smoke test against them, and stop the services that
+#                          were not running before
 #
 # Each service publishes its port on the loopback address; compose.yaml holds
 # the defaults (POSTGRES_PORT, FACILITY_PORT, RESERVATION_PORT).
@@ -22,11 +22,14 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
-# The services that compose.yaml builds from this repository, with their
-# images: "<service> <image>" per line.
+# The services of the bounded contexts, which compose.yaml builds from
+# backend/Dockerfile, with their images: "<service> <image>" per line. AWS
+# Emulator is built too, but it is a tool of the local environment, not a
+# part of the product: tools/scripts/aws.sh starts it, and nothing ships it.
 images() {
   docker compose config --format json \
-    | jq -r '.services | to_entries[] | select(.value.build != null) | "\(.key) \(.value.image)"'
+    | jq -r --arg backend "$PWD/backend" \
+      '.services | to_entries[] | select(.value.build.context == $backend) | "\(.key) \(.value.image)"'
 }
 
 built_services() {
