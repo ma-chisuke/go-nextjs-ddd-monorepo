@@ -142,11 +142,16 @@ func TestRunPublishesWhatArrivesAndRemovesOldEvents(t *testing.T) {
 
 	arriving := events(t, 2)
 	source.Add(arriving...)
+	// The relay publishes the two events, and removes the event of eight days
+	// ago; the three younger ones stay. It removes old events after it
+	// published what waited, so the test waits for both before it stops the
+	// relay: a relay that is stopped right after publishing removes nothing.
 	deadline := time.After(5 * time.Second)
-	for len(publisher.Published()) < 4 {
+	for len(publisher.Published()) < 4 || source.Len() != 3 {
 		select {
 		case <-deadline:
-			t.Fatalf("the relay published %d events, want 4", len(publisher.Published()))
+			t.Fatalf("the relay published %d events, want 4, and the outbox holds %d, want 3",
+				len(publisher.Published()), source.Len())
 		case <-time.After(time.Millisecond):
 		}
 	}
@@ -154,9 +159,8 @@ func TestRunPublishesWhatArrivesAndRemovesOldEvents(t *testing.T) {
 	if err := <-done; err != nil {
 		t.Errorf("Run = %v, want nil after the cancellation", err)
 	}
-	// The event of eight days ago is gone; the three younger ones stay.
 	if source.Len() != 3 {
-		t.Errorf("the outbox holds %d events, want 3", source.Len())
+		t.Errorf("the outbox holds %d events after the relay stopped, want 3", source.Len())
 	}
 }
 

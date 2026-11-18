@@ -30,3 +30,7 @@ peerDependencyRules:
     eslint-plugin-import>eslint: "10"
     eslint-plugin-jsx-a11y>eslint: "10"
     eslint-plugin-react>eslint: "10"
+    # openapi-typescript 7 declares TypeScript 5 as its peer. It generates the
+    # same types with TypeScript 6, and gen-check-api-ts and the type check of
+    # the frontend fail if a later version stops doing so.
+    openapi-typescript>typescript: "6"

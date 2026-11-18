@@ -1380,50 +1380,49 @@ case_lint_events_breaking__deleted() {
   passes CHECK_BASE=HEAD
 }
 
-good_frontend() {
-  put frontend/src/lib/format.ts << 'EOF'
-export function formatCapacity(capacity: number): string {
-  return `${String(capacity)} people`;
+# The cases of the frontend add a bad file to the frontend as it is, and
+# take it away again: the frontend of the repository is the good input.
+case_gen_check_api_ts() {
+  # Generated types that somebody edited by hand, or forgot to regenerate.
+  local generated=frontend/src/lib/api/facility.gen.ts
+  printf '\n// Edited by hand.\n' >> "$COPY/$generated"
+  fails "$generated:1: [gen/stale]"
+  run git checkout -q -- "$generated"
+  passes
 }
-EOF
-  put frontend/src/features/rooms/capacity.ts << 'EOF'
-import { formatCapacity } from "@/lib/format";
 
-export function capacityLabel(capacity: number): string {
-  return formatCapacity(capacity);
-}
-EOF
-  put frontend/src/app/page.tsx << 'EOF'
-import { capacityLabel } from "@/features/rooms/capacity";
-
-export default function Page() {
-  return <p>{capacityLabel(8)}</p>;
-}
-EOF
+case_gen_check_api_ts__missing() {
+  # An API document whose types were never generated.
+  run cp contracts/http/facility.openapi.yaml contracts/http/sample.openapi.yaml
+  fails 'contracts/http/sample.openapi.yaml:1: [gen/missing]'
+  drop contracts/http/sample.openapi.yaml
+  # Types that no API document generates any more.
+  run cp frontend/src/lib/api/facility.gen.ts frontend/src/lib/api/sample.gen.ts
+  fails 'frontend/src/lib/api/sample.gen.ts:1: [gen/no-document]'
+  drop frontend/src/lib/api/sample.gen.ts
+  passes
 }
 
 case_lint_frontend() {
-  good_frontend
   # A feature never uses another feature.
-  put frontend/src/features/reservations/limit.ts << 'EOF'
-import { capacityLabel } from "@/features/rooms/capacity";
+  put frontend/src/features/sample/rooms.ts << 'EOF'
+import { listRooms } from "@/features/facility/server/rooms";
 
-export const limit = capacityLabel(4);
+export const rooms = listRooms;
 EOF
-  fails 'frontend/src/features/reservations/limit.ts:1: [boundaries/dependencies]'
-  drop frontend/src/features/reservations
+  fails 'frontend/src/features/sample/rooms.ts:1: [boundaries/dependencies]'
+  drop frontend/src/features/sample
   passes
 }
 
 case_lint_frontend__server_only() {
-  good_frontend
-  put frontend/src/features/rooms/server/rooms.ts << 'EOF'
+  put frontend/src/features/sample/server/rooms.ts << 'EOF'
 export function loadRooms(): string[] {
   return [];
 }
 EOF
-  fails 'frontend/src/features/rooms/server/rooms.ts:1: [no-restricted-syntax]'
-  put frontend/src/features/rooms/server/rooms.ts << 'EOF'
+  fails 'frontend/src/features/sample/server/rooms.ts:1: [no-restricted-syntax]'
+  put frontend/src/features/sample/server/rooms.ts << 'EOF'
 import "server-only";
 
 export function loadRooms(): string[] {
@@ -1432,7 +1431,7 @@ export function loadRooms(): string[] {
 EOF
   put frontend/src/app/rooms.tsx << 'EOF'
 "use client";
-import { loadRooms } from "@/features/rooms/server/rooms";
+import { loadRooms } from "@/features/sample/server/rooms";
 
 export function Rooms() {
   return <p>{loadRooms().join(", ")}</p>;
@@ -1444,22 +1443,51 @@ EOF
 }
 
 case_lint_frontend_types() {
-  good_frontend
   put frontend/src/lib/format.ts << 'EOF'
 export function formatCapacity(capacity: number): string {
   return capacity;
 }
 EOF
   fails 'frontend/src/lib/format.ts:2: [TS2322]'
-  good_frontend
+  drop frontend/src/lib/format.ts
+  passes
+}
+
+case_lint_frontend_types__api() {
+  # A call that the API document does not allow: the types generated from
+  # the document refuse it (TPL-0007, layer 1).
+  put frontend/src/features/facility/server/sample.ts << 'EOF'
+import "server-only";
+
+import { facilityApi } from "@/lib/api/server/clients";
+
+export function listByFloor() {
+  return facilityApi().GET("/rooms", { params: { query: { floor: 3 } } });
+}
+EOF
+  fails 'frontend/src/features/facility/server/sample.ts:6: [TS2353]'
+  drop frontend/src/features/facility/server/sample.ts
   passes
 }
 
 case_lint_frontend_unused() {
-  good_frontend
   put frontend/src/lib/unused.ts 'export const unused = 1;'
   fails 'frontend/src/lib/unused.ts:1: [knip/files]'
   drop frontend/src/lib/unused.ts
+  passes
+}
+
+case_test_frontend() {
+  put frontend/src/lib/sample.test.ts << 'EOF'
+import assert from "node:assert/strict";
+import { test } from "node:test";
+
+test("the self-test expects this test to fail", () => {
+  assert.equal(1, 2);
+});
+EOF
+  fails 'the self-test expects this test to fail'
+  drop frontend/src/lib/sample.test.ts
   passes
 }
 

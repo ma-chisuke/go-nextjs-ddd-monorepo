@@ -86,6 +86,21 @@ export default defineConfig([
     },
   },
   {
+    // The test runner of Node returns a promise from `test`, and runs the
+    // test by itself: nothing waits for that promise.
+    files: ["src/**/*.test.ts"],
+    rules: {
+      "@typescript-eslint/no-floating-promises": [
+        "error",
+        {
+          allowForKnownSafeCalls: [
+            { from: "package", name: ["test", "describe", "it"], package: "node:test" },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: serverModules,
     rules: {
       "no-restricted-syntax": [

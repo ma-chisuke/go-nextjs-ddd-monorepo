@@ -7,4 +7,10 @@
   // The types generated from the OpenAPI contracts cover the whole contract,
   // and a page uses only part of it.
   "ignore": ["src/lib/api/**/*.gen.ts"],
+  // The unit tests, which the test runner of Node finds by this pattern
+  // (make test-frontend).
+  "entry": ["src/**/*.test.ts"],
+  // tools/scripts/gen-frontend.sh runs the generator of those types, from
+  // outside this package, where knip does not look.
+  "ignoreDependencies": ["openapi-typescript"],
 }

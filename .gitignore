@@ -37,3 +37,6 @@ lefthook-local.yml
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Written by Next.js (next dev, next build, next typegen).
+next-env.d.ts
