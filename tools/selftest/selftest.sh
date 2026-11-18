@@ -1193,8 +1193,11 @@ case_lint_contracts_breaking() {
   passes
 }
 
+# A document of its own, next to the real ones, which refer to each other: in
+# place of reservation.asyncapi.yaml, it would leave the references of
+# notification.asyncapi.yaml unresolved.
 good_asyncapi() {
-  put contracts/events/reservation.asyncapi.yaml << 'EOF'
+  put contracts/events/sample.asyncapi.yaml << 'EOF'
 asyncapi: 3.0.0
 info:
   title: Reservation events
@@ -1234,9 +1237,9 @@ EOF
 case_lint_contracts__asyncapi() {
   good_asyncapi
   # AsyncAPI 3.0 knows only send and receive.
-  run sed -i.orig -e 's|action: send|action: publish|' contracts/events/reservation.asyncapi.yaml
-  fails 'contracts/events/reservation.asyncapi.yaml:18: [struct]'
-  drop contracts/events/reservation.asyncapi.yaml.orig
+  run sed -i.orig -e 's|action: send|action: publish|' contracts/events/sample.asyncapi.yaml
+  fails 'contracts/events/sample.asyncapi.yaml:18: [struct]'
+  drop contracts/events/sample.asyncapi.yaml.orig
   good_asyncapi
   passes
 }

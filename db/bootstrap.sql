@@ -62,3 +62,23 @@ GRANT USAGE ON SCHEMA reservation TO reservation_runtime;
 GRANT USAGE ON SCHEMA extensions TO reservation_owner, reservation_runtime;
 ALTER ROLE reservation_owner SET search_path = reservation, extensions;
 ALTER ROLE reservation_runtime SET search_path = reservation, extensions;
+
+-- Notification --------------------------------------------------------------
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'notification_owner') THEN
+        CREATE ROLE notification_owner LOGIN;
+    END IF;
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'notification_runtime') THEN
+        CREATE ROLE notification_runtime LOGIN;
+    END IF;
+END
+$$;
+
+CREATE SCHEMA IF NOT EXISTS notification AUTHORIZATION notification_owner;
+REVOKE ALL ON SCHEMA notification FROM PUBLIC;
+GRANT USAGE ON SCHEMA notification TO notification_runtime;
+GRANT USAGE ON SCHEMA extensions TO notification_owner, notification_runtime;
+ALTER ROLE notification_owner SET search_path = notification, extensions;
+ALTER ROLE notification_runtime SET search_path = notification, extensions;

@@ -1,0 +1,42 @@
+# sqlc types the queries of the Notification context. It reads only the
+# schema of this context, so a query on a table of another context fails here
+# (TPL-0005, TPL-0011). Generated files end in .gen.go.
+version: "2"
+sql:
+  - engine: postgresql
+    schema: schema.sql
+    queries: queries
+    # sqlc vet (make lint-sqlc) prepares every query in a scratch database
+    # that holds this schema, whose address the check sets, and applies the
+    # rules below. Generation reads schema.sql alone, without a database.
+    # Copy this part unchanged to the sqlc.yaml of a new context.
+    database:
+      uri: ${SQLC_VET_DATABASE_URI}
+    analyzer:
+      database: false
+    rules:
+      - sqlc/db-prepare
+      - no-unfiltered-write
+    gen:
+      go:
+        package: postgres
+        out: .
+        sql_package: pgx/v5
+        emit_interface: true
+        emit_empty_slices: true
+        output_db_file_name: db.gen.go
+        output_models_file_name: models.gen.go
+        output_querier_file_name: querier.gen.go
+        output_files_suffix: .gen
+        overrides:
+          - db_type: uuid
+            go_type: github.com/google/uuid.UUID
+          - db_type: timestamptz
+            go_type: time.Time
+rules:
+  # sqlc writes out the columns of SELECT * before vet sees a query, so no
+  # rule can find it; it also means that the * never reaches the database.
+  - name: no-unfiltered-write
+    message: an UPDATE or DELETE without WHERE changes every row of the table
+    rule: >-
+      query.sql.matches(r"(?im)^\s*(update|delete)\s") && !query.sql.matches(r"(?i)\bwhere\b")
