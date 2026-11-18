@@ -74,11 +74,45 @@ start() {
 
 # The relay and the worker need the bus and the queue when they start, so the
 # emulator comes up first, and Terraform fills it before the services start.
+#
+# A service that calls AWS reads the CA of the emulator once, when it starts,
+# and the emulator makes a new CA at every start. Compose leaves a running
+# service alone when its own settings did not change, so after the emulator
+# started anew, the services that mount its CA are restarted.
 up() {
+  local before after clients
   tools/scripts/db.sh up
+  before=$(emulator_start)
   start aws
+  after=$(emulator_start)
   tools/scripts/aws.sh apply
   start
+  if [ "$before" != "$after" ]; then
+    clients=$(emulator_clients)
+    if [ -n "$clients" ]; then
+      # shellcheck disable=SC2086 # one service per word
+      docker compose restart $clients > /dev/null
+      # shellcheck disable=SC2086 # one service per word
+      start --no-deps $clients
+    fi
+  fi
+}
+
+# Which container of the emulator runs, and since when; empty without one.
+emulator_start() {
+  local container
+  container=$(docker compose ps --quiet aws)
+  if [ -n "$container" ]; then
+    docker inspect --format '{{.Id}} {{.State.StartedAt}}' "$container"
+  fi
+}
+
+# The services that mount the volume with the CA of the emulator.
+emulator_clients() {
+  docker compose config --format json \
+    | jq -r '.services | to_entries[]
+       | select(.key != "aws" and any(.value.volumes[]?; .source == "aws-emulator"))
+       | .key'
 }
 
 # The base URL of a service on this host, from the port that Compose published
