@@ -8,7 +8,7 @@ STACK := tools/scripts/stack.sh
 
 # What goes into the images or into the system: a change to any of these
 # starts the smoke test and the scan of the images (make/security.mk).
-STACK_SOURCES := "backend" "contracts" "db" "compose.yaml"
+STACK_SOURCES := "backend" "contracts" "db" "compose.yaml" "infra/local" "infra/modules" "tools/scripts/aws.sh"
 
 .PHONY: up down
 
