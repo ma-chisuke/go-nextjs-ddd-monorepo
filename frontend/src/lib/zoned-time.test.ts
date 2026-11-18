@@ -11,6 +11,7 @@ import {
   isTimeOfDay,
   isTimeZone,
   startOfDay,
+  timeZoneNames,
   wallTime,
   type LocalTime,
 } from "./zoned-time.ts";
@@ -172,6 +173,15 @@ test("isTimeZone knows the zones of the IANA database", () => {
   assert.equal(isTimeZone("UTC"), true);
   assert.equal(isTimeZone("Mars/Olympus_Mons"), false);
   assert.equal(isTimeZone(""), false);
+});
+
+test("timeZoneNames lists UTC first, once, and the zones of the IANA database", () => {
+  const names = timeZoneNames();
+  assert.equal(names[0], "UTC");
+  assert.equal(names.filter((name) => name === "UTC").length, 1);
+  assert.ok(names.includes("Asia/Tokyo"));
+  assert.ok(names.includes("America/New_York"));
+  assert.ok(names.every(isTimeZone));
 });
 
 test("addDays crosses months and years", () => {

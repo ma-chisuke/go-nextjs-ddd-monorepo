@@ -41,6 +41,14 @@ export function isTimeZone(value: string): boolean {
   }
 }
 
+/**
+ * The names of the time zones that JavaScript knows, UTC first. The list of
+ * Intl leaves out UTC, which is a zone of the IANA database too.
+ */
+export function timeZoneNames(): string[] {
+  return ["UTC", ...Intl.supportedValuesOf("timeZone").filter((name) => name !== "UTC")];
+}
+
 /** The date that comes a number of days after a date, or before it when the number is negative. */
 export function addDays(date: string, days: number): string {
   const parts = requireDate(date);
