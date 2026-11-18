@@ -56,8 +56,14 @@ built_services() {
 
 # Build and start services (all of them without arguments), and wait until
 # each one is healthy.
+#
+# One more try after a failure. Most of the published ports lie in the range
+# from which Linux hands out ports to outgoing connections and to tests that
+# listen on "any free port", so a check that runs at the same time can hold
+# one for a moment, and the start then fails with "address already in use".
 start() {
-  if ! docker compose up --build --detach --wait --wait-timeout 120 --quiet-pull "$@"; then
+  if ! docker compose up --build --detach --wait --wait-timeout 120 --quiet-pull "$@" \
+    && ! { sleep 3 && docker compose up --build --detach --wait --wait-timeout 120 --quiet-pull "$@"; }; then
     echo "stack: a service did not become healthy; its last log lines:" >&2
     docker compose ps --all >&2
     # shellcheck disable=SC2046 # one service per word
