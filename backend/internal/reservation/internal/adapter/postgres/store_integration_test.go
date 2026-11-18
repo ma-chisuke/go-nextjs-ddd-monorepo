@@ -527,6 +527,7 @@ func TestRuntimeRolePrivileges(t *testing.T) {
 		"change a table":                      "ALTER TABLE reservations ADD COLUMN intruder integer",
 		"drop a table":                        "DROP TABLE idempotency_keys",
 		"empty a table":                       "TRUNCATE reservations",
+		"empty the outbox":                    "TRUNCATE outbox",
 		"create a table in the public schema": "CREATE TABLE public.intruder (id integer)",
 	}
 	for what, statement := range denied {
