@@ -74,9 +74,10 @@ func integrationEvent(id uuid.UUID, e domain.Event) (event.Envelope, error) {
 
 // outboxEvents returns the rows of the outbox that publish the domain events
 // of a change stored at the instant. Each event gets a new id, a UUID version
-// 7, so the relay publishes the events about in the order of their changes.
-// The rows are made before the transaction that stores them, so a domain
-// event without a mapping stores nothing at all.
+// 7, and the relay publishes the events in the order of their ids, which is
+// close to the order of their changes. The rows are made before the
+// transaction that stores them, so a domain event without a mapping stores
+// nothing at all.
 func outboxEvents(events []domain.Event, at time.Time) ([]InsertOutboxEventParams, error) {
 	rows := make([]InsertOutboxEventParams, 0, len(events))
 	for _, e := range events {
