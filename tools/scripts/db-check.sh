@@ -27,14 +27,14 @@
 # schema of each context as its owner role, as `db.sh apply` does.
 #
 # The server must run (`db.sh server`). The connection follows db.sh: PGHOST
-# (127.0.0.1), POSTGRES_PORT (55432), DB_OWNER_PASSWORD_<CONTEXT>, and
+# (127.0.0.1), POSTGRES_PORT (15432), DB_OWNER_PASSWORD_<CONTEXT>, and
 # PGSCHEMA_PLAN_USER and PGSCHEMA_PLAN_PASSWORD.
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
 host="${PGHOST:-127.0.0.1}"
-port="${POSTGRES_PORT:-55432}"
+port="${POSTGRES_PORT:-15432}"
 sslmode="${PGSSLMODE:-disable}"
 docs_root=docs/generated/db
 kind="${1:-}"

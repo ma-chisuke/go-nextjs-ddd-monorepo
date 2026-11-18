@@ -53,7 +53,7 @@ make check   # fast checks; takes a few seconds
 
 A dev container in `.devcontainer/` gives the same environment without installing anything on your machine.
 
-The local system and `make check-all` need Docker. [Run the services locally](docs/guides/run-locally.md) starts the system, books a room through the APIs with curl, and shows the mail that the booking causes in Mailpit, at <http://127.0.0.1:58025>.
+The local system and `make check-all` need Docker. [Run the services locally](docs/guides/run-locally.md) starts the system, books a room through the APIs with curl, and shows the mail that the booking causes in Mailpit, at <http://127.0.0.1:18025>.
 
 ## Use the template
 

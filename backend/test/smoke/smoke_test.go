@@ -43,8 +43,8 @@ type reservation struct {
 }
 
 func TestBookARoomAcrossTheServices(t *testing.T) {
-	facility := connect(t, "facility", "FACILITY_URL", "http://127.0.0.1:58081")
-	reservations := connect(t, "reservation", "RESERVATION_URL", "http://127.0.0.1:58082")
+	facility := connect(t, "facility", "FACILITY_URL", "http://127.0.0.1:18081")
+	reservations := connect(t, "reservation", "RESERVATION_URL", "http://127.0.0.1:18082")
 
 	// A name that no other run uses, so the scenario never meets the rows of
 	// an earlier run and leaves nothing that a later run could meet.
@@ -139,7 +139,7 @@ type mailbox struct {
 // compose.yaml.
 func openMailbox(t *testing.T) *mailbox {
 	t.Helper()
-	const fallback = "http://127.0.0.1:58025"
+	const fallback = "http://127.0.0.1:18025"
 	base := os.Getenv("MAILPIT_URL")
 	if base == "" {
 		base = fallback

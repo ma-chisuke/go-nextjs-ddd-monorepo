@@ -68,6 +68,6 @@ test-frontend:
 # The development server of Next.js, against the APIs of the local system
 # (`make up`), on http://127.0.0.1:3000.
 frontend-dev: ## Run the frontend from source against the local system
-	@cd frontend && FACILITY_API_URL=$${FACILITY_API_URL:-http://127.0.0.1:$${FACILITY_PORT:-58081}} \
-		RESERVATION_API_URL=$${RESERVATION_API_URL:-http://127.0.0.1:$${RESERVATION_PORT:-58082}} \
+	@cd frontend && FACILITY_API_URL=$${FACILITY_API_URL:-http://127.0.0.1:$${FACILITY_PORT:-18081}} \
+		RESERVATION_API_URL=$${RESERVATION_API_URL:-http://127.0.0.1:$${RESERVATION_PORT:-18082}} \
 		$(FRONTEND_BIN)/next dev --hostname 127.0.0.1

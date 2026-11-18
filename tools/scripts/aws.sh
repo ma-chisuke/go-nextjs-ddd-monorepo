@@ -13,7 +13,7 @@
 #        aws.sh env      print the environment that points the AWS SDKs and
 #                        Terraform at the emulator, as `export` lines for eval
 #
-# The endpoint is HTTPS on the loopback address, port AWS_PORT (59297). The
+# The endpoint is HTTPS on the loopback address, port AWS_PORT (19297). The
 # emulator makes its certificate and the CA at every start, so `server` copies
 # the CA every time. Requests are not signed, and the credentials of `env` are
 # placeholders that the SDKs need to sign at all.
@@ -37,7 +37,7 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
-port="${AWS_PORT:-59297}"
+port="${AWS_PORT:-19297}"
 ca=".cache/aws-emulator/ca.pem"
 
 server() {
