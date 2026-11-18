@@ -1,15 +1,18 @@
 # The local environment: everything runs with Docker Compose alone, without
 # an AWS account (TPL-0017).
 #
-#   make up         start PostgreSQL, bring every schema up to date, then build
-#                   and start the service of every context
+#   make up         start PostgreSQL and bring every schema up to date, start
+#                   AWS Emulator and create the event bus and the queues in
+#                   it, then build and start Mailpit and the services of
+#                   every context
 #   make down       stop everything; the data of PostgreSQL stays
 #   make db-up      start PostgreSQL and bring every schema up to date
 #   make db-down    stop it and delete its data
 #
 # Start the system with `make up`, not with `docker compose up` alone: pgschema
-# from mise.toml applies the schemas from the host (tools/scripts/db.sh), and
-# the services expect them in place.
+# and Terraform from mise.toml apply the schemas and the AWS resources from
+# the host (tools/scripts/db.sh, tools/scripts/aws.sh), and the services
+# expect them in place.
 name: go-nextjs-ddd-monorepo
 
 # What the service of every bounded context shares. Each one is built from
@@ -22,6 +25,19 @@ x-context-service: &context-service
     - ALL
   security_opt:
     - no-new-privileges:true
+
+# What points a service at AWS Emulator instead of AWS (package awsconfig).
+# The service mounts the volume aws-emulator at /aws-emulator for the CA. The
+# certificate of the emulator carries the name localhost, and the services
+# reach it as `aws`, so they are told which name to expect. Requests are not
+# signed; the credentials are placeholders that the SDK needs to sign at all.
+x-aws-emulator: &aws-emulator
+  AWS_REGION: us-east-1
+  AWS_ENDPOINT_URL: https://aws:9297
+  AWS_CA_BUNDLE: /aws-emulator/9297/ca.pem
+  AWS_ENDPOINT_SERVER_NAME: localhost
+  AWS_ACCESS_KEY_ID: emulator
+  AWS_SECRET_ACCESS_KEY: emulator
 
 services:
   postgres:
@@ -102,6 +118,81 @@ services:
         condition: service_healthy
       facility:
         condition: service_healthy
+
+  # The relay of the outbox of Reservation: the image of the API with another
+  # command, as a second ECS service runs it in AWS (TPL-0014). It publishes
+  # the events to the bus that `make up` creates in the emulator, and refuses
+  # to start without that bus.
+  reservation-relay:
+    <<: *context-service
+    build:
+      context: backend
+      args:
+        CONTEXT: reservation
+    image: go-nextjs-ddd-monorepo/reservation:local
+    command: [relay]
+    environment:
+      <<: *aws-emulator
+      DATABASE_URL: postgres://reservation_runtime:reservation_runtime@postgres:5432/app?sslmode=disable
+      EVENT_BUS_NAME: contexts
+    volumes:
+      - aws-emulator:/aws-emulator:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      aws:
+        condition: service_healthy
+
+  # The worker of Notification: it reads the queue that `make up` creates in
+  # the emulator, and sends its mail to Mailpit.
+  notification:
+    <<: *context-service
+    build:
+      context: backend
+      args:
+        CONTEXT: notification
+    image: go-nextjs-ddd-monorepo/notification:local
+    environment:
+      <<: *aws-emulator
+      DATABASE_URL: postgres://notification_runtime:notification_runtime@postgres:5432/app?sslmode=disable
+      # The emulator names its queues as AWS does, and answers for that name
+      # on its own endpoint. 000000000000 is its account.
+      EVENTS_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/000000000000/notification-events
+      SMTP_ADDR: mailpit:1025
+      MAIL_FROM: Meeting rooms <rooms@example.com>
+    volumes:
+      - aws-emulator:/aws-emulator:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      aws:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+
+  # Mailpit catches the mail that Notification sends, and shows it at
+  # http://127.0.0.1:58025. No mail leaves the machine, and the mail is gone
+  # when the container stops.
+  mailpit:
+    image: axllent/mailpit:v1.33.1@sha256:aef2aacc11f075ec0fb6874275ee4a421e688e11a96ebb296134d1735c7761ce
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    user: 65532:65532
+    tmpfs:
+      # Mailpit keeps the mail in a temporary database.
+      - /tmp
+    ports:
+      # The web interface and the API, on the loopback address only. SMTP
+      # (1025) is for the other containers.
+      - 127.0.0.1:${MAILPIT_PORT:-58025}:8025
+    healthcheck:
+      test: [CMD, /mailpit, readyz]
+      interval: 2s
+      timeout: 2s
+      retries: 30
 
 volumes:
   postgres-data:

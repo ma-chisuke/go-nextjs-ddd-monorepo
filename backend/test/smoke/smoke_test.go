@@ -2,18 +2,27 @@
 
 // Package smoke runs one scenario across the services of the local system,
 // over real HTTP: Facility and Reservation in Docker Compose, with PostgreSQL
-// behind them. `make smoke` starts the system and runs this test, which fails
-// when the system is not up.
+// behind them, and then the events of the scenario on their way to the
+// organizer: from the outbox of Reservation through its relay, the event bus
+// and the queue in AWS Emulator, and the worker of Notification, to Mailpit.
+// `make smoke` starts the system and runs this test, which fails when the
+// system is not up.
 //
 // The test knows the services only by their API documents in contracts/http/,
-// which check every response, and imports no bounded context (TPL-0005).
+// which check every response, and by the mail that arrives; it imports no
+// bounded context (TPL-0005).
 package smoke
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -40,6 +49,9 @@ func TestBookARoomAcrossTheServices(t *testing.T) {
 	// A name that no other run uses, so the scenario never meets the rows of
 	// an earlier run and leaves nothing that a later run could meet.
 	run := uuid.NewString()
+	// An organizer of this run alone, so that the mail of the scenario can be
+	// told from the mail of every other run.
+	organizer := "smoke-" + run + "@example.com"
 
 	res := facility.Do(http.MethodPost, "/rooms", map[string]any{
 		"name":      "Smoke test " + run,
@@ -64,7 +76,7 @@ func TestBookARoomAcrossTheServices(t *testing.T) {
 		"startsAt":       at(10),
 		"endsAt":         at(11),
 		"attendees":      4,
-		"organizerEmail": "smoke@example.com",
+		"organizerEmail": organizer,
 	}
 	key := apitest.Header("Idempotency-Key", "smoke-"+run)
 
@@ -105,6 +117,114 @@ func TestBookARoomAcrossTheServices(t *testing.T) {
 	if cancelled.Status != "cancelled" {
 		t.Fatalf("the cancelled reservation has the status %q, want cancelled", cancelled.Status)
 	}
+
+	// The booking, the rescheduling, and the cancellation each wrote an event
+	// to the outbox. The repeated booking and the refused ones wrote none, so
+	// the organizer gets three mails, and no more.
+	want := []string{"Reservation cancelled", "Reservation confirmed", "Reservation confirmed"}
+	got := openMailbox(t).mailTo(t, organizer, len(want))
+	if strings.Join(got, "; ") != strings.Join(want, "; ") {
+		t.Fatalf("the organizer got the mails %q, want %q", got, want)
+	}
+	t.Logf("ok: the organizer got %d mails through the outbox, the event bus, the queue, and Notification", len(got))
+}
+
+// mailbox is Mailpit, which catches the mail of the local system.
+type mailbox struct {
+	base   *url.URL
+	client *http.Client
+}
+
+// openMailbox returns Mailpit at the URL in MAILPIT_URL, or at its port in
+// compose.yaml.
+func openMailbox(t *testing.T) *mailbox {
+	t.Helper()
+	const fallback = "http://127.0.0.1:58025"
+	base := os.Getenv("MAILPIT_URL")
+	if base == "" {
+		base = fallback
+	}
+	u, err := url.Parse(base)
+	if err != nil || u.Host == "" {
+		t.Fatalf("smoke: MAILPIT_URL=%q is not a URL such as %s", base, fallback)
+	}
+	return &mailbox{base: u, client: &http.Client{Timeout: 10 * time.Second}}
+}
+
+// mailTo waits until Mailpit holds at least n mails to the address, then a
+// little longer for a mail too many, and returns what the subjects say before
+// their colon, sorted.
+func (m *mailbox) mailTo(t *testing.T, address string, n int) []string {
+	t.Helper()
+	base := m.base.String()
+	search := m.base.JoinPath("api", "v1", "search")
+	search.RawQuery = url.Values{"query": {`to:"` + address + `"`}}.Encode()
+	var subjects []string
+	deadline := time.Now().Add(90 * time.Second)
+	settled := false
+	for {
+		found, err := m.subjects(t, search)
+		if err != nil {
+			t.Fatalf("smoke: Mailpit at %s does not answer: %v\n"+
+				"Start the local system with `make up`, or run `make smoke`, which starts it.", base, err)
+		}
+		subjects = found
+		if len(subjects) >= n {
+			if settled {
+				break
+			}
+			// Every mail is there. A second delivery of an event would
+			// arrive within a few seconds; give it the chance to show.
+			settled = true
+			time.Sleep(3 * time.Second)
+			continue
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("after 90 seconds, Mailpit holds %d mails to %s, want %d: %q\n"+
+				"The relay of Reservation, AWS Emulator, or the worker of Notification dropped an event; see their logs (docker compose logs).",
+				len(subjects), address, n, subjects)
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	for i, subject := range subjects {
+		subjects[i], _, _ = strings.Cut(subject, ":")
+	}
+	sort.Strings(subjects)
+	return subjects
+}
+
+// subjects returns the subjects of the mails that a search of Mailpit finds.
+func (m *mailbox) subjects(t *testing.T, search *url.URL) ([]string, error) {
+	t.Helper()
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, search.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	res, err := m.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = res.Body.Close() }()
+	body, err := io.ReadAll(io.LimitReader(res.Body, 1<<20))
+	if err != nil {
+		return nil, err
+	}
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("GET %s answered %s: %s", search, res.Status, body)
+	}
+	var found struct {
+		Messages []struct {
+			Subject string `json:"Subject"`
+		} `json:"messages"`
+	}
+	if err := json.Unmarshal(body, &found); err != nil {
+		return nil, fmt.Errorf("GET %s: %w", search, err)
+	}
+	subjects := make([]string, len(found.Messages))
+	for i, m := range found.Messages {
+		subjects[i] = m.Subject
+	}
+	return subjects, nil
 }
 
 // connect returns a client of the service at the URL in the environment
