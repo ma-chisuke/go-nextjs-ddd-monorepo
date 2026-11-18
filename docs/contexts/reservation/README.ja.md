@@ -28,7 +28,21 @@ Reservation は、会議室の予約を受け持つ。ある時間帯に会議�
 
 ## イベント
 
-まだない。ドメインは変更のたびに `ReservationConfirmed` と `ReservationCancelled` を返すが、マイルストーン M2 が送信箱を加えるまで、それを発行するものはない（TPL-0013）。Reservation はどのイベントも購読しない。
+Reservation は2つの統合イベントを発行する。[`contracts/events/reservation.asyncapi.yaml`](../../../contracts/events/reservation.asyncapi.yaml) がそれらを記述し、[`contracts/events/reservation/`](../../../contracts/events/reservation/) の JSON Schema がそれぞれのデータを定める。
+
+| イベント | Reservation が発行するとき |
+|---|---|
+| `reservation.ReservationConfirmed.v1` | 会議室を予約したとき。予約を変更するたびにも、新しい時間帯と参加人数で改めて発行する |
+| `reservation.ReservationCancelled.v1` | 予約を取り消したとき |
+
+- ドメインは、変更のたびにそのドメインイベント（`ReservationConfirmed` か `ReservationCancelled`）を返す。ストアはそれを統合イベントに変え、変更と同じトランザクションの中でテーブル `outbox` に書く（TPL-0013）。統合イベントは CloudEvents の封筒であり、その `subject` は予約の ID である。したがって、変更がコミットされればイベントも必ず保存され、コミットされなければ保存されない。拒否された変更はイベントを保存しない。同じ冪等キーで再び届いた予約のリクエストも、イベントを保存しない。
+- プラットフォームの中継（`internal/platform/outbox`）は、イベントの ID の順に送信箱を読む。この順は、変更の順にほぼ一致する。中継は各イベントをブローカーに渡し、そのあとで発行済みの印を付ける。`module.go` の `NewRelay` が、ブローカーを受け取って中継を組み立てる。中継は同時にいくつも動かせ、各イベントは最初にそれを取った中継が発行する。
+- 配信は少なくとも1回である。中継がイベントをブローカーに渡したあと、印を付ける前に止まると、そのイベントは同じ `id` のまま再び発行される。1つの予約のイベントが、順序を入れ替えて届くこともある。そのため受け取る側は、処理した各イベントの `id` を記録し、順序が問題になるときは `time` を見る。
+- 中継は、発行済みのイベントを、保持期間（既定では7日）が過ぎてから送信箱から消す。
+- イベントを黙って捨てることはない。統合イベントを持たないドメインイベントがあれば、その変更は失敗する。送信箱の中の読めないイベントは送信箱に残り、エラーとしてログに記録され、中継はほかのイベントの処理を続ける。
+- テストは、ストアが作る統合イベントをすべて、その `type` が指す JSON Schema で検証する。
+
+Reservation はどのイベントも購読しない。
 
 ## 決まり
 
@@ -54,4 +68,4 @@ Reservation は、予約と変更のたびに、会議室の定員・利用時�
 - コマンドは、Facility のベース URL を `FACILITY_API_URL` から読む。
 - アダプターのテストは、Facility の偽物を相手に動く。偽物は、アダプターが送る各リクエストと、偽物自身が返す各答えを、Facility の API の文書に照らして検証する。そのため、アダプターが追従していない変更がその文書に入ると、このテストが失敗する。
 
-<!-- i18n-source: README.md sha256:cf2ab9b671505a028925679394d98601b2622fe190d8fc970ce3ad5d7f89000d -->
+<!-- i18n-source: README.md sha256:f48e6a4b97c969ebf16862da4d7ec0f51c5aaaf732ba0855f16eae8e242e5c91 -->

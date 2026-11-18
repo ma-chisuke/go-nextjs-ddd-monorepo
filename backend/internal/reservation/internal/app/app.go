@@ -4,9 +4,10 @@
 // generator of ids (TPL-0004).
 //
 // A use case loads what the domain needs, asks the domain to apply the rules,
-// and stores the result. The rules themselves are in the domain package; the
-// errors that belong to a use case, such as a reservation that does not
-// exist, are the kinds in errors.go.
+// and stores the result together with the events that the domain returned;
+// other contexts learn of a change through these events. The rules
+// themselves are in the domain package; the errors that belong to a use case,
+// such as a reservation that does not exist, are the kinds in errors.go.
 package app
 
 import (
@@ -94,10 +95,10 @@ func (s *Reservations) load(ctx context.Context, id domain.ReservationID, read V
 	return v, nil
 }
 
-// update stores the changed reservation, provided that it is still at the
-// version that the client read.
-func (s *Reservations) update(ctx context.Context, r domain.Reservation, read Version, now time.Time) (Versioned, error) {
-	version, err := s.store.Update(ctx, r, read, now)
+// update stores the changed reservation and the events of the change,
+// provided that the reservation is still at the version that the client read.
+func (s *Reservations) update(ctx context.Context, r domain.Reservation, events []domain.Event, read Version, now time.Time) (Versioned, error) {
+	version, err := s.store.Update(ctx, r, events, read, now)
 	switch {
 	case errors.Is(err, ErrVersionConflict):
 		return Versioned{}, newError(KindVersionMismatch, "The reservation changed since it was read. Read it again.")

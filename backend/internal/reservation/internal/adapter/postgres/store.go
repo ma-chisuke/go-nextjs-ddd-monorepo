@@ -1,8 +1,10 @@
 // Package postgres is the database side of the Reservation context: its
 // schema (schema.sql), its queries (queries/), the code that sqlc generates
-// from them (*.gen.go), and the store that implements the port of the use
-// cases over them. Generated types do not leave this package: the store
-// turns rows into domain objects and back (TPL-0011).
+// from them (*.gen.go), the store that implements the port of the use cases
+// over them, and the outbox from which the relay publishes the events of the
+// context (outbox.go). Generated types do not leave this package: the store
+// turns rows into domain objects and back (TPL-0011), and domain events into
+// integration events (events.go).
 package postgres
 
 import (
@@ -50,12 +52,17 @@ func NewStore(pool *pgxpool.Pool) *Store {
 	return &Store{pool: pool, queries: New(pool)}
 }
 
-// Add stores the reservation and its idempotency key in one transaction. The
-// exclusion constraint refuses an overlapping confirmed reservation, and the
-// unique constraint a key that is taken; when two requests race, the database
-// makes the second wait for the first and then refuses it.
-func (s *Store) Add(ctx context.Context, r domain.Reservation, key app.IdempotencyKey, at time.Time) (app.Version, error) {
+// Add stores the reservation, its events, and its idempotency key in one
+// transaction. The exclusion constraint refuses an overlapping confirmed
+// reservation, and the unique constraint a key that is taken; when two
+// requests race, the database makes the second wait for the first and then
+// refuses it.
+func (s *Store) Add(ctx context.Context, r domain.Reservation, events []domain.Event, key app.IdempotencyKey, at time.Time) (app.Version, error) {
 	params, err := insertParams(r, at)
+	if err != nil {
+		return 0, err
+	}
+	outboxed, err := outboxEvents(events, at)
 	if err != nil {
 		return 0, err
 	}
@@ -66,12 +73,16 @@ func (s *Store) Add(ctx context.Context, r domain.Reservation, key app.Idempoten
 		if version, err = q.InsertReservation(ctx, params); err != nil {
 			return err
 		}
-		return q.InsertIdempotencyKey(ctx, InsertIdempotencyKeyParams{
+		err = q.InsertIdempotencyKey(ctx, InsertIdempotencyKeyParams{
 			ReservationID: uuid.UUID(key.Reservation),
 			Key:           key.Key,
 			Fingerprint:   key.Fingerprint,
 			CreatedAt:     at,
 		})
+		if err != nil {
+			return err
+		}
+		return insertEvents(ctx, q, outboxed)
 	})
 	if err != nil {
 		return 0, portError(err)
@@ -91,8 +102,9 @@ func (s *Store) Get(ctx context.Context, id domain.ReservationID) (app.Versioned
 	return versioned(row)
 }
 
-// Update replaces the reservation if it is still at version read.
-func (s *Store) Update(ctx context.Context, r domain.Reservation, read app.Version, at time.Time) (app.Version, error) {
+// Update replaces the reservation if it is still at version read, and stores
+// its events, in one transaction.
+func (s *Store) Update(ctx context.Context, r domain.Reservation, events []domain.Event, read app.Version, at time.Time) (app.Version, error) {
 	attendees, err := int32Of(r.Attendees())
 	if err != nil {
 		return 0, err
@@ -105,14 +117,27 @@ func (s *Store) Update(ctx context.Context, r domain.Reservation, read app.Versi
 	if err != nil {
 		return 0, err
 	}
-	version, err := s.queries.UpdateReservation(ctx, UpdateReservationParams{
-		StartsAt:    r.Period().Start,
-		EndsAt:      r.Period().End,
-		Attendees:   attendees,
-		Status:      status,
-		At:          at,
-		ID:          uuid.UUID(r.ID()),
-		ReadVersion: readVersion,
+	outboxed, err := outboxEvents(events, at)
+	if err != nil {
+		return 0, err
+	}
+	var version int32
+	err = pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
+		q := s.queries.WithTx(tx)
+		var err error
+		version, err = q.UpdateReservation(ctx, UpdateReservationParams{
+			StartsAt:    r.Period().Start,
+			EndsAt:      r.Period().End,
+			Attendees:   attendees,
+			Status:      status,
+			At:          at,
+			ID:          uuid.UUID(r.ID()),
+			ReadVersion: readVersion,
+		})
+		if err != nil {
+			return err
+		}
+		return insertEvents(ctx, q, outboxed)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The reservation exists, because the use case read it: another

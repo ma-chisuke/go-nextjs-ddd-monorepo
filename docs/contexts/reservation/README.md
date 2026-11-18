@@ -28,7 +28,21 @@ The API has no authentication of its own, because only the private network reach
 
 ## Events
 
-None yet: the domain returns `ReservationConfirmed` and `ReservationCancelled` from each change, and nothing publishes them until milestone M2 adds the outbox (TPL-0013). Reservation subscribes to no event.
+Reservation publishes two integration events. [`contracts/events/reservation.asyncapi.yaml`](../../../contracts/events/reservation.asyncapi.yaml) describes them, and the JSON Schemas in [`contracts/events/reservation/`](../../../contracts/events/reservation/) define their data.
+
+| Event | When Reservation publishes it |
+|---|---|
+| `reservation.ReservationConfirmed.v1` | When a room is booked, and again each time the reservation is rescheduled, with the new period and attendees |
+| `reservation.ReservationCancelled.v1` | When a reservation is cancelled |
+
+- Each change of the domain returns its domain event, `ReservationConfirmed` or `ReservationCancelled`. The store turns it into the integration event, a CloudEvents envelope whose `subject` is the id of the reservation, and writes it to the table `outbox` in the transaction of the change (TPL-0013). So an event is stored if and only if its change commits. A refused change stores no event, and neither does a booking that comes again with its idempotency key.
+- The relay of the platform (`internal/platform/outbox`) reads the outbox in the order of the event ids, which is close to the order of the changes, hands each event to the broker, and then marks it as published. `NewRelay` in `module.go` builds it for a broker. Several relays can run at once, and each event goes to the one that takes it first.
+- Delivery is at least once. When a relay stops after it handed an event to the broker and before it marked the event, the event is published again, with the same `id`. Events of one reservation can also arrive out of order. A consumer records the `id` of each event that it handled, and looks at `time` when the order matters.
+- The relay deletes a published event from the outbox after a retention period, seven days by default.
+- No event is dropped silently. A domain event that has no integration event fails the change. An event of the outbox that cannot be read stays there and is logged as an error, and the relay goes on with the other events.
+- The tests check every integration event that the store makes against the JSON Schema of its type.
+
+Reservation subscribes to no event.
 
 ## Rules
 

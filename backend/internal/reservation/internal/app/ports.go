@@ -32,18 +32,24 @@ var (
 // the requests that booked them. It refuses two confirmed reservations of one
 // room whose periods overlap, even when two requests store them at the same
 // time.
+//
+// The store also keeps the events of each change, in the same transaction as
+// the change, so that an event is kept if and only if its change is: the
+// relay of the outbox publishes them afterwards (TPL-0013).
 type Store interface {
-	// Add stores a new reservation at version 1, together with the
-	// idempotency key of the request that booked it, all or nothing. It
-	// returns ErrOverlap or ErrKeyTaken when it refuses the reservation.
-	Add(ctx context.Context, r domain.Reservation, key IdempotencyKey, at time.Time) (Version, error)
+	// Add stores a new reservation at version 1, together with the events of
+	// its booking and the idempotency key of the request that booked it, all
+	// or nothing. It returns ErrOverlap or ErrKeyTaken when it refuses the
+	// reservation, and then keeps none of the events.
+	Add(ctx context.Context, r domain.Reservation, events []domain.Event, key IdempotencyKey, at time.Time) (Version, error)
 	// Get returns the reservation with the id, or ErrNotFound.
 	Get(ctx context.Context, id domain.ReservationID) (Versioned, error)
 	// Update replaces the reservation if the store holds it at version read,
-	// and returns the new version. It returns ErrVersionConflict when the
-	// reservation is at another version, and ErrOverlap when it refuses the
-	// new period.
-	Update(ctx context.Context, r domain.Reservation, read Version, at time.Time) (Version, error)
+	// stores the events of the change with it, all or nothing, and returns
+	// the new version. It returns ErrVersionConflict when the reservation is
+	// at another version, and ErrOverlap when it refuses the new period; then
+	// it keeps none of the events.
+	Update(ctx context.Context, r domain.Reservation, events []domain.Event, read Version, at time.Time) (Version, error)
 	// Overlaps reports whether a confirmed reservation of the room, other
 	// than except, overlaps the period.
 	Overlaps(ctx context.Context, room domain.RoomID, period domain.Period, except domain.ReservationID) (bool, error)

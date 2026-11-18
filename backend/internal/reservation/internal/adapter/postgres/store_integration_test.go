@@ -4,6 +4,7 @@ package postgres_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -13,6 +14,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/ma-chisuke/go-nextjs-ddd-monorepo/backend/internal/platform/event"
+	"github.com/ma-chisuke/go-nextjs-ddd-monorepo/backend/internal/platform/event/eventtest"
 	"github.com/ma-chisuke/go-nextjs-ddd-monorepo/backend/internal/platform/postgres/postgrestest"
 	"github.com/ma-chisuke/go-nextjs-ddd-monorepo/backend/internal/reservation/internal/adapter/postgres"
 	"github.com/ma-chisuke/go-nextjs-ddd-monorepo/backend/internal/reservation/internal/app"
@@ -26,14 +29,23 @@ var at = time.Date(2030, time.June, 3, 9, 0, 0, 0, time.UTC)
 // newStore returns the store over the real database, connected as the runtime
 // role of Reservation, and a room of its own for the test. Other tests run at
 // the same time and leave their rows, so a test looks only at its own room;
-// the rows of the room are deleted when the test ends.
+// the rows of the room, and their events, are deleted when the test ends.
 func newStore(t *testing.T) (store *postgres.Store, room domain.RoomID, pool *pgxpool.Pool) {
 	t.Helper()
 	pool = postgrestest.Open(t, "reservation")
 	room = domain.RoomID(newUUID(t))
+	deleteRoom(t, pool, room)
+	return postgres.NewStore(pool), room, pool
+}
+
+// deleteRoom deletes the reservations of the room and their events when the
+// test ends.
+func deleteRoom(t *testing.T, pool *pgxpool.Pool, room domain.RoomID) {
+	t.Helper()
 	t.Cleanup(func() {
 		ctx := context.Background()
 		for _, statement := range []string{
+			"DELETE FROM outbox WHERE payload #>> '{data,roomId}' = $1::uuid::text",
 			"DELETE FROM idempotency_keys WHERE reservation_id IN (SELECT id FROM reservations WHERE room_id = $1)",
 			"DELETE FROM reservations WHERE room_id = $1",
 		} {
@@ -42,7 +54,6 @@ func newStore(t *testing.T) (store *postgres.Store, room domain.RoomID, pool *pg
 			}
 		}
 	})
-	return postgres.NewStore(pool), room, pool
 }
 
 func newUUID(t *testing.T) uuid.UUID {
@@ -69,14 +80,91 @@ func confirmed(t *testing.T, room domain.RoomID, period domain.Period) (domain.R
 	return r, app.IdempotencyKey{Key: "key-" + id.String(), Fingerprint: "fp-" + id.String(), Reservation: id}
 }
 
+// bookedEvents returns the events of the booking of r at at.
+func bookedEvents(r domain.Reservation) []domain.Event {
+	return []domain.Event{domain.ReservationConfirmed{
+		Reservation: r.ID(), Room: r.Room(), Period: r.Period(), Attendees: r.Attendees(),
+		Organizer: r.Organizer(), OccurredAt: at,
+	}}
+}
+
 func add(t *testing.T, store *postgres.Store, room domain.RoomID, period domain.Period) domain.Reservation {
 	t.Helper()
 	r, key := confirmed(t, room, period)
-	if _, err := store.Add(t.Context(), r, key, at); err != nil {
+	if _, err := store.Add(t.Context(), r, bookedEvents(r), key, at); err != nil {
 		t.Fatal(err)
 	}
 	return r
 }
+
+// storedEvent is a row of the outbox.
+type storedEvent struct {
+	event.Envelope
+	createdAt time.Time
+	published bool
+}
+
+// storedEvents returns the events about the reservation that the outbox
+// holds, the oldest first. Each one is a valid envelope that matches its
+// contract, under the id and the type of its row.
+func storedEvents(t *testing.T, pool *pgxpool.Pool, id domain.ReservationID) []storedEvent {
+	t.Helper()
+	rows, err := pool.Query(t.Context(), `SELECT id, event_type, payload, created_at, published_at IS NOT NULL
+		FROM outbox WHERE payload ->> 'subject' = $1 ORDER BY id`, id.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var events []storedEvent
+	for rows.Next() {
+		var (
+			rowID     uuid.UUID
+			eventType string
+			payload   []byte
+			stored    storedEvent
+		)
+		if err := rows.Scan(&rowID, &eventType, &payload, &stored.createdAt, &stored.published); err != nil {
+			t.Fatal(err)
+		}
+		if stored.Envelope, err = event.Parse(payload); err != nil {
+			t.Fatalf("the outbox holds an event that does not parse: %v\n%s", err, payload)
+		}
+		eventtest.AssertMatchesContract(t, stored.Envelope)
+		if stored.ID != rowID || stored.Type != eventType {
+			t.Errorf("the row %s of type %s holds the event %s of type %s", rowID, eventType, stored.ID, stored.Type)
+		}
+		events = append(events, stored)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	return events
+}
+
+// wantEventTypes fails the test unless the outbox holds events of these
+// types about the reservation, in this order, none of them published yet,
+// and returns them.
+func wantEventTypes(t *testing.T, pool *pgxpool.Pool, id domain.ReservationID, types ...string) []storedEvent {
+	t.Helper()
+	events := storedEvents(t, pool, id)
+	got := make([]string, 0, len(events))
+	for _, e := range events {
+		got = append(got, e.Type)
+		if e.published {
+			t.Errorf("the event %s is published already", e.ID)
+		}
+	}
+	if fmt.Sprint(got) != fmt.Sprint(types) {
+		t.Errorf("the outbox holds the events %v about the reservation %s, want %v", got, id, types)
+	}
+	return events
+}
+
+// The types of the events of Reservation.
+const (
+	typeConfirmed = "reservation.ReservationConfirmed.v1"
+	typeCancelled = "reservation.ReservationCancelled.v1"
+)
 
 func TestStoreKeepsReservations(t *testing.T) {
 	t.Parallel()
@@ -84,7 +172,7 @@ func TestStoreKeepsReservations(t *testing.T) {
 	ctx := t.Context()
 
 	r, key := confirmed(t, room, hours(10, 11))
-	version, err := store.Add(ctx, r, key, at)
+	version, err := store.Add(ctx, r, bookedEvents(r), key, at)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,14 +204,14 @@ func TestStoreKeepsReservations(t *testing.T) {
 	}
 
 	// A change names the version it read, and counts.
-	cancelled, _, err := got.Reservation.Cancel(at)
+	cancelled, events, err := got.Reservation.Cancel(at)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.Update(ctx, cancelled, 2, at); !errors.Is(err, app.ErrVersionConflict) {
+	if _, err := store.Update(ctx, cancelled, events, 2, at); !errors.Is(err, app.ErrVersionConflict) {
 		t.Errorf("got %v for a change of version 2, want app.ErrVersionConflict", err)
 	}
-	version, err = store.Update(ctx, cancelled, 1, at)
+	version, err = store.Update(ctx, cancelled, events, 1, at)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,23 +223,92 @@ func TestStoreKeepsReservations(t *testing.T) {
 	}
 }
 
+// The events of a change are stored with it, in its transaction, and wait in
+// the outbox for the relay. A change that the store refuses stores none.
+func TestStoreKeepsTheEventsOfEachChange(t *testing.T) {
+	t.Parallel()
+	store, room, pool := newStore(t)
+	ctx := t.Context()
+
+	r, key := confirmed(t, room, hours(10, 11))
+	if _, err := store.Add(ctx, r, bookedEvents(r), key, at); err != nil {
+		t.Fatal(err)
+	}
+	booked := wantEventTypes(t, pool, r.ID(), typeConfirmed)
+	if len(booked) == 1 && (!booked[0].createdAt.Equal(at) || !booked[0].Time.Equal(at)) {
+		t.Errorf("the event of the booking was created at %s and happened at %s, want both at %s", booked[0].createdAt, booked[0].Time, at)
+	}
+
+	// A rescheduling confirms the reservation again, with its new terms.
+	room8 := domain.Room{ID: room, Capacity: 8, Hours: domain.OpeningHours{Closes: domain.NewTimeOfDay(23, 0)}}
+	moved, events, err := r.Reschedule(room8, hours(12, 13), 6, at)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Update(ctx, moved, events, 1, at); err != nil {
+		t.Fatal(err)
+	}
+	cancelled, events, err := moved.Cancel(at)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A change of a version that is gone stores no event.
+	if _, err := store.Update(ctx, cancelled, events, 1, at); !errors.Is(err, app.ErrVersionConflict) {
+		t.Errorf("got %v for a change of version 1, want app.ErrVersionConflict", err)
+	}
+	if _, err := store.Update(ctx, cancelled, events, 2, at); err != nil {
+		t.Fatal(err)
+	}
+	stored := wantEventTypes(t, pool, r.ID(), typeConfirmed, typeConfirmed, typeCancelled)
+	if len(stored) == 3 {
+		var data struct {
+			StartsAt  time.Time `json:"startsAt"`
+			Attendees int       `json:"attendees"`
+		}
+		if err := json.Unmarshal(stored[1].Data, &data); err != nil {
+			t.Fatal(err)
+		}
+		if !data.StartsAt.Equal(hours(12, 13).Start) || data.Attendees != 6 {
+			t.Errorf("the rescheduling published %s, want the new period and attendees", stored[1].Data)
+		}
+	}
+
+	// A domain event that has no integration event fails the change, which
+	// stores nothing.
+	other, otherKey := confirmed(t, room, hours(15, 16))
+	if _, err := store.Add(ctx, other, []domain.Event{nil}, otherKey, at); err == nil {
+		t.Error("the store added a reservation with an event that has no integration event")
+	}
+	if _, err := store.Get(ctx, other.ID()); !errors.Is(err, app.ErrNotFound) {
+		t.Errorf("got %v, want no reservation", err)
+	}
+	if _, err := store.Update(ctx, cancelled, []domain.Event{nil}, 3, at); err == nil {
+		t.Error("the store changed a reservation with an event that has no integration event")
+	}
+	if got, _ := store.Get(ctx, r.ID()); got.Version != 3 {
+		t.Errorf("the reservation is at version %d, want 3: the failed change changed it", got.Version)
+	}
+}
+
 func TestStoreRefusesOverlaps(t *testing.T) {
 	t.Parallel()
-	store, room, _ := newStore(t)
+	store, room, pool := newStore(t)
 	ctx := t.Context()
 	first := add(t, store, room, hours(10, 12))
 
 	overlapping, key := confirmed(t, room, hours(11, 13))
-	if _, err := store.Add(ctx, overlapping, key, at); !errors.Is(err, app.ErrOverlap) {
+	if _, err := store.Add(ctx, overlapping, bookedEvents(overlapping), key, at); !errors.Is(err, app.ErrOverlap) {
 		t.Errorf("got %v, want app.ErrOverlap", err)
 	}
-	// The transaction stored nothing: neither the reservation nor its key.
+	// The transaction stored nothing: neither the reservation, nor its key,
+	// nor its event.
 	if _, err := store.Get(ctx, overlapping.ID()); !errors.Is(err, app.ErrNotFound) {
 		t.Errorf("got %v, want no reservation", err)
 	}
 	if _, err := store.FindKey(ctx, key.Key); !errors.Is(err, app.ErrNotFound) {
 		t.Errorf("got %v, want no idempotency key", err)
 	}
+	wantEventTypes(t, pool, overlapping.ID())
 	// One may end when the next starts.
 	add(t, store, room, hours(12, 13))
 	add(t, store, room, hours(9, 10))
@@ -167,20 +324,22 @@ func TestStoreRefusesOverlaps(t *testing.T) {
 	}
 
 	// A move onto another reservation is refused too.
-	moved, _, err := first.Reschedule(domain.Room{ID: room, Capacity: 8, Hours: domain.OpeningHours{Closes: domain.NewTimeOfDay(23, 0)}}, hours(10, 13), 4, at)
+	moved, events, err := first.Reschedule(domain.Room{ID: room, Capacity: 8, Hours: domain.OpeningHours{Closes: domain.NewTimeOfDay(23, 0)}}, hours(10, 13), 4, at)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.Update(ctx, moved, 1, at); !errors.Is(err, app.ErrOverlap) {
+	if _, err := store.Update(ctx, moved, events, 1, at); !errors.Is(err, app.ErrOverlap) {
 		t.Errorf("got %v, want app.ErrOverlap", err)
 	}
+	// The refused move stored no event: the booking is the only one.
+	wantEventTypes(t, pool, first.ID(), typeConfirmed)
 
 	// A cancelled reservation holds nothing.
-	cancelled, _, err := first.Cancel(at)
+	cancelled, events, err := first.Cancel(at)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.Update(ctx, cancelled, 1, at); err != nil {
+	if _, err := store.Update(ctx, cancelled, events, 1, at); err != nil {
 		t.Fatal(err)
 	}
 	add(t, store, room, hours(10, 12))
@@ -188,22 +347,23 @@ func TestStoreRefusesOverlaps(t *testing.T) {
 
 func TestStoreRefusesATakenKey(t *testing.T) {
 	t.Parallel()
-	store, room, _ := newStore(t)
+	store, room, pool := newStore(t)
 	ctx := t.Context()
 	_, key := confirmed(t, room, hours(10, 11))
 	first, _ := confirmed(t, room, hours(10, 11))
 	key.Reservation = first.ID()
-	if _, err := store.Add(ctx, first, key, at); err != nil {
+	if _, err := store.Add(ctx, first, bookedEvents(first), key, at); err != nil {
 		t.Fatal(err)
 	}
 	second, _ := confirmed(t, room, hours(14, 15))
 	key.Reservation = second.ID()
-	if _, err := store.Add(ctx, second, key, at); !errors.Is(err, app.ErrKeyTaken) {
+	if _, err := store.Add(ctx, second, bookedEvents(second), key, at); !errors.Is(err, app.ErrKeyTaken) {
 		t.Errorf("got %v, want app.ErrKeyTaken", err)
 	}
 	if _, err := store.Get(ctx, second.ID()); !errors.Is(err, app.ErrNotFound) {
 		t.Errorf("got %v, want no reservation: the key and the reservation are stored together or not at all", err)
 	}
+	wantEventTypes(t, pool, second.ID())
 }
 
 func TestStoreListsInPages(t *testing.T) {
@@ -214,10 +374,7 @@ func TestStoreListsInPages(t *testing.T) {
 		add(t, store, room, hours(h[0], h[1]))
 	}
 	other := domain.RoomID(newUUID(t))
-	t.Cleanup(func() {
-		_, _ = pool.Exec(context.Background(), "DELETE FROM idempotency_keys WHERE reservation_id IN (SELECT id FROM reservations WHERE room_id = $1)", uuid.UUID(other))
-		_, _ = pool.Exec(context.Background(), "DELETE FROM reservations WHERE room_id = $1", uuid.UUID(other))
-	})
+	deleteRoom(t, pool, other)
 	add(t, store, other, hours(10, 11))
 
 	list := func(q app.ListQuery) string {
@@ -263,7 +420,7 @@ func TestConcurrentBookingsOfOneSlot(t *testing.T) {
 		r, key := confirmed(t, room, hours(10, 11))
 		wg.Go(func() {
 			<-start
-			_, errs[i] = store.Add(t.Context(), r, key, at)
+			_, errs[i] = store.Add(t.Context(), r, bookedEvents(r), key, at)
 		})
 	}
 	close(start)
@@ -370,6 +527,7 @@ func TestRuntimeRolePrivileges(t *testing.T) {
 		"change a table":                      "ALTER TABLE reservations ADD COLUMN intruder integer",
 		"drop a table":                        "DROP TABLE idempotency_keys",
 		"empty a table":                       "TRUNCATE reservations",
+		"empty the outbox":                    "TRUNCATE outbox",
 		"create a table in the public schema": "CREATE TABLE public.intruder (id integer)",
 	}
 	for what, statement := range denied {
