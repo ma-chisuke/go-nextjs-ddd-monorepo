@@ -68,3 +68,17 @@ For each booking and each rescheduling, Reservation needs the capacity, the open
 - Facility's problem room-not-found becomes [unknown-room](../../problems/unknown-room.md). A failure of Facility, an answer that cannot be used, or no answer within 3 seconds becomes [facility-unavailable](../../problems/facility-unavailable.md), with `Retry-After`.
 - The command reads the base URL of Facility from `FACILITY_API_URL`.
 - The tests of the adapter run against a fake of Facility that validates each request of the adapter, and each answer that the fake gives, against Facility's API document. A change to that document that the adapter does not follow fails them.
+
+## Screens
+
+The frontend books rooms with the feature `frontend/src/features/reservation/`, which calls this API from the server of Next.js only (TPL-0014). It knows a room in its own words (`room.ts`): the page gets the room from Facility, and `frontend/src/app/_compose/` turns it into those words, as `adapter/facility` does here.
+
+| Page | What it shows | Operations |
+|---|---|---|
+| `/rooms/{roomId}` | The reservations of the room on one date in its time zone, with links to the dates around it, and the form that books the room on that date | `listReservations`, `bookRoom` |
+| `/reservations/{reservationId}` | The reservation with its room, and the forms that reschedule and cancel it while it is confirmed | `getReservation`, `rescheduleReservation`, `cancelReservation` |
+
+- A person reads and enters the period in the time zone of the room; `period.ts` turns it into the instants of the API, and says when the clocks of the zone skip a time.
+- The form that books sends an `Idempotency-Key` that the server of Next.js makes when it renders the form, and keeps it with a fingerprint of the booking that went out with it. The same booking, sent again, books once; another booking from the same form gets a new key (`booking.ts`).
+- The forms that reschedule and cancel send the version that the page showed in `If-Match`. On precondition-failed or reservation-cancelled, the page shows a notice and the reservation as it is now (`changes.ts`).
+- Each kind of problem that a person can act on has words of its own, at the field that it is about where there is one (`problems.ts`). Any other problem shows its title and detail as they are.
