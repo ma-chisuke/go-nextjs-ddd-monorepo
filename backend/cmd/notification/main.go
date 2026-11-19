@@ -6,11 +6,18 @@
 //
 //	DATABASE_URL      the PostgreSQL URL of the runtime role of Notification (required)
 //	EVENTS_QUEUE_URL  the URL of the SQS queue that holds the events for Notification (required)
-//	SMTP_ADDR         the host and port of the mail server, such as mailpit:1025 (required)
 //	MAIL_FROM         the address that the mail comes from, such as "Meeting rooms <rooms@example.com>" (required)
-//	AWS_REGION        the AWS region (required; ECS sets it)
+//	SMTP_ADDR         the host and port of an SMTP server, such as mailpit:1025 (default: none, and the mail
+//	                  goes through Amazon SES)
+//	AWS_REGION        the AWS region, of SQS and of SES (required; ECS sets it)
 //	HTTP_ADDR         the address of the health check (default ":8080")
 //	LOG_LEVEL         debug, info, warn, or error (default "info")
+//
+// The worker sends its mail over SMTP when SMTP_ADDR is set, as the local
+// environment does to Mailpit, and through Amazon SES when it is not, as in
+// AWS. Its log says at start which of the two it uses. With SES, a verified
+// identity of SES must cover MAIL_FROM, and the role of the task must allow
+// ses:SendEmail on that identity.
 //
 // The local environment also points the worker at AWS Emulator, with the
 // variables that package awsconfig describes.
@@ -43,8 +50,8 @@ func run(ctx context.Context, getenv func(string) string, stdout io.Writer) erro
 	env := config.NewReader(getenv)
 	databaseURL := env.Required("DATABASE_URL")
 	queueURL := env.Required("EVENTS_QUEUE_URL")
-	smtpAddr := env.Required("SMTP_ADDR")
 	mailFrom := env.Required("MAIL_FROM")
+	smtpAddr := env.Default("SMTP_ADDR", "")
 	addr := env.Default(httpserver.AddrVariable, httpserver.DefaultAddr)
 	logLevel := env.Default("LOG_LEVEL", "info")
 	if err := env.Err(); err != nil {
@@ -69,6 +76,7 @@ func run(ctx context.Context, getenv func(string) string, stdout io.Writer) erro
 		Logger:   logger,
 		Now:      time.Now,
 		SMTPAddr: smtpAddr,
+		AWS:      cfg,
 		MailFrom: mailFrom,
 	})
 	if err != nil {
