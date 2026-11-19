@@ -1,0 +1,9 @@
+The guide for running the system on a developer's machine, docs/guides/run-locally.md, never says how to read the log of a service. People ask about it.
+
+Add a section "Read the logs" to the guide, right after the section "See the mail". It should say:
+
+- `docker compose logs --follow <service>` shows the log of one service as it is written, for example `docker compose logs --follow reservation`.
+- The services write one JSON object per line, so `docker compose logs --no-log-prefix reservation | jq .` makes a log readable.
+- The names of the services are the ones that `docker compose ps` lists.
+
+Keep the style of the guide. Finish the change so that it is ready to be merged.
