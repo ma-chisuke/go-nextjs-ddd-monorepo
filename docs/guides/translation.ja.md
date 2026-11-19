@@ -187,5 +187,12 @@
 | end-to-end test | エンドツーエンドテスト |
 | scenario（エンドツーエンドテストの） | シナリオ |
 | headless mode（ブラウザーの） | ヘッドレスモード |
+| region（AWS の） | リージョン |
+| identity（Amazon SES の） | ID |
+| verify（Amazon SES の ID を） | 検証する |
+| sandbox（Amazon SES の） | サンドボックス |
+| throttling | スロットリング |
+| configuration set（Amazon SES の） | 設定セット |
+| bounce（メールの） | バウンス |
 
-<!-- i18n-source: translation.md sha256:d3833662ffd0dd64afae73e3c28682e794219dc9cdb7c3f07406be9123929436 -->
+<!-- i18n-source: translation.md sha256:5aa9aa32b802590203af6a07185da8a199d0d97dfdfb024f58735ae6b8f1641e -->

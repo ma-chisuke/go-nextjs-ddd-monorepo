@@ -187,3 +187,10 @@ Use these Japanese terms. The table grows when a new term appears; add the term 
 | end-to-end test | エンドツーエンドテスト |
 | scenario (of the end-to-end test) | シナリオ |
 | headless mode (of a browser) | ヘッドレスモード |
+| region (AWS) | リージョン |
+| identity (of Amazon SES) | ID |
+| verify (an identity of Amazon SES) | 検証する |
+| sandbox (of Amazon SES) | サンドボックス |
+| throttling | スロットリング |
+| configuration set (of Amazon SES) | 設定セット |
+| bounce (of a mail) | バウンス |
