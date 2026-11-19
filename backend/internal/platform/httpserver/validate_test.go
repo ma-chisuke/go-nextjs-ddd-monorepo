@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -75,5 +76,40 @@ func TestMethodNotAllowedNamesTheMethodsOfTheURL(t *testing.T) {
 		if got := rec.Header().Get("Content-Type"); got != problem.MediaType {
 			t.Errorf("%s /counts: got the content type %q, want a problem", method, got)
 		}
+	}
+}
+
+func TestWholeNumbersReachTheHandlerAsIntegers(t *testing.T) {
+	tests := []struct {
+		name   string
+		body   string
+		status int
+		// seen is what the handler reads; empty when it is the body as sent.
+		seen string
+	}{
+		{"an integer", `{"count": 4}`, http.StatusNoContent, ""},
+		{"a whole number with a fraction", `{"count": 4.0}`, http.StatusNoContent, `{"count":4}`},
+		{"a whole number with an exponent", `{"count": 1e3, "more": [2.50e1, 7]}`, http.StatusNoContent, `{"count":1000,"more":[25,7]}`},
+		{"a fraction where the document allows numbers", `{"count": 4, "ratio": 0.5, "label": "4.0"}`, http.StatusNoContent, ""},
+		{"a fraction where the document asks for an integer", `{"count": 4.5}`, http.StatusUnprocessableEntity, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var seen []byte
+			rec := serve(t, countsHandler(t, &seen), http.MethodPost, tt.body)
+			if rec.Code != tt.status {
+				t.Fatalf("got status %d, want %d\n%s", rec.Code, tt.status, rec.Body)
+			}
+			if tt.status != http.StatusNoContent {
+				return
+			}
+			want := tt.seen
+			if want == "" {
+				want = tt.body
+			}
+			if !bytes.Equal(seen, []byte(want)) {
+				t.Errorf("the handler read %s, want %s", seen, want)
+			}
+		})
 	}
 }
