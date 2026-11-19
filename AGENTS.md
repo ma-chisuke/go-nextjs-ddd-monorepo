@@ -46,6 +46,7 @@ The app directories appear as the milestones in the README add them.
 - **Decision records.** Do not edit `docs/adr/template/`. Record a new or changed decision in `docs/adr/ADR-NNNN-<slug>.md`. (TPL-0001)
 - **Generated files and lockfiles.** Do not edit them by hand. Change the source and run `make gen`, or use the package manager. After a change to a `schema.sql`, also run `make gen-db-docs` (needs Docker).
 - **Schemas.** Change only the `schema.sql` of a context; there are no migration files. Never add a line to `schema-changes.allow` on your own: letting a dangerous statement through is a decision of review. (TPL-0010)
+- **Scanner exceptions.** Never add an entry to `.trivyignore.yaml` on your own: accepting a finding of Trivy is a decision of review. Change the code so that the finding goes away, or stop and say so. (TPL-0024)
 - **Commits.** Conventional Commits, one purpose per commit. Do not skip hooks.
 - **GitHub Actions.** After checkout and the setup of mise, a workflow step calls `make` and nothing else. Actions are pinned to a commit SHA. (TPL-0018, TPL-0024)
 - **Never** read `.env` files, force push, push to `main`, or apply infrastructure to prd.
