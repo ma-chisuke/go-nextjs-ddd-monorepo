@@ -124,7 +124,7 @@ Mailpit keeps the mail on a temporary file system, so the mail is gone when its 
 
 ## Look at the queues
 
-The template pins no AWS CLI. If you have one installed, point it at the emulator with the environment that `tools/scripts/aws.sh` prints:
+`mise.toml` pins the command-line tool of AWS, `aws`, for the deployment. Point it at the emulator with the environment that `tools/scripts/aws.sh` prints, in a shell in which mise is active (or put `mise exec --` before each command):
 
 ```sh
 eval "$(tools/scripts/aws.sh env)"
@@ -157,6 +157,8 @@ AWS Emulator keeps its state in memory, and makes a new CA at every start. After
 `make up` does both steps when it starts the emulator anew. After the emulator restarts in any other way, such as `docker compose restart aws`, run them by hand.
 Events wait in the outbox meanwhile, so none is lost; the relay publishes them once it can.
 `make aws-server` starts the emulator alone, without the other services, and copies its CA. The tests use it: `make test-integration`, `make smoke`, and `make e2e` start the emulator before they run.
+
+`make rehearse-infra`, part of `make check-all`, uses the same emulator for another purpose: it applies the units of stg to it and plans those of prd against them ([Deploy to AWS](deploy.md#without-an-aws-account)). It works in the Region `ap-northeast-1`, while the local system lives in `us-east-1`, and the queues and buses of one Region are apart from those of another, so the rehearsal leaves the local system alone. What it creates stays in the emulator until the emulator restarts.
 
 ## Run an API from its source
 
@@ -235,4 +237,4 @@ No Renovate rule updates the version of AWS Emulator yet (TPL-0017), so the upda
 
 1. Find the new version in the list that the comment at the top of the Dockerfile names.
 2. Change `EMULATOR_VERSION`, and the two checksums `EMULATOR_SHA256_ARM64` and `EMULATOR_SHA256_AMD64`. `curl --location <URL of the package> | shasum -a 256` gives the checksum of each package, the one for `aarch64` and the one for `x86_64`. The URL of a package is in the `RUN` instruction of the Dockerfile.
-3. Run `make up`, which builds the image and recreates the container of the emulator, and `CHECK_SCOPE=changed make check-all`. The integration tests of `platform/awsevents` and `make smoke` show whether the new version still does what the template relies on. The build fails when the package does not match its checksum or the signature of AWS.
+3. Run `make up`, which builds the image and recreates the container of the emulator, and `CHECK_SCOPE=changed make check-all`. The integration tests of `platform/awsevents` and of `notification/internal/adapter/ses`, `make smoke`, and `make rehearse-infra` show whether the new version still does what the template relies on. The build fails when the package does not match its checksum or the signature of AWS.

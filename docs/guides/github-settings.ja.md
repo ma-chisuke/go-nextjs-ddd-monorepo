@@ -3,7 +3,7 @@
 このリポジトリの決まりには、ファイルではなく GitHub 上のリポジトリの設定にあるものがある。
 CI が `main` を守れるのはルールセットが CI のチェックを必須にしている場合だけであり、Renovate が更新をマージできるのはリポジトリが自動マージを許している場合だけである。
 スクリプト `tools/github/apply-settings.sh` がこれらの設定を書き込む。設定をスクリプトに置くことで、プルリクエストでレビューでき、いつでも適用し直せる。
-このガイドは、スクリプトの実行方法、各設定の意味、スクリプトにはできない2つの作業（リリース用の App と Renovate の App）を説明する。
+このガイドは、スクリプトの実行方法、各設定の意味、スクリプトにはできない作業（リリース用の App、デプロイの環境、Renovate の App）を説明する。
 
 ## 設定を適用する
 
@@ -104,6 +104,28 @@ App ができるまで、リリースのワークフローは実行されない�
 - 互換性を壊す変更（`feat!:` や `BREAKING CHANGE:` のフッター）は、バージョンが 1.0.0 未満のあいだはマイナーバージョンを、それ以降はメジャーバージョンを上げる。
 - リリースノートに載るのは `feat`、`fix`、`perf`、`revert`、`build`、`ci`、`docs` である。`refactor`、`test`、`style`、`chore` は載らず、これらだけからなるリリースは作られない。
 
+## デプロイの環境を用意する
+
+ワークフロー `Plan` と `Deploy` は、stg と prd の AWS アカウントに届く（TPL-0018）。これらには、GitHub の環境2つと、リポジトリの変数5つが要る。スクリプトは、これらを設定も比較もしない。[AWS にデプロイする](deploy.ja.md#アカウントを準備する)のとおりにアカウントを準備したら、手で設定する。ロールの変数を設定するまで、それを使うジョブはスキップされる。
+
+| 設定 | 値 | 理由 |
+|---|---|---|
+| 環境 `stg` | デプロイできるブランチ：`main` だけ | stg のロール `github-deploy` は、この環境のジョブだけを信頼する。そのため、デプロイするのは `main` へのマージだけである。 |
+| 環境 `prd` | デプロイできるブランチ：`main` だけ。必須のレビュー担当者：1人以上 | prd のジョブは、その人が承認するまで待つ。 |
+| 変数 `AWS_REGION` | 環境のリージョン。たとえば `ap-northeast-1` | どのジョブも、そこで AWS にサインインする。 |
+| 変数 `AWS_PLAN_ROLE_ARN_STG` と `AWS_PLAN_ROLE_ARN_PRD` | 各アカウントのロール `github-plan` の ARN。`make infra-bootstrap` が表示する | `Plan` のジョブがこれを引き受ける。 |
+| 変数 `AWS_DEPLOY_ROLE_ARN_STG` と `AWS_DEPLOY_ROLE_ARN_PRD` | 各アカウントのロール `github-deploy` の ARN | `Deploy` のジョブがこれを引き受ける。 |
+
+環境は **Settings** > **Environments** で作り、変数は `gh` で設定する。
+
+```sh
+gh variable set AWS_REGION --body ap-northeast-1
+gh variable set AWS_PLAN_ROLE_ARN_STG --body '<ARN of github-plan in stg>'
+gh variable set AWS_DEPLOY_ROLE_ARN_STG --body '<ARN of github-deploy in stg>'
+```
+
+これらの変数はシークレットではない。ARN は何の権限も与えず、どのジョブがロールを引き受けられるかは、各ロールの信頼ポリシーが決める。
+
 ## Renovate を入れる
 
 リポジトリに [Renovate の GitHub App](https://github.com/apps/renovate) をインストールする。
@@ -119,8 +141,12 @@ Renovate は `mise.toml` と一緒に `mise.lock` も更新する。
 Renovate のプルリクエストが `mise.toml` を変えて `mise.lock` を変えていないと、CI で `make setup` が失敗する。
 その場合は、そのプルリクエストのブランチをチェックアウトし、`make tools-lock` を実行して、結果をプッシュする。
 
+Renovate は、`infra/live/providers.hcl` の Terraform の provider も更新する。`infra/local/` のものと一緒に、1つのプルリクエストにまとめる（グループ `Terraform providers`）。
+Renovate は `infra/live/providers.lock.hcl` を書かない。そのため、そのブランチでは Terragrunt の実行がどれも失敗し、CI の `validate-live` も失敗する。
+そのブランチをチェックアウトし、`make infra-lock` を実行して、結果をプッシュする。
+
 pnpm と uv は、リリースから3日たっていないバージョンを拒む。今日リリースされたセキュリティの修正も例外ではない。
 そうした修正をすぐ取り込むには、そのパッケージを `pnpm-workspace.yaml`（`minimumReleaseAgeExclude`）か `pyproject.toml`（`exclude-newer-package`）で決まりから外す。
 リリースから3日たったら、その例外を消す。
 
-<!-- i18n-source: github-settings.md sha256:e5ba7c742614febc7a5f7df0afbcbc22e8eff8b07795869945fa8de631c3e606 -->
+<!-- i18n-source: github-settings.md sha256:96d5c29c7676ddb2d7b5d5bee1544dd931cdd6b66ed667d9c76d59e1706a1afc -->
