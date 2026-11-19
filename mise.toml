@@ -41,6 +41,10 @@ terragrunt = "1.2.2"
 tflint = "0.66.0"
 terraform-docs = "0.25.1"
 
+# AWS: the deployment pushes images to Amazon ECR and runs the task that
+# prepares the database (tools/scripts/infra.sh)
+aws-cli = "2.41.0"
+
 # SQL: lint, typed queries, declarative schema, and schema documents
 "github:sbdchd/squawk" = "2.73.0"
 "aqua:sqlc-dev/sqlc" = "1.31.1"

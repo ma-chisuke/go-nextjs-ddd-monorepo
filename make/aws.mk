@@ -17,12 +17,13 @@ AWS_SOURCES := "infra/local/*" "infra/modules/*" "tools/scripts/aws.sh"
 # in scope concerns a check that uses it, so a change to the documents alone
 # builds no image.
 aws-server:
-	@$(TASK) $@ 'if [ -n "$$($(FILES) $(GO_GLOBS) "*.sql" $(STACK_SOURCES) $(AWS_SOURCES))" ]; then $(AWS) server; fi'
+	@$(TASK) $@ 'if [ -n "$$($(FILES) $(GO_GLOBS) "*.sql" $(STACK_SOURCES) $(AWS_SOURCES) $(LIVE_SOURCES))" ]; then $(AWS) server; fi'
 
 aws-apply: ## Create the event bus and the queues in the running AWS Emulator
 	@$(AWS) apply
 
 # The adapters for EventBridge and SQS run against the emulator in the tests
 # behind the build tag `integration` (make/db.mk), and the smoke test and the
-# end-to-end test send their events through it (make/stack.mk).
-test-integration smoke e2e: | aws-server
+# end-to-end test send their events through it (make/stack.mk). The rehearsal
+# of an environment applies its units to the emulator (make/infra.mk).
+test-integration smoke e2e rehearse-infra: | aws-server

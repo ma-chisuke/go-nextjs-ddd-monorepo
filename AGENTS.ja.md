@@ -27,7 +27,7 @@
 | `frontend/` | Next.js。文脈ごとに `src/features/<context>/` を置く。変える前に [frontend/AGENTS.ja.md](frontend/AGENTS.ja.md) を読む。 |
 | `contracts/` | `http/` に OpenAPI の文書、`events/` に AsyncAPI の文書と各イベントの JSON Schema。生成コードと契約のテストの元になる。 |
 | `db/` | データベースの初期設定。 |
-| `infra/` | Terraform。`modules/` と、それらを AWS Emulator に適用する `local/`。Terragrunt はデプロイとともに加わる。 |
+| `infra/` | Terraform。`modules/`、Terragrunt が実行する stg と prd のユニットを置く `live/`（[ガイド](docs/guides/deploy.ja.md)）、ローカルのシステムのためにモジュールを AWS Emulator に適用する `local/`。 |
 | `tools/` | このリポジトリのチェックと生成器（Go のモジュールとスクリプト）。 |
 | `make/` | make のターゲット。分野ごとに1ファイル。 |
 | `docs/adr/` | 決定の記録。`template/` はテンプレートのもの。 |
@@ -48,7 +48,8 @@
 - **スキーマ。** 変えるのは文脈の `schema.sql` だけであり、マイグレーションのファイルはない。`schema-changes.allow` に自分の判断で行を足さない。危険な SQL 文を通すかどうかは、レビューで決めることである。（TPL-0010）
 - **スキャナーの例外。** `.trivyignore.yaml` に自分の判断で項目を足さない。Trivy の指摘を認めるかどうかは、レビューで決めることである。指摘がなくなるようにコードを変えるか、作業を止めて報告する。（TPL-0024）
 - **コミット。** Conventional Commits に従い、1つのコミットの目的は1つにする。フックを飛ばさない。
-- **GitHub Actions。** ワークフローのステップは、チェックアウトと mise の準備のあとは `make` だけを呼ぶ。Action はコミット SHA で固定する。（TPL-0018、TPL-0024）
+- **GitHub Actions。** ワークフローのステップは、チェックアウト、mise の準備、AWS へのサインインのあとは `make` だけを呼ぶ。Action はコミット SHA で固定する。（TPL-0018、TPL-0024）
+- **環境。** `infra/live/stg/` と `infra/live/prd/` の違いは `env.hcl` だけである。ユニットは `infra/live/_units/` で、両方の環境について変える。（TPL-0015）
 - **禁止。** `.env` を読まない。force push をしない。`main` に push しない。prd にインフラを適用しない。
 
-<!-- i18n-source: AGENTS.md sha256:a35c1bf3c23a04a71f521aff62d943c77fa5851078da1846dac0baab65679025 -->
+<!-- i18n-source: AGENTS.md sha256:c6e0d0db09c59dda45d810055ffb598af3c32078688630e4e734fc81f3509e56 -->

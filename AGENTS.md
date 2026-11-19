@@ -27,7 +27,7 @@ The reason for a rule is in the decision record that the rule cites ([docs/adr/]
 | `frontend/` | Next.js. `src/features/<context>/` per bounded context. Read [frontend/AGENTS.md](frontend/AGENTS.md) before you change it. |
 | `contracts/` | OpenAPI documents in `http/`; AsyncAPI documents and the JSON Schema of each event in `events/`. The source of generated code and of the contract tests. |
 | `db/` | Database bootstrap. |
-| `infra/` | Terraform: `modules/`, and `local/`, which applies them to AWS Emulator. Terragrunt arrives with the deployment. |
+| `infra/` | Terraform: `modules/`; `live/`, the units of stg and prd that Terragrunt runs ([guide](docs/guides/deploy.md)); and `local/`, which applies modules to AWS Emulator for the local system. |
 | `tools/` | Checks and generators of this repository (Go module, scripts). |
 | `make/` | One file of make targets per area. |
 | `docs/adr/` | Decision records. `template/` belongs to the template. |
@@ -48,5 +48,6 @@ The app directories appear as the milestones in the README add them.
 - **Schemas.** Change only the `schema.sql` of a context; there are no migration files. Never add a line to `schema-changes.allow` on your own: letting a dangerous statement through is a decision of review. (TPL-0010)
 - **Scanner exceptions.** Never add an entry to `.trivyignore.yaml` on your own: accepting a finding of Trivy is a decision of review. Change the code so that the finding goes away, or stop and say so. (TPL-0024)
 - **Commits.** Conventional Commits, one purpose per commit. Do not skip hooks.
-- **GitHub Actions.** After checkout and the setup of mise, a workflow step calls `make` and nothing else. Actions are pinned to a commit SHA. (TPL-0018, TPL-0024)
+- **GitHub Actions.** After checkout, the setup of mise, and the sign-in to AWS, a workflow step calls `make` and nothing else. Actions are pinned to a commit SHA. (TPL-0018, TPL-0024)
+- **Environments.** `infra/live/stg/` and `infra/live/prd/` differ in `env.hcl` alone: change a unit in `infra/live/_units/`, for both. (TPL-0015)
 - **Never** read `.env` files, force push, push to `main`, or apply infrastructure to prd.

@@ -1,0 +1,103 @@
+# The deployment: stg after every merge that can change what an environment
+# runs, then prd (TPL-0014, TPL-0018). `make deploy` pushes the images whose
+# content changed, prepares the database, and applies every unit; a context
+# whose image did not change is left running (tools/scripts/infra.sh).
+#
+# A job signs in to the AWS account of its environment through the OIDC
+# provider of GitHub, as the role `github-deploy`, whose trust policy names
+# the GitHub Environment of the job (infra/modules/github-oidc). No key is
+# stored on GitHub. The Environment `prd` requires the approval of a
+# reviewer, so the job of prd waits for a person. Until the repository
+# variable with the ARN of the role of stg is set, nothing is deployed;
+# docs/guides/deploy.md says how to set an environment up.
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - infra/**
+      - backend/**
+      - frontend/**
+      - db/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - tools/scripts/infra.sh
+      - tools/scripts/images.sh
+      - tools/scripts/terraform-init.sh
+      - make/infra.mk
+      - mise.toml
+      - mise.lock
+      - .github/workflows/deploy.yml
+
+permissions: {}
+
+# One deployment at a time, in the order of the merges: a run waits for the
+# one before it, and is never cancelled half-way.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  # renovate: datasource=github-releases depName=jdx/mise extractVersion=^v(?<version>.+)$
+  MISE_VERSION: 2026.11.8
+
+jobs:
+  stg:
+    name: deploy stg
+    if: vars.AWS_DEPLOY_ROLE_ARN_STG != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: stg
+    permissions:
+      contents: read
+      id-token: write # the token that AWS exchanges for the credentials of the role
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Terraform, Terragrunt, and the AWS CLI
+        uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
+        with:
+          version: ${{ env.MISE_VERSION }}
+          install_args: terraform terragrunt aws-cli jq
+      - name: Sign in to the account of stg as the role that deploys
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN_STG }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: make deploy
+        run: make deploy ENV=stg
+
+  # prd gets what stg got: the same commit, after stg succeeded and a
+  # reviewer of the Environment approved.
+  prd:
+    name: deploy prd
+    needs: stg
+    if: vars.AWS_DEPLOY_ROLE_ARN_PRD != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: prd
+    permissions:
+      contents: read
+      id-token: write # the token that AWS exchanges for the credentials of the role
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Terraform, Terragrunt, and the AWS CLI
+        uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
+        with:
+          version: ${{ env.MISE_VERSION }}
+          install_args: terraform terragrunt aws-cli jq
+      - name: Sign in to the account of prd as the role that deploys
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN_PRD }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: make deploy
+        run: make deploy ENV=prd
