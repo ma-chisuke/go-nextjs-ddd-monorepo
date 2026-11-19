@@ -1,0 +1,17 @@
+# Findings of Trivy that are decisions, not mistakes (`make scan-config`).
+# An entry names one check, the files that it is allowed in, and the reason.
+# The check keeps failing everywhere else.
+#
+# Adding an entry is a decision of review: never add one to make a check
+# pass (AGENTS.md). Change the code so that the finding goes away, or bring
+# the case to a person.
+# https://trivy.dev/latest/docs/configuration/filtering/#trivyignoreyaml
+
+misconfigurations:
+  - id: AWS-0053
+    paths:
+      - infra/modules/web/main.tf
+    statement: >-
+      The load balancer of the web front end is the public entry of the
+      system (TPL-0014). It is the only one: the APIs of the contexts have no
+      load balancer.

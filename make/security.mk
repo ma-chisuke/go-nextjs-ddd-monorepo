@@ -19,8 +19,10 @@ TRIVY_SKIP := --skip-dirs .venv --skip-dirs .cache --skip-dirs .claude/worktrees
 # Dockerfile and Terraform misconfiguration, with the checks built into the
 # pinned Trivy binary: no network, and the same result everywhere. The cache of
 # its own keeps out a check bundle that an earlier `trivy` run downloaded.
+# .trivyignore.yaml lists the findings that review accepted, each for the
+# files that it names.
 scan-config:
-	@$(TASK) $@ 'trivy config $(TRIVY_REPORT) --cache-dir $(CURDIR)/.cache/trivy-config --skip-check-update --misconfig-scanners dockerfile,terraform $(TRIVY_SKIP) --skip-dirs node_modules --skip-dirs "**/node_modules" .'
+	@$(TASK) $@ 'trivy config $(TRIVY_REPORT) --cache-dir $(CURDIR)/.cache/trivy-config --skip-check-update --misconfig-scanners dockerfile,terraform --ignorefile .trivyignore.yaml $(TRIVY_SKIP) --skip-dirs node_modules --skip-dirs "**/node_modules" .'
 
 # Dependencies in every lockfile. Downloads the vulnerability database, so it
 # runs in check-all.
