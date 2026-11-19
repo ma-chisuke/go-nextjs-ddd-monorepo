@@ -958,6 +958,51 @@ EOF
   passes
 }
 
+case_validate_terraform__test() {
+  put infra/modules/plain/variables.tf << 'EOF'
+variable "name" {
+  description = "The name."
+  type        = string
+}
+EOF
+  put infra/modules/plain/main.tf << 'EOF'
+output "greeting" {
+  description = "The greeting."
+  value       = "hello ${var.name}"
+}
+EOF
+  put infra/modules/plain/tests/plain.tftest.hcl << 'EOF'
+variables {
+  name = "world"
+}
+
+run "greets" {
+  command = plan
+
+  assert {
+    condition     = output.greeting == "bye world"
+    error_message = "The greeting must greet."
+  }
+}
+EOF
+  fails 'infra/modules/plain/tests/plain.tftest.hcl:9: [terraform test] run "greets": Test assertion failed: The greeting must greet.'
+  put infra/modules/plain/tests/plain.tftest.hcl << 'EOF'
+variables {
+  name = "world"
+}
+
+run "greets" {
+  command = plan
+
+  assert {
+    condition     = output.greeting == "hello world"
+    error_message = "The greeting must greet."
+  }
+}
+EOF
+  passes
+}
+
 case_lint_sql() {
   put db/schema.sql << 'EOF'
 CREATE TABLE rooms (

@@ -20,7 +20,8 @@ TERRAFORM_DOCS := terraform-docs --config=$(CURDIR)/.terraform-docs.yml
 TERRAGRUNT_FMT := terragrunt hcl fmt --no-tips --log-custom-format "%msg"
 
 # The directories, among those of the files in scope, that hold a .tf file.
-tf-dirs = $(FILES) $(1) | xargs -r -n1 dirname | sort -u | while read -r d; do \
+# A test file, tests/*.tftest.hcl, counts for the module that it tests.
+tf-dirs = $(FILES) $(1) | xargs -r -n1 dirname | sed "s|/tests$$||" | sort -u | while read -r d; do \
 	if [ -n "$$(find "$$d" -maxdepth 1 -name "*.tf" -print -quit)" ]; then echo "$$d"; fi; done
 
 # Installs the tflint plugins that .tflint.hcl pins. Uses the GitHub API without
@@ -55,6 +56,8 @@ lint-terraform-docs:
 	@$(TASK) $@ '$(call tf-dirs,$(TF_DOCS_GLOBS)) | xargs -r -n1 $(TERRAFORM_DOCS) --output-check 2>&1 \
 		| sed -E "s|^Error: (.*) is out of date$$|\1:1: [terraform-docs] the generated section is out of date. Fix: make gen|"'
 
-# Needs `terraform init`, which downloads the providers.
+# `terraform validate`, then the tests of the module (`terraform test` on
+# tests/*.tftest.hcl), which plan against a mock of the AWS provider. Needs
+# `terraform init`, which downloads the providers.
 validate-terraform:
 	@$(TASK) $@ '$(call tf-dirs,$(TF_GLOBS)) | xargs -r tools/scripts/terraform-validate.sh'
