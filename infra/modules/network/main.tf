@@ -1,19 +1,32 @@
 # The network of one environment (TPL-0015): a VPC with three kinds of subnet
 # in each Availability Zone.
 #
-#   public     the load balancer of the web front end, and the NAT gateways
-#   private    the tasks of the contexts and of the web front end; they reach
-#              the internet through a NAT gateway and are not reachable from it
-#   database   the Aurora cluster; no route leaves the VPC
+#   public     the load balancer of the web front end
+#   private    the tasks of the contexts and of the web front end
+#   database   the Aurora cluster
 #
 # Only what sits in a public subnet can be reached from the internet, so the
 # APIs of the contexts stay private by where they run (TPL-0014).
+#
+# By default nothing in the private subnets can reach the internet either.
+# The tasks reach the AWS services that they call through VPC endpoints (AWS
+# PrivateLink), so their traffic stays inside the VPC, and their security
+# groups allow no address outside it. A NAT gateway is there for the team
+# whose context calls a service outside AWS (var.nat_gateways).
 
 locals {
   zones = { for index, zone in var.availability_zones : zone => index }
 
   # The zones whose public subnet holds a NAT gateway.
-  nat_zones = var.single_nat_gateway ? { (var.availability_zones[0]) = 0 } : local.zones
+  nat_zones = {
+    none     = {}
+    single   = { (var.availability_zones[0]) = 0 }
+    per-zone = local.zones
+  }[var.nat_gateways]
+
+  # The zones whose private subnet holds a network interface of each
+  # interface endpoint.
+  endpoint_zones = var.interface_endpoints_in_every_zone ? var.availability_zones : [var.availability_zones[0]]
 }
 
 data "aws_region" "current" {}
@@ -114,32 +127,9 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-resource "aws_eip" "nat" {
-  for_each = local.nat_zones
-
-  domain = "vpc"
-
-  tags = {
-    Name = "${var.environment}-nat-${each.key}"
-  }
-}
-
-resource "aws_nat_gateway" "this" {
-  for_each = local.nat_zones
-
-  allocation_id = aws_eip.nat[each.key].id
-  subnet_id     = aws_subnet.public[each.key].id
-
-  tags = {
-    Name = "${var.environment}-${each.key}"
-  }
-
-  # A NAT gateway needs the internet gateway of its VPC.
-  depends_on = [aws_internet_gateway.this]
-}
-
 # One route table for each zone, so that each zone can use the NAT gateway of
-# its own zone when there is one.
+# its own zone when there is one. Without a NAT gateway, a private subnet has
+# the local route and the route to Amazon S3 alone.
 resource "aws_route_table" "private" {
   for_each = local.zones
 
@@ -148,14 +138,6 @@ resource "aws_route_table" "private" {
   tags = {
     Name = "${var.environment}-private-${each.key}"
   }
-}
-
-resource "aws_route" "private_internet" {
-  for_each = local.zones
-
-  route_table_id         = aws_route_table.private[each.key].id
-  destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = aws_nat_gateway.this[var.single_nat_gateway ? var.availability_zones[0] : each.key].id
 }
 
 resource "aws_route_table_association" "private" {
@@ -181,9 +163,11 @@ resource "aws_route_table_association" "database" {
   route_table_id = aws_route_table.database.id
 }
 
-# The layers of a container image come from Amazon S3. A gateway endpoint
-# costs nothing and keeps that traffic off the NAT gateway, which charges for
-# every gigabyte.
+# Endpoints -----------------------------------------------------------------
+
+# The layers of a container image come from Amazon S3, through a gateway
+# endpoint, which costs nothing. A security group names Amazon S3 by the
+# prefix list of this endpoint.
 resource "aws_vpc_endpoint" "s3" {
   vpc_id            = aws_vpc.this.id
   service_name      = "com.amazonaws.${data.aws_region.current.region}.s3"
@@ -193,6 +177,79 @@ resource "aws_vpc_endpoint" "s3" {
   tags = {
     Name = "${var.environment}-s3"
   }
+}
+
+# The interface endpoints accept HTTPS from inside the VPC. A task reaches
+# them when its own security group allows HTTPS to this group.
+resource "aws_security_group" "endpoints" {
+  name        = "${var.environment}-endpoints"
+  description = "The interface endpoints of the AWS services."
+  vpc_id      = aws_vpc.this.id
+
+  tags = {
+    Name = "${var.environment}-endpoints"
+  }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "endpoints_https" {
+  security_group_id = aws_security_group.endpoints.id
+  description       = "HTTPS from inside the VPC."
+  cidr_ipv4         = aws_vpc.this.cidr_block
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+}
+
+# With private DNS, the usual name of a service, such as
+# logs.<region>.amazonaws.com, resolves to the endpoint inside the VPC, so
+# the SDKs and the ECS agent need no setting.
+resource "aws_vpc_endpoint" "interface" {
+  for_each = var.interface_endpoints
+
+  vpc_id              = aws_vpc.this.id
+  service_name        = "com.amazonaws.${data.aws_region.current.region}.${each.key}"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = [for zone in local.endpoint_zones : aws_subnet.private[zone].id]
+  security_group_ids  = [aws_security_group.endpoints.id]
+  private_dns_enabled = true
+
+  tags = {
+    Name = "${var.environment}-${each.key}"
+  }
+}
+
+# NAT gateways (optional) ---------------------------------------------------
+
+resource "aws_eip" "nat" {
+  for_each = local.nat_zones
+
+  domain = "vpc"
+
+  tags = {
+    Name = "${var.environment}-nat-${each.key}"
+  }
+}
+
+resource "aws_nat_gateway" "this" {
+  for_each = local.nat_zones
+
+  allocation_id = aws_eip.nat[each.key].id
+  subnet_id     = aws_subnet.public[each.key].id
+
+  tags = {
+    Name = "${var.environment}-${each.key}"
+  }
+
+  # A NAT gateway needs the internet gateway of its VPC.
+  depends_on = [aws_internet_gateway.this]
+}
+
+resource "aws_route" "private_internet" {
+  for_each = var.nat_gateways == "none" ? {} : local.zones
+
+  route_table_id         = aws_route_table.private[each.key].id
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = aws_nat_gateway.this[var.nat_gateways == "single" ? var.availability_zones[0] : each.key].id
 }
 
 # Flow logs -----------------------------------------------------------------

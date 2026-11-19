@@ -22,3 +22,13 @@ output "database_subnet_ids" {
   description = "The IDs of the database subnets, one for each zone, in the order of the zones: for the Aurora cluster."
   value       = [for zone in var.availability_zones : aws_subnet.database[zone].id]
 }
+
+output "endpoints_security_group_id" {
+  description = "The ID of the security group of the interface endpoints. A task reaches the AWS services when its security group allows HTTPS to this group."
+  value       = aws_security_group.endpoints.id
+}
+
+output "s3_prefix_list_id" {
+  description = "The ID of the prefix list of Amazon S3 in this Region. A task pulls the layers of its image when its security group allows HTTPS to this prefix list."
+  value       = aws_vpc_endpoint.s3.prefix_list_id
+}
