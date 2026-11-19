@@ -5,7 +5,7 @@ output "endpoint" {
 
 output "port" {
   description = "The port of PostgreSQL."
-  value       = aws_rds_cluster.this.port
+  value       = local.port
 }
 
 output "database_name" {

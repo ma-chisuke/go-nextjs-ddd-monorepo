@@ -190,7 +190,7 @@ resource "aws_secretsmanager_secret_version" "role" {
   secret_string_wo = jsonencode({
     username = each.value.name
     password = ephemeral.random_password.role[each.key].result
-    url      = "postgres://${each.value.name}:${ephemeral.random_password.role[each.key].result}@${aws_rds_cluster.this.endpoint}:${aws_rds_cluster.this.port}/${var.database_name}?sslmode=require"
+    url      = "postgres://${each.value.name}:${ephemeral.random_password.role[each.key].result}@${aws_rds_cluster.this.endpoint}:${local.port}/${var.database_name}?sslmode=require"
   })
   secret_string_wo_version = var.password_version
 }
@@ -330,7 +330,7 @@ locals {
     readonlyRootFilesystem = true
     environment = [
       { name = "PGHOST", value = aws_rds_cluster.this.endpoint },
-      { name = "PGPORT", value = tostring(aws_rds_cluster.this.port) },
+      { name = "PGPORT", value = tostring(local.port) },
       { name = "PGDATABASE", value = var.database_name },
       { name = "PGSSLMODE", value = "require" },
     ]
