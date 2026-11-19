@@ -323,15 +323,19 @@ func TestRescheduleReservation(t *testing.T) {
 		t.Errorf("got %+v, want version 3, from 12:00 to 14:00, with 6 attendees", moved)
 	}
 
-	// The version that the client read is the current one.
+	// The version that the client read is the current one. A change that
+	// names an older one is refused before the rules apply: the client reads
+	// the reservation again first.
+	tooMany := 9
 	_, err = f.uc.RescheduleReservation(t.Context(), app.RescheduleReservationInput{Reservation: id, Read: 2, Attendees: &attendees})
+	wantAppKind(t, err, app.KindVersionMismatch)
+	_, err = f.uc.RescheduleReservation(t.Context(), app.RescheduleReservationInput{Reservation: id, Read: 2, Attendees: &tooMany})
 	wantAppKind(t, err, app.KindVersionMismatch)
 	// Another reservation holds 14:00 to 15:00.
 	later := at(20, 15, 0)
 	_, err = f.uc.RescheduleReservation(t.Context(), app.RescheduleReservationInput{Reservation: id, Read: 3, End: &later})
 	wantAppKind(t, err, app.KindRoomAlreadyBooked)
 	// The rules of a booking apply.
-	tooMany := 9
 	_, err = f.uc.RescheduleReservation(t.Context(), app.RescheduleReservationInput{Reservation: id, Read: 3, Attendees: &tooMany})
 	wantDomainKind(t, err, domain.KindOverCapacity)
 	// A reservation that does not exist.
@@ -363,7 +367,8 @@ func TestChangeInARace(t *testing.T) {
 	t.Parallel()
 	store := &apptest.Store{}
 	ids := &apptest.IDs{}
-	booked, err := app.New(store, apptest.NewRooms(roomA), apptest.NewClock(now), ids).BookRoom(t.Context(), booking("k1", on(10, 11)))
+	uc := app.New(store, apptest.NewRooms(roomA), apptest.NewClock(now), ids)
+	booked, err := uc.BookRoom(t.Context(), booking("k1", on(10, 11)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -373,7 +378,21 @@ func TestChangeInARace(t *testing.T) {
 	attendees := 2
 	_, err = racing.RescheduleReservation(t.Context(), app.RescheduleReservationInput{Reservation: booked.Reservation.ID(), Read: 1, Attendees: &attendees})
 	wantAppKind(t, err, app.KindVersionMismatch)
-	wantEvents(t, store, confirmedEvent(booked.Reservation.ID(), on(10, 11), 4))
+
+	// The store refuses an overlapping period that the check of a
+	// rescheduling missed.
+	later, err := uc.BookRoom(t.Context(), booking("k2", on(12, 13)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	racing = app.New(&racingStore{Store: store}, apptest.NewRooms(roomA), apptest.NewClock(now), ids)
+	start := at(20, 10, 0)
+	_, err = racing.RescheduleReservation(t.Context(), app.RescheduleReservationInput{Reservation: later.Reservation.ID(), Read: 1, Start: &start})
+	wantAppKind(t, err, app.KindRoomAlreadyBooked)
+
+	wantEvents(t, store,
+		confirmedEvent(booked.Reservation.ID(), on(10, 11), 4),
+		confirmedEvent(later.Reservation.ID(), on(12, 13), 4))
 }
 
 func TestCancelReservation(t *testing.T) {
@@ -595,6 +614,25 @@ func TestFailuresOfTheStore(t *testing.T) {
 			wantEvents(t, f.store, confirmedEvent(booked.Reservation.ID(), on(10, 11), 4))
 		})
 	}
+}
+
+// A use case refuses a period that another reservation holds before it asks
+// the store to write anything: the check of overlaps gives the common case its
+// answer early, even when the write would fail.
+func TestOverlapsAreRefusedBeforeAWrite(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t)
+	f.book(t, "k1", on(10, 12))
+	later := f.book(t, "k2", on(12, 13))
+
+	uc := app.New(brokenStore{Store: f.store, broken: "Add"}, f.rooms, f.clock, &apptest.IDs{})
+	_, err := uc.BookRoom(t.Context(), booking("k3", on(11, 13)))
+	wantAppKind(t, err, app.KindRoomAlreadyBooked)
+
+	uc = app.New(brokenStore{Store: f.store, broken: "Update"}, f.rooms, f.clock, &apptest.IDs{})
+	start := at(20, 11, 0)
+	_, err = uc.RescheduleReservation(t.Context(), app.RescheduleReservationInput{Reservation: later.Reservation.ID(), Read: 1, Start: &start})
+	wantAppKind(t, err, app.KindRoomAlreadyBooked)
 }
 
 // The clock and the generator of ids can be plain functions, and a booking
