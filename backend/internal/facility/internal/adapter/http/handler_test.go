@@ -205,7 +205,11 @@ func TestRequestsOutsideTheDocument(t *testing.T) {
 	t.Parallel()
 	client := newClient(t)
 	wantProblem(t, client.Do(http.MethodGet, "/meeting-rooms", nil), "not-found", http.StatusNotFound)
-	wantProblem(t, client.Do(http.MethodDelete, "/rooms", nil), "method-not-allowed", http.StatusMethodNotAllowed)
+	res := client.Do(http.MethodDelete, "/rooms", nil)
+	wantProblem(t, res, "method-not-allowed", http.StatusMethodNotAllowed)
+	if got, want := res.Header.Get("Allow"), "GET, POST"; got != want {
+		t.Errorf("got Allow %q, want %q", got, want)
+	}
 }
 
 func TestHealthCheck(t *testing.T) {

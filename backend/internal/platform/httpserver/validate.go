@@ -48,8 +48,15 @@ func ValidateRequests(doc *openapi3.T) (func(http.Handler) http.Handler, error) 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			route, pathParams, err := router.FindRoute(r)
+			if errors.Is(err, routers.ErrMethodNotAllowed) {
+				// A 405 names the methods that the URL has (RFC 9110,
+				// section 15.5.6).
+				w.Header().Set("Allow", strings.Join(allowedMethods(router, r), ", "))
+				problem.Write(w, problem.New(problem.MethodNotAllowed, ""))
+				return
+			}
 			if err != nil {
-				problem.Write(w, routeProblem(err))
+				problem.Write(w, problem.New(problem.NotFound, ""))
 				return
 			}
 			input := &openapi3filter.RequestValidationInput{
@@ -67,11 +74,23 @@ func ValidateRequests(doc *openapi3.T) (func(http.Handler) http.Handler, error) 
 	}, nil
 }
 
-func routeProblem(err error) *problem.Problem {
-	if errors.Is(err, routers.ErrMethodNotAllowed) {
-		return problem.New(problem.MethodNotAllowed, "")
+// methods are the methods that an operation of an API document can have.
+var methods = []string{
+	http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut, http.MethodPatch,
+	http.MethodDelete, http.MethodOptions, http.MethodTrace,
+}
+
+// allowedMethods returns the methods of the operations at the URL of r.
+func allowedMethods(router routers.Router, r *http.Request) []string {
+	var allowed []string
+	for _, method := range methods {
+		probe := r.WithContext(r.Context())
+		probe.Method = method
+		if _, _, err := router.FindRoute(probe); err == nil {
+			allowed = append(allowed, method)
+		}
 	}
-	return problem.New(problem.NotFound, "")
+	return allowed
 }
 
 // requestProblem turns the errors of the validator into one problem. A body

@@ -169,13 +169,17 @@ func (c *Client) send(req *http.Request) Response {
 
 // validate checks the response against the operation that the request
 // addressed. A request that addresses no operation has no documented
-// responses; its answer must still be a problem.
+// responses; its answer must still be a problem, and a 405 names the methods
+// that the URL has in Allow (RFC 9110, section 15.5.6).
 func (c *Client) validate(req *http.Request, res Response) {
 	c.t.Helper()
 	route, pathParams, err := c.router.FindRoute(req)
 	if err != nil {
 		if ct := res.Header.Get("Content-Type"); res.Status < 400 || ct != "application/problem+json" {
 			c.t.Errorf("apitest: %s %s addresses no operation, and the answer is %d %q, not a problem", req.Method, req.URL.Path, res.Status, ct)
+		}
+		if res.Status == http.StatusMethodNotAllowed && res.Header.Get("Allow") == "" {
+			c.t.Errorf("apitest: %s %s answered 405 without the header Allow", req.Method, req.URL.Path)
 		}
 		return
 	}
