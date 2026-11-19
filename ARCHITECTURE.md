@@ -1,6 +1,6 @@
 # Architecture
 
-The map of the product: its bounded contexts and their processes, the layers inside each, the frontend that shows them, the path of a request from a screen through an API, the path of an event, the database, and the checks that keep the structure in place.
+The map of the product: its bounded contexts and their processes, the layers inside each, the frontend that shows them, the path of a request from a screen through an API, the path of an event, the database, the environments in AWS, and the checks that keep the structure in place.
 The reasons are in the decision records ([docs/adr/](docs/adr/README.md)), and the procedures in the guides ([docs/guides/](docs/guides/)).
 
 ## Bounded contexts
@@ -14,7 +14,7 @@ flowchart LR
     notification["Notification<br/>supporting subdomain"]
     bus["EventBridge<br/>event bus contexts"]
     queue["SQS queue<br/>notification-events"]
-    mail["Mail server"]
+    mail["Mail<br/>Mailpit locally, Amazon SES in AWS"]
     db[("PostgreSQL 18<br/>a schema per context")]
     browser -- "pages and Server Functions" --> web
     web -- "reservation.openapi.yaml" --> reservation
@@ -23,7 +23,7 @@ flowchart LR
     reservation -- "events, through<br/>its outbox and relay" --> bus
     bus -- "the rule of Notification" --> queue
     queue --> notification
-    notification -- "SMTP" --> mail
+    notification -- "SMTP or SES" --> mail
     reservation -- "as reservation_runtime" --> db
     facility -- "as facility_runtime" --> db
     notification -- "as notification_runtime" --> db
@@ -45,17 +45,17 @@ flowchart LR
 
 Each process of a context runs from the image of its context, with the command of the context or one of its modes (TPL-0014). The frontend runs from an image of its own.
 
-| Context | Process | Command | Service in `compose.yaml` |
-|---|---|---|---|
-| Facility | The API | `facility` | `facility` |
-| Reservation | The API | `reservation` | `reservation` |
-| Reservation | The relay of its outbox, a worker | `reservation relay` | `reservation-relay` |
-| Notification | The consumer of its queue, a worker | `notification` | `notification` |
-| (none) | The frontend: the server of Next.js | `frontend/server.js`, the standalone server, on Node | `web` |
+| Context | Process | Command | Service in `compose.yaml` | ECS service in AWS |
+|---|---|---|---|---|
+| Facility | The API | `facility` | `facility` | `facility` |
+| Reservation | The API | `reservation` | `reservation` | `reservation` |
+| Reservation | The relay of its outbox, a worker | `reservation relay` | `reservation-relay` | `reservation-relay` |
+| Notification | The consumer of its queue, a worker | `notification` | `notification` | `notification-worker` |
+| (none) | The frontend: the server of Next.js | `frontend/server.js`, the standalone server, on Node | `web` | `web` |
 
 - `platform/httpserver.Main` runs the command of a context, a mode named by its argument (`httpserver.Mode`), or the health check (`<command> healthcheck`). A command reads its configuration from the environment, and the comment at the top of `backend/cmd/<context>/main.go` lists the variables.
 - An API runs on `platform/httpserver.Run`. A worker runs on `platform/httpserver.RunWorker`, which serves `GET /healthz` next to the work, so the health check of the image watches an API and a worker the same way. The health check of a worker says only that the process runs: a worker that cannot reach its database or its broker stays healthy, logs the failure, and tries again.
-- The relay and the worker read the configuration of the AWS SDK with `platform/awsconfig`: the region, and locally the endpoint of AWS Emulator and its CA (TPL-0017).
+- The relay and the worker read the configuration of the AWS SDK with `platform/awsconfig`: the region, and locally the endpoint of AWS Emulator and its CA (TPL-0017). In AWS, the SDK reaches the services at their usual names, which resolve to the VPC endpoints.
 - `frontend/Dockerfile` builds the image of the frontend: the standalone output of `next build` on distroless Node. The server reads the base URL of each API from `FACILITY_API_URL` and `RESERVATION_API_URL`. Its health check, `GET /healthz`, answers 200 and calls no API, so a context that is down does not restart the frontend. Node runs the check (`healthcheck.mjs`), because the image has no shell.
 
 ## Layers inside a context
@@ -88,7 +88,8 @@ backend/internal/notification/   supporting, a worker: a transaction script
     ├── app/                     the use case Notifier, the anticorruption layer for events (events.go), and the port Mailer
     └── adapter/
         ├── postgres/            schema.sql, queries/, and the code that sqlc generates
-        └── smtp/                the Mailer over SMTP
+        ├── smtp/                the Mailer over SMTP, to Mailpit in the local environment
+        └── ses/                 the Mailer over Amazon SES, in AWS
 ```
 
 Reservation holds the rules that the product exists for, and they depend on each other: the time zone of a room decides on which day a period falls, that day decides the opening hours, and an overlap can arise between two requests that arrive at the same moment.
@@ -99,7 +100,7 @@ Facility checks two rules, that a room opens before it closes and that its time 
 A domain layer, and the mapping between it and the rows, would cost more than these rules, so the use cases call the `Querier` that sqlc generates and map rows to the types of `app` directly.
 
 Notification has one rule of its own, that each event sends its mail once, so it is a transaction script like Facility.
-Its use case is not called by an operation of an API but by the consumer of its queue, through the `event.Handler` that `NewHandler` returns. It reaches the mail server through the port `Mailer`, so its tests use a fake in `app/apptest/`.
+Its use case is not called by an operation of an API but by the consumer of its queue, through the `event.Handler` that `NewHandler` returns. It sends its mail through the port `Mailer`, so its tests use a fake in `app/apptest/`. The command picks the adapter from its environment: `adapter/smtp` when `SMTP_ADDR` is set, as in the local system, and `adapter/ses` otherwise, as in AWS.
 
 `lint-arch` tells the two kinds apart by the directory `internal/domain/`: only in a context without it may `app` import its own `adapter/postgres`.
 
@@ -221,7 +222,7 @@ sequenceDiagram
     participant queue as SQS
     participant worker as notification<br/>platform/awsevents
     participant app as Notification<br/>app
-    participant mail as Mail server
+    participant mail as Mailpit or SES
     store->>db: INSERT into outbox, in the transaction of the change
     relay->>db: take the waiting events (FOR UPDATE SKIP LOCKED)
     relay->>bus: PutEvents, one event per call
@@ -230,7 +231,7 @@ sequenceDiagram
     worker->>queue: ReceiveMessage
     worker->>app: HandleEvent(envelope)
     app->>db: INSERT into notifications (unique event_id)
-    app->>mail: SMTP
+    app->>mail: SMTP or SES
     app->>db: commit
     worker->>queue: DeleteMessage
 ```
@@ -243,7 +244,7 @@ sequenceDiagram
 6. The handler, `Notifier.HandleEvent`, reads the data of the event in its anticorruption layer (`internal/app/events.go`) and ignores a type that it does not handle. In one transaction, it records the id of the event in `notifications`, whose unique constraint refuses a second record, sends the mail through the `Mailer`, and commits. A second delivery of the event finds the record and sends nothing.
 
 Delivery is at least once, and events can arrive out of order, so every consumer is idempotent (TPL-0013).
-In AWS, the bus and the queue will come from the same modules as locally; in the local environment, Terraform applies them to AWS Emulator (`infra/local/`, TPL-0015, TPL-0017).
+In AWS, the bus and the queue come from the same modules as locally, through the units `platform` and `contexts/notification` ([Infrastructure](#infrastructure)); in the local environment, Terraform applies them to AWS Emulator (`infra/local/`, TPL-0015, TPL-0017).
 
 ## The database
 
@@ -260,10 +261,92 @@ One PostgreSQL 18 database holds every context (TPL-0009). `db/bootstrap.sql` cr
 - Each role of a context has the search path `<context>, extensions`, so no SQL names a schema. The extension `btree_gist`, which the exclusion constraint of Reservation needs, lives in the schema `extensions`.
 - The `schema.sql` of a context is its desired state. pgschema applies it to a database (`make db-apply`), sqlc reads it to type the queries (`make gen`), and tbls writes `docs/generated/db/<context>/` from it (`make gen-db-docs`).
 - Locally, `compose.yaml` runs PostgreSQL on `127.0.0.1:15432`, and `db/local.sql` gives each role its own name as its password. The local system uses the database `app`, and the integration tests a database of their own, `app_test`, on the same server.
+- In AWS, the database is Aurora PostgreSQL. Before each deployment, a task runs the image of `db/Dockerfile` as the master user, which is not a superuser: it runs `db/bootstrap.sql`, sets the password of each role from its secret in Secrets Manager, and applies every `schema.sql` (TPL-0016).
 
 ## Infrastructure
 
-`infra/` holds the Terraform that creates the AWS resources of the events (TPL-0015).
+`infra/` holds the Terraform of the environments in AWS, stg and prd, and of the local environment (TPL-0015).
+Nothing has been applied to AWS yet: the modules are tested against a mock of the AWS provider, every unit is validated, and the units of stg are rehearsed on AWS Emulator. [Deploy to AWS](docs/guides/deploy.md) prepares an account, and lists what the first apply must confirm.
+
+### What runs in an account
+
+Each environment is an AWS account of its own, with the same parts:
+
+```mermaid
+flowchart LR
+    browser["Browser"]
+    subgraph vpc["VPC of one environment"]
+        subgraph public["Public subnets"]
+            alb["Load balancer<br/>HTTPS, the one public entry"]
+        end
+        subgraph private["Private subnets: ECS on Fargate, with Service Connect"]
+            web["web<br/>Next.js"]
+            facility["facility<br/>API"]
+            reservation["reservation<br/>API"]
+            relay["reservation-relay"]
+            worker["notification-worker"]
+            endpoints["VPC endpoints<br/>ECR, S3, Logs, Secrets Manager,<br/>ECS agent, EventBridge, SQS, SES"]
+        end
+        subgraph data["Database subnets"]
+            aurora[("Aurora PostgreSQL 18<br/>a schema per context")]
+        end
+    end
+    bus["EventBridge<br/>bus contexts"]
+    queue["SQS<br/>notification-events"]
+    ses["Amazon SES"]
+    browser -- "HTTPS" --> alb
+    alb --> web
+    web -- "http://facility:8080" --> facility
+    web -- "http://reservation:8080" --> reservation
+    reservation -- "http://facility:8080" --> facility
+    facility --> aurora
+    reservation --> aurora
+    relay --> aurora
+    worker --> aurora
+    relay -- "PutEvents" --> endpoints
+    worker -- "ReceiveMessage, SendEmail" --> endpoints
+    endpoints --> bus
+    bus -- "the rule of Notification" --> queue
+    endpoints --> queue
+    endpoints --> ses
+```
+
+- Each process of `compose.yaml` runs as an ECS service, from the same image and with the same command: the API of a context is the service `<context>`, and each worker the service `<context>-<worker>` ([Processes](#processes)). The services of a context share one task execution role and one task role, and the task role allows only what the context calls (TPL-0014).
+- Only the load balancer of the module `web` can be reached from the internet. The APIs have no load balancer and no public address: a service calls an API through ECS Service Connect at `http://<context>:8080`, the address that it has in Docker Compose (TPL-0014).
+- The private subnets have no route to the internet. The tasks reach the AWS services through VPC endpoints, and no security group names an address range outside the VPC (TPL-0014).
+- Each service gets `DATABASE_URL` from the secret of its runtime role in Secrets Manager. The cluster is Aurora Serverless v2 from 0 ACU in stg, and two provisioned instances in prd (TPL-0016).
+- The unit `platform` creates the event bus, and the unit of Notification its queue, its dead-letter queue, and its rule, with the modules that the local environment applies too (TPL-0013).
+- Not drawn: the task that prepares the database before each deployment, the image repositories, the logs in CloudWatch Logs, and the roles of GitHub Actions.
+
+### The units
+
+`infra/live/<environment>/` holds the same units in every environment, and Terragrunt applies each with its own state (TPL-0015).
+
+| Unit | Module | What it creates |
+|---|---|---|
+| `ci` | `github-oidc` | The roles that GitHub Actions assumes, `github-plan` and `github-deploy` (TPL-0018) |
+| `network` | `network` | The VPC, its public, private, and database subnets, and the endpoints of the AWS services |
+| `registry` | `registry` | A repository in Amazon ECR for each image: one for each context, `web`, and `db` |
+| `database` | `database` | The Aurora cluster, the secrets of the roles of each context, and the task that prepares the database |
+| `platform` | `platform` | The ECS cluster, the namespace of Service Connect, the event bus (`event-bus`), and the security group of the services |
+| `contexts/<context>` | `context-service` | The services, the roles, the logs, and the subscription (`event-subscription`) of one context |
+| `web` | `web` | The service of Next.js, the public load balancer, its certificate, and its DNS record |
+
+- Every `infra/live/<environment>/<unit>/terragrunt.hcl` is the same file. What a unit creates is in `infra/live/_units/<unit>.hcl`, what an environment is in its `env.hcl`, and what all share in `infra/live/system.hcl`, such as the list of contexts.
+- `infra/live/root.hcl` gives every unit its state in S3, a provider that accepts only the account of its environment, and the providers of `infra/live/providers.hcl` with the checksums of `providers.lock.hcl`.
+
+### A deployment
+
+The workflow `Deploy` runs `make deploy ENV=stg` after each merge into `main`, then `make deploy ENV=prd` after a reviewer approved the job (TPL-0018). A deployment does four things, in this order (`tools/scripts/infra.sh`):
+
+1. It applies the unit `registry`, then builds and pushes each image whose tag the registry does not hold. The tag is a hash of the files that the image is built from (`tools/scripts/images.sh`).
+2. It applies the units `network`, `database`, and `platform`.
+3. It runs the task that prepares the database, and waits for it: `db/bootstrap.sql` as the master user, the passwords of the roles, and the `schema.sql` of every context with pgschema (TPL-0010). The schema changes while the old code still runs.
+4. It applies every unit. Only the services whose image changed get a new task definition and restart, and ECS rolls back a deployment whose tasks do not become healthy.
+
+On a pull request, the workflow `Plan` runs `make infra-plan` for stg and for prd, as a role that can read and cannot change.
+
+### The local environment
 
 | Path | What it is |
 |---|---|
@@ -272,7 +355,7 @@ One PostgreSQL 18 database holds every context (TPL-0009). `db/bootstrap.sql` cr
 | `infra/local/` | The root that applies both modules to AWS Emulator: the bus `contexts`, and the subscription of Notification. It accepts only an endpoint on this machine |
 | `infra/local/aws-emulator/` | The Dockerfile of the image of AWS Emulator, with the public key that checks its package |
 
-`make up`, `make smoke`, and `make e2e` apply `infra/local/` with `tools/scripts/aws.sh apply` (`make aws-apply`). The other modules and the Terragrunt units for stg and prd arrive with the infrastructure milestone.
+`make up`, `make smoke`, and `make e2e` apply `infra/local/` with `tools/scripts/aws.sh apply` (`make aws-apply`), in the Region `us-east-1` of the emulator. `make rehearse-infra` applies the units of stg to the same emulator, in `ap-northeast-1`, and leaves the local system alone (TPL-0017).
 
 ## Rules and what enforces them
 
@@ -318,6 +401,15 @@ Each rule below holds because a check fails when a change breaks it.
 | No page renders data of the contexts at build time | `outcome`, which waits for the request; `next build`, when a page reads uncached data outside `<Suspense>` | Build of the image |
 | The pure logic of the frontend does what its tests say: forms, problems, and times in a time zone | Unit tests on the test runner of Node (`test-frontend`) | `make check` |
 | A person registers a room, books it, reschedules, and cancels in a browser, and gets the mails; a refused change shows in the words of the screen (TPL-0008, TPL-0017) | `make e2e`: the scenarios of `frontend/e2e/`, with Playwright in Chromium, against the local system | `make check-all` |
+| No API of a context can be reached from outside the VPC (TPL-0014) | The tests of `infra/modules/context-service` (`validate-terraform`); Trivy, which accepts a public load balancer in `infra/modules/web/main.tf` alone (`scan-config`, `.trivyignore.yaml`) | `make check`, `make check-all` |
+| No task sends to an address range outside the VPC (TPL-0014) | Trivy, check AWS-0104 (`scan-config`); the tests of the modules | `make check`, `make check-all` |
+| A deployment restarts only the contexts that changed (TPL-0014) | The tag of each image, a hash of its sources (`tools/scripts/images.sh`); `lint-arch` rule `arch/context-import`, which keeps the sources of a context complete | `make check` |
+| stg and prd have the same units, every `terragrunt.hcl` is the same file, every `env.hcl` sets the same keys, and every context has a unit (TPL-0015) | `lint-infra-live` | `make check` |
+| Every unit builds and validates, with the outputs of the other units mocked (TPL-0015) | `validate-live` | `make check-all` |
+| The units of stg apply to AWS Emulator in the order of a deployment, and those of prd plan against them (TPL-0015, TPL-0017) | `rehearse-infra` | `make check-all` |
+| Every unit installs the providers that `infra/live/providers.lock.hcl` names (TPL-0024) | `-lockfile=readonly` in `infra/live/root.hcl` | Every Terragrunt run |
+| The image that prepares the database works as a master user that is not a superuser, changes nothing when it runs again, and leaves each runtime role its own schema alone (TPL-0009, TPL-0016) | `test-db-image`, against the local PostgreSQL | `make check-all` |
+| prd changes only through the workflow, after a reviewer approved the job (TPL-0018) | `tools/scripts/infra.sh`, which refuses prd outside GitHub Actions; the GitHub environment `prd` | Run time |
 
 No check enforces these rules yet, so review does:
 
@@ -325,4 +417,6 @@ No check enforces these rules yet, so review does:
 - the type `uuid` of each primary key (TPL-0012);
 - an AsyncAPI document of each consumer that declares what it consumes (TPL-0013);
 - a feature of the frontend that calls the API of its own context only (TPL-0003);
-- a screen that never parses the title or the detail of a problem (TPL-0008).
+- a screen that never parses the title or the detail of a problem (TPL-0008);
+- a public entry in no module but `infra/modules/web` (TPL-0014);
+- an entry of `.trivyignore.yaml` that a person approved (TPL-0024).
