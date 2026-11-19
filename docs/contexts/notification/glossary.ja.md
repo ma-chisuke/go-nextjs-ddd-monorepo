@@ -12,7 +12,7 @@ Notification にはドメイン層がない（TPL-0003）ので、識別子は�
 | `Message.To` | 宛先 | メールを届けるメールアドレス。予約の主催者のアドレスである。 |
 | `Message.Subject` | 件名 | メールが何についてのものかを示す1行。予約の確定とその開始時刻などを書く。 |
 | `Message.Body` | 本文 | メールの文面。予約に何が起きたか、予約の id、会議室の id、UTC で書いた時間帯を書く。 |
-| `Mailer` | メーラー | メールをメールサーバーに渡すもの。手元の環境では、SMTP で Mailpit に送る。 |
+| `Mailer` | メーラー | メールをメールサーバーに渡すもの。手元の環境では SMTP で Mailpit に送り、AWS では Amazon SES を呼ぶ。 |
 | `Mailer.Send` | メールを送る | メールをメールサーバーに渡す。サーバーが受け取ったときに限り、メールは送ったことになる。 |
 
-<!-- i18n-source: glossary.md sha256:39e3f8a458e542d42b37266c2e785d5aad58e8df12875aadde610d6a975c72e9 -->
+<!-- i18n-source: glossary.md sha256:035fffb77d0753b66505aa24c4311f976fd9ff9d2e5e8591008e0ba73d166778 -->

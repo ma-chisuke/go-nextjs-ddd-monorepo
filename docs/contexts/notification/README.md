@@ -29,6 +29,25 @@ The worker is the command `notification` (TPL-0014). It reads the events from th
 An event of any other type is logged and ignored, and counts as handled.
 An event of one of these types whose data breaks its contract, such as one without the address of the organizer, fails: it comes again, and after the last attempt the broker sets it aside in the dead-letter queue of Notification.
 
+## How the mail goes out
+
+The use case hands each mail to the port `Mailer`. The command `notification` chooses the adapter from its environment when it starts, and one line of its log names the choice.
+
+| Variable | Use |
+|---|---|
+| `SMTP_ADDR` | The host and port of an SMTP server, such as `mailpit:1025`. When it is set, the adapter `smtp` speaks plain SMTP to that server, without authentication or TLS. The local system sets it, so its mail goes to Mailpit. When it is not set, the adapter `ses` sends the mail through Amazon SES, with `SendEmail` of the SES API v2. |
+| `MAIL_FROM` | The address that the mail comes from, such as `Meeting rooms <rooms@example.com>`. Both adapters need it. With SES, a verified identity of SES, such as the domain `example.com`, must cover it. |
+| `AWS_REGION` | The region of the queue, and of SES. ECS sets it. |
+
+Both adapters send the same mail: to one recipient, with the subject, and with the body in plain text in UTF-8.
+In AWS, the SDK reaches SES at its default endpoint, and the role of the task must allow `ses:SendEmail` on the identity of the sender.
+The team creates and verifies that identity in its account, outside this repository. While the account is in the sandbox of SES, SES also delivers only to verified addresses.
+
+A mail that fails makes the handling of its event fail, whatever the cause: the record rolls back, and the event comes again.
+For a throttling or an error of the service, the SDK makes up to three attempts within one handling before the handling fails.
+A refusal makes every delivery fail: a permanent answer (5xx) of the SMTP server, or an answer of SES such as `MessageRejected`, which SES gives for a sender that no verified identity covers. After the last delivery, the event waits in the dead-letter queue, as an event whose data breaks its contract does.
+Most refusals end when a person fixes the account or the identity. The events can then be moved back from the dead-letter queue to the queue, and send their mail.
+
 ## Rules
 
 - Each event sends its mail once, although delivery is at least once (TPL-0013). In one transaction, Notification records the mail in `notifications`, whose unique constraint on the id of the event refuses a second record, then sends the mail, and commits. When the record is there already, it sends nothing.
@@ -40,10 +59,11 @@ An event of one of these types whose data breaks its contract, such as one witho
 ## Known limits of the sample
 
 - A mail shows the room by its id and the period in UTC, because the events carry neither the name of the room nor its time zone. A product would add them to the events, in a new version of each, or ask Facility for each mail.
-- The mailer speaks plain SMTP, without authentication or TLS, to Mailpit in the local environment. In AWS, the mail will go through Amazon SES, with another adapter of `Mailer` that arrives with the infrastructure milestone.
+- The adapter `smtp` speaks plain SMTP, without authentication or TLS, which suits Mailpit in the local environment only. In AWS, the mail goes through Amazon SES.
+- Notification does not learn which mail bounced, or which mail a recipient marked as spam. It would need a configuration set of SES that publishes these events, and a consumer of them.
 
 ## What Notification needs from other contexts
 
 - From Reservation, its events, as their JSON Schemas define them. `internal/app/events.go` is the anticorruption layer: it reads the data of each event into structs of Notification and checks the properties that the mail needs. It ignores the properties that it does not read, so Reservation can add properties without breaking Notification. The unit tests turn every example in the two JSON Schemas into a mail, so an example that Notification cannot read fails them.
 - Nothing from Facility.
-- A mail server that accepts SMTP. The command gives its address and the address that the mail comes from.
+- A mail server: an SMTP server in the local environment, and Amazon SES in AWS, as [How the mail goes out](#how-the-mail-goes-out) describes.

@@ -1,7 +1,13 @@
 // Package smtp sends the mail of the Notification context over SMTP, with the
 // standard library. It speaks plain SMTP, without authentication or TLS, as
-// the local mail server Mailpit expects (TPL-0017). A mail server in the
-// cloud needs another adapter.
+// the local mail server Mailpit expects (TPL-0017). In AWS, the adapter ses
+// sends the mail through Amazon SES instead.
+//
+// Send returns nil only when the server took the mail. Every failure is an
+// error that keeps the answer of the server, a permanent refusal (5xx) too:
+// the handler of Notification then rolls the record of the mail back, the
+// event comes again, and after the last delivery it waits in the dead-letter
+// queue (TPL-0013). The adapter ses does the same with the answers of SES.
 package smtp
 
 import (
