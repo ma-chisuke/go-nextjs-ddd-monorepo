@@ -134,7 +134,12 @@ func TestBookRoomIdempotently(t *testing.T) {
 	first := f.book(t, "k1", on(10, 11))
 
 	// The same request with the same key gets the same reservation, and
-	// books nothing new, even after the reservation changed.
+	// books nothing new: the reservation does not stand in its own way.
+	if again := f.book(t, "k1", on(10, 11)); again != first {
+		t.Errorf("got %+v, want the reservation of the first request, %+v", again, first)
+	}
+
+	// The same holds after the reservation changed.
 	cancelled, err := f.uc.CancelReservation(t.Context(), first.Reservation.ID(), first.Version)
 	if err != nil {
 		t.Fatal(err)
@@ -236,6 +241,12 @@ func TestBookRoomInARace(t *testing.T) {
 	if got != winner {
 		t.Errorf("got %+v, want the reservation of the request that won, %+v", got, winner)
 	}
+
+	// Another request with the key of the winner that lost the race is
+	// refused, as it would be without the race.
+	racing = app.New(&racingStore{Store: store}, apptest.NewRooms(roomA), apptest.NewClock(now), ids)
+	_, err = racing.BookRoom(t.Context(), booking("k1", on(12, 13)))
+	wantAppKind(t, err, app.KindIdempotencyKeyReused)
 	wantEvents(t, store, confirmedEvent(winner.Reservation.ID(), on(10, 11), 4))
 }
 
