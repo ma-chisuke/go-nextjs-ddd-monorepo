@@ -26,11 +26,11 @@ c620e32a53047f1722c5cb5c64e8feb9bc5ad3a043deaadeeed06208e1bdcf0c  TPL-0013-event
 bc31cc06f40dcb24d09a02968993bfb78e3292a827bd818edafc523a752fb91e  TPL-0013-events-with-outbox-cloudevents-eventbridge-sqs.md
 2a14113803487b8bd8e5a65ca198ba1455a12817523df690f13c5787963a84e8  TPL-0014-deploy-each-context-to-ecs.ja.md
 43684a42136bf663f8636ce47621968f440a09fd975fe66e7caf5077649aca0d  TPL-0014-deploy-each-context-to-ecs.md
-2293c74fedfc255390669114f4bbc5b780021eec3cd49c97e4be08eb9dbbec45  TPL-0015-terraform-and-terragrunt.ja.md
+ee0506a0ee47ebdd8dec39152b2ee31c419307870e974e9733d60c3dbd15c426  TPL-0015-terraform-and-terragrunt.ja.md
 d5b7e6b59a19c65c535508b64a599850bcef9ac1560f3e3c364efb1741f84ecd  TPL-0015-terraform-and-terragrunt.md
 bb1e44e9731b800591fe46c8260ae7f4867cf1a8f1dd747510caab00eb47fe96  TPL-0016-aurora-serverless-v2-by-default.ja.md
 26f25da5732a12438445807b0a8eacfdf93fe77c03684263fad17a320bf641a3  TPL-0016-aurora-serverless-v2-by-default.md
-c196686c233ffa89e59a10ded0431ba5e9be83500f54bfa1085de3c8f87e71ba  TPL-0017-aws-emulator-for-local-development.ja.md
+a6af1c5bb9f5c0cc537b9d530783f102546bed4d7a48d0e276830f5b7620a4e1  TPL-0017-aws-emulator-for-local-development.ja.md
 434d3a7d0b97f7fd0b06e95aede6dbd925fe7c138fe08095d622a0c9d7d7c64f  TPL-0017-aws-emulator-for-local-development.md
 bbd7155eee5f672da08a9fa2589f1ea2ae1cf4846a1da636e9917875db821bdb  TPL-0018-github-actions-with-oidc.ja.md
 4ee03c77e92e3b7ff59babe06005bd88123fdb31f7642f18483f0238fe163764  TPL-0018-github-actions-with-oidc.md

@@ -408,7 +408,7 @@ Each rule below holds because a check fails when a change breaks it.
 | Every unit builds and validates, with the outputs of the other units mocked (TPL-0015) | `validate-live` | `make check-all` |
 | The units of stg apply to AWS Emulator in the order of a deployment, and those of prd plan against them (TPL-0015, TPL-0017) | `rehearse-infra` | `make check-all` |
 | Every unit installs the providers that `infra/live/providers.lock.hcl` names (TPL-0024) | `-lockfile=readonly` in `infra/live/root.hcl` | Every Terragrunt run |
-| The image that prepares the database works as a master user that is not a superuser, changes nothing when it runs again, and leaves each runtime role its own schema alone (TPL-0009, TPL-0016) | `test-db-image`, against the local PostgreSQL | `make check-all` |
+| The image that prepares the database works as a master user that is not a superuser, changes nothing when it runs again, and lets each runtime role read its own schema and no other (TPL-0009, TPL-0016) | `test-db-image`, against the local PostgreSQL | `make check-all` |
 | prd changes only through the workflow, after a reviewer approved the job (TPL-0018) | `tools/scripts/infra.sh`, which refuses prd outside GitHub Actions; the GitHub environment `prd` | Run time |
 
 No check enforces these rules yet, so review does:

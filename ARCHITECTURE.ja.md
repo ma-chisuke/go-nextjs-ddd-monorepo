@@ -409,7 +409,7 @@ flowchart LR
 | ほかのユニットの出力をモックにして、どのユニットも組み立てて検証できる（TPL-0015） | `validate-live` | `make check-all` |
 | stg のユニットはデプロイと同じ順序で AWS Emulator に適用でき、prd のユニットはそれに対して plan できる（TPL-0015、TPL-0017） | `rehearse-infra` | `make check-all` |
 | どのユニットも、`infra/live/providers.lock.hcl` にある provider だけを入れる（TPL-0024） | `infra/live/root.hcl` の `-lockfile=readonly` | Terragrunt の実行のたび |
-| データベースを準備するイメージは、スーパーユーザーではないマスターユーザーとして動き、もう一度動かしても何も変えず、各実行時のロールには自分のスキーマだけを使わせる（TPL-0009、TPL-0016） | 手元の PostgreSQL に対する `test-db-image` | `make check-all` |
+| データベースを準備するイメージは、スーパーユーザーではないマスターユーザーとして動き、もう一度動かしても何も変えず、各実行時のロールには自分のスキーマだけを読ませる（TPL-0009、TPL-0016） | 手元の PostgreSQL に対する `test-db-image` | `make check-all` |
 | prd が変わるのは、レビュー担当者がジョブを承認したあとのワークフローを通したときだけである（TPL-0018） | GitHub Actions の外では prd を拒む `tools/scripts/infra.sh`。GitHub の環境 `prd` | 実行時 |
 
 次の決まりを守らせるチェックはまだないので、レビューで守る。
@@ -422,4 +422,4 @@ flowchart LR
 - 公開の入口を作るモジュールが `infra/modules/web` だけであること（TPL-0014）
 - `.trivyignore.yaml` の項目を人が承認していること（TPL-0024）
 
-<!-- i18n-source: ARCHITECTURE.md sha256:e01511b5816116b8248b2b52dd14632d67f00864d754d3d4e3050e5d23f157e9 -->
+<!-- i18n-source: ARCHITECTURE.md sha256:9abea43a68e9749a2a2823f278b034a0432ccea778393d58086034aaf92ccfe8 -->
