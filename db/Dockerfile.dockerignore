@@ -1,0 +1,8 @@
+# The build context of db/Dockerfile, which is the root of the repository.
+# Everything is left out except what is named here: the image holds the SQL
+# that prepares the database and nothing else, so a change to the code of a
+# service does not rebuild it.
+*
+!db/bootstrap.sql
+!db/prepare.sh
+!backend/internal/*/internal/adapter/postgres/schema.sql
