@@ -12,8 +12,8 @@ type Message struct {
 	Body string
 }
 
-// Mailer sends mail. The SMTP adapter implements it for Mailpit, and
-// apptest.Mailer in memory for tests.
+// Mailer sends mail. The SMTP adapter implements it for Mailpit, the SES
+// adapter for Amazon SES in AWS, and apptest.Mailer in memory for tests.
 type Mailer interface {
 	// Send hands the message to the mail server, and returns nil only when
 	// the server took it. It gives up when ctx ends.
