@@ -135,7 +135,7 @@ No modules.
 | password\_version | The version of the passwords of the roles of the contexts. Raising it writes a new password to each secret; the task that prepares the database then sets them on the roles, and the services read them when they start again. | `number` | `1` | no |
 | s3\_prefix\_list\_id | The ID of the prefix list of Amazon S3 (`s3_prefix_list_id` of the module network). The task pulls the layers of its image from there. | `string` | n/a | yes |
 | subnet\_ids | The IDs of the database subnets, where the cluster runs (`database_subnet_ids` of the module network). Aurora needs subnets in two Availability Zones at least. | `list(string)` | n/a | yes |
-| task\_cpu\_architecture | The CPU architecture of the task that prepares the database: `ARM64` or `X86_64`. The image must be built for it; `db/Dockerfile` builds for both. | `string` | `"ARM64"` | no |
+| task\_cpu\_architecture | The CPU architecture of the task that prepares the database: `X86_64` or `ARM64`. The image must be built for it; the deployment builds every image for `linux/amd64` (`tools/scripts/images.sh`), which is the default here and in the modules of the services. | `string` | `"X86_64"` | no |
 | task\_subnet\_ids | The IDs of the private subnets, where the task that prepares the database runs (`private_subnet_ids` of the module network). | `list(string)` | n/a | yes |
 | vpc\_id | The ID of the VPC (`vpc_id` of the module network). | `string` | n/a | yes |
 

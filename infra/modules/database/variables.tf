@@ -180,9 +180,9 @@ variable "db_image" {
 }
 
 variable "task_cpu_architecture" {
-  description = "The CPU architecture of the task that prepares the database: `ARM64` or `X86_64`. The image must be built for it; `db/Dockerfile` builds for both."
+  description = "The CPU architecture of the task that prepares the database: `X86_64` or `ARM64`. The image must be built for it; the deployment builds every image for `linux/amd64` (`tools/scripts/images.sh`), which is the default here and in the modules of the services."
   type        = string
-  default     = "ARM64"
+  default     = "X86_64"
 
   validation {
     condition     = contains(["ARM64", "X86_64"], var.task_cpu_architecture)

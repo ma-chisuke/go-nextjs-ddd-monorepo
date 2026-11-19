@@ -73,4 +73,4 @@ AWS についての次の事実は仮定であり、初めて適用するとき�
 
 入力、出力、リソースの一覧は、terraform-docs がコードから[英語版](README.md)に書き出す。コードの中の説明は英語なので、一覧は英語版だけにある。
 
-<!-- i18n-source: README.md sha256:954167467cd53b55baf9daf7c5621e88921db07fe65a76d12f46a85eda8a19de -->
+<!-- i18n-source: README.md sha256:6a4fa6319fcea32cf3b137125d4122e607fb3495861696f2f7487437bb9e17f5 -->
