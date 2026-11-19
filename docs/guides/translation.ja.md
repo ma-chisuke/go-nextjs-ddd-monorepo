@@ -194,5 +194,34 @@
 | throttling | スロットリング |
 | configuration set（Amazon SES の） | 設定セット |
 | bounce（メールの） | バウンス |
+| cluster（ECS、Aurora の） | クラスター |
+| container | コンテナ |
+| task、task definition（ECS の） | タスク、タスク定義 |
+| task execution role、task role（ECS の） | タスク実行ロール、タスクロール |
+| deployment circuit breaker（ECS の） | デプロイのサーキットブレーカー |
+| namespace（Service Connect の） | 名前空間 |
+| endpoint（VPC の）。gateway endpoint、interface endpoint | エンドポイント。ゲートウェイエンドポイント、インターフェイスエンドポイント |
+| public subnet、private subnet | 公開サブネット、非公開サブネット |
+| load balancer | ロードバランサー |
+| Availability Zone | アベイラビリティーゾーン |
+| hosted zone（Amazon Route 53 の） | ホストゾーン |
+| secret（Secrets Manager の） | シークレット |
+| customer managed key（AWS KMS の） | カスタマーマネージドキー |
+| lifecycle policy（Amazon ECR の） | ライフサイクルポリシー |
+| push、pull（イメージやブランチを） | プッシュ、プル |
+| promote（イメージを stg から prd へ） | 昇格させる |
+| capacity（データベースの） | キャパシティ |
+| connection pool | 接続プール |
+| master user（Aurora の） | マスターユーザー |
+| pause、resume（Aurora Serverless v2 の） | 一時停止する、再開する |
+| writer、reader（Aurora のインスタンス） | ライター、リーダー |
+| snapshot | スナップショット |
+| plan（Terraform、pgschema の） | plan（訳さない） |
+| apply（Terraform、pgschema の） | 適用する |
+| state（Terraform の） | state（訳さない） |
+| ephemeral resource、ephemeral value（Terraform の） | エフェメラルリソース、エフェメラルな値 |
+| write-only argument（Terraform の） | 書き込み専用の引数 |
+| mock（provider の、またはユニットの出力の） | モック |
+| rehearsal（`make rehearse-infra`） | リハーサル |
 
-<!-- i18n-source: translation.md sha256:5aa9aa32b802590203af6a07185da8a199d0d97dfdfb024f58735ae6b8f1641e -->
+<!-- i18n-source: translation.md sha256:e986d7db1138fe1deffc66fc3b29c543510d3aa54591a44dc5616083c5c94f73 -->

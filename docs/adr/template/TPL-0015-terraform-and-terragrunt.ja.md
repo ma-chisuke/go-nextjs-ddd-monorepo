@@ -14,7 +14,7 @@ date: 2026-11-19
 このとき、向きの違う3つの要件がある。
 
 - 環境どうしは同じ形でなければならない。stg で動いたものが prd でも動くようにするためである。一方で、大きさ・キャパシティ・ドメイン名などの値は環境ごとに違う。
-- ある文脈への変更では、その文脈だけを plan し apply したい。全部を1つの state にすると、plan はいつも遅く、apply はいつも危うくなる。
+- ある文脈への変更では、その文脈だけを plan し、適用したい。全部を1つの state にすると、plan はいつも遅く、適用はいつも危うくなる。
 - stg での誤りが prd に及んではならず、一方の環境の認証情報がもう一方で使えてもならない。
 
 インフラをどの道具で書き、コードをどう分け、環境どうしをどう隔てればよいか。
@@ -22,7 +22,7 @@ date: 2026-11-19
 ## 判断の基準
 
 - stg と prd は同じ形を持ち、その形は1回だけ書く。違うのは値だけである。
-- ある文脈への変更は、その文脈の state だけを plan し apply する。
+- ある文脈への変更は、その文脈の state だけを plan し、適用する。
 - stg での誤りや漏れた認証情報が、prd に届かない。
 - 広く知られた道具であり、リンターとスキャナーがそろっている。
 - 道具のバージョンを1か所で固定する（TPL-0022）。
@@ -48,11 +48,11 @@ date: 2026-11-19
 - `infra/live/root.hcl` は、すべてのユニットに3つのファイルを作る。state を置く S3 のバックエンド、`allowed_account_ids` を持つ AWS provider、`infra/live/providers.hcl` から取る provider のバージョンである。`allowed_account_ids` によって、provider はその環境のアカウント以外をすべて拒む。
 - すべてのユニットの provider のチェックサムは、1つのロックファイル `infra/live/providers.lock.hcl` が持つ。各ユニットは `-lockfile=readonly` で初期化し、自分のロックファイルを持たない。`providers.hcl` を変えたら、`make infra-lock` がこのファイルを書く。
 - state は S3 に置き、S3 のネイティブのロック（`use_lockfile`）を使う。state はユニットごとに1つで、アカウントごとのバケットに置く。バケットは、`make infra-bootstrap` がユニット `ci` の適用とともに、アカウントごとに1回作る。これを実行するのは管理者の権限を持つ人である。まだ存在しないロールを、ワークフローは引き受けられないからである。
-- ユニットは、Terragrunt の依存関係を通してほかのユニットの出力を読む。たとえば文脈のユニットは、`network`・`registry`・`database`・`platform` の出力を読む。依存先のユニットがまだ state を持たない間は、`infra/live/mocks.hcl` のモックの出力が見える。モックを使うのは `terraform validate` と plan だけで、apply では使わない。
-- stg と prd は別々の AWS アカウントにする。2つのツリーの形は同じで、違うのは `env.hcl` の値だけである。テンプレートに入っている値は仮のものである（アカウント `111111111111` と `222222222222`、ドメイン `example.com` など）。チームは、最初の apply の前にそれらを置き換える（[AWS にデプロイする](../../guides/deploy.ja.md)）。
+- ユニットは、Terragrunt の依存関係を通してほかのユニットの出力を読む。たとえば文脈のユニットは、`network`・`registry`・`database`・`platform` の出力を読む。依存先のユニットがまだ state を持たない間は、`infra/live/mocks.hcl` のモックの出力が見える。モックを使うのは `terraform validate` と plan だけで、適用では使わない。
+- stg と prd は別々の AWS アカウントにする。2つのツリーの形は同じで、違うのは `env.hcl` の値だけである。テンプレートに入っている値は仮のものである（アカウント `111111111111` と `222222222222`、ドメイン `example.com` など）。チームは、最初の適用の前にそれらを置き換える（[AWS にデプロイする](../../guides/deploy.ja.md)）。
 - Terragrunt は、ユニットの作業用のコピーを `infra/live/` の外の `.cache/terragrunt/<mode>/<environment>/.terragrunt-cache` に置く。Terragrunt 1.2.2 はリポジトリ全体からユニットを探し、その名前のディレクトリだけを飛ばす。ほかの名前にすると、自分のコピーをユニットとして拾ってしまう。
 - Terraform と Terragrunt のバージョンは `mise.toml` で固定する（TPL-0022）。
-- CI は OIDC で各アカウントにサインインし、長期のアクセスキーを持たない（TPL-0018）。ワークフロー `Plan` がプルリクエストで stg と prd のすべてのユニットを plan し、ワークフロー `Deploy` がマージのあとにそれらを apply する。
+- CI は OIDC で各アカウントにサインインし、長期のアクセスキーを持たない（TPL-0018）。ワークフロー `Plan` がプルリクエストで stg と prd のすべてのユニットを plan し、ワークフロー `Deploy` がマージのあとにそれらを適用する。
 
 この決定は3つの点で最初の計画と違う。
 
@@ -62,17 +62,17 @@ date: 2026-11-19
 
 ### 結果
 
-- 良い点：ある文脈への変更は、小さな state を1つ plan し apply するだけで済む。plan は速く、apply がほかの文脈を変えることもない。
+- 良い点：ある文脈への変更は、小さな state を1つ plan し、適用するだけで済む。plan は速く、適用がほかの文脈を変えることもない。
 - 良い点：形はモジュールに1回だけ書くので、stg と prd は同じコードで動く。
 - 良い点：アカウントが別なので、環境どうしが隔離される。stg の権限は prd で何の効力も持たず、クォータと費用も分かれる。
 - 良い点：Terraform は provider とモジュールのエコシステムがいちばん大きく、リンター（tflint）とスキャナー（Trivy）も対応している。
 - 悪い点：覚えて固定する道具が2つになる。Terragrunt は、Terraform の上に設定の層を1つ重ねる。
-- 悪い点：小さな state が互いに依存する。たとえば `network` の出力を変えたら、それを読むユニットより先に apply する必要があり、順番を守る手間がかかる。
+- 悪い点：小さな state が互いに依存する。たとえば `network` の出力を変えたら、それを読むユニットより先に適用する必要があり、順番を守る手間がかかる。
 - 良い点：stg と prd は食い違わない。ユニットは同じで、どの `terragrunt.hcl` も同じファイルであり、どの `env.hcl` も同じキーを設定する。
 - 良い点：どのディレクトリでコマンドを実行しても、一方のアカウントの認証情報でもう一方を変えることはできない。各ユニットの provider は、その環境のアカウントしか受け付けない。
 - 悪い点：アカウントごとに準備が要る。state 用のバケット、OIDC 用のロール、Amazon Route 53 のホストゾーン、Amazon SES の検証済みの ID である。バケットとロールは、管理者の権限を持つ人がワークフローの外で作る。
 - 悪い点：ユニットの定義は、そのディレクトリにない。読む人は `_units/` を見ることを覚える必要があり、`terragrunt.hcl` の include のパスも、書き下したものではなく計算したものである。
-- 悪い点：AWS にはまだ何も apply していない。モジュールのテストは provider のモックに対して plan し、`validate-live` はほかのユニットの出力をモックにし、リハーサルはエミュレーターに apply する。そのため、AWS でしかわからないことは、最初の apply で確かめる（[AWS にデプロイする](../../guides/deploy.ja.md#最初の適用で確かめること)）。
+- 悪い点：AWS にはまだ何も適用していない。モジュールのテストは provider のモックに対して plan し、`validate-live` はほかのユニットの出力をモックにし、リハーサルはエミュレーターに適用する。そのため、AWS でしかわからないことは、最初の適用で確かめる（[AWS にデプロイする](../../guides/deploy.ja.md#最初の適用で確かめること)）。
 - 悪い点：Terraform のライセンスは Business Source License であり、オープンソースのライセンスではない。ただし、チームが自分のインフラを管理するために Terraform を使うことは制限していない。
 
 ### 確認の方法
@@ -86,7 +86,7 @@ date: 2026-11-19
   - `system.hcl` の文脈、`backend/cmd/` のコマンド、`contexts/` の下のユニットが食い違う。
 - `make check-all` は、さらに `validate-terraform` を実行する。これは各モジュールで `terraform validate` を実行し、続けて `tests/*.tftest.hcl` を `mock_provider "aws"` に対して `terraform test` で実行する。`terraform init` を実行し、provider をダウンロードする。
 - `make check-all` は `validate-live` も実行する。Terragrunt が組み立てたとおりの各ユニットで `terraform validate` を実行し、ほかのユニットの出力はモックで置き換える。1つの環境で、すべての環境を代表させる。どの環境も同じユニットを持つことを、`lint-infra-live` が示しているからである。
-- `make check-all` は `rehearse-infra` も実行する。stg のユニットを、デプロイと同じ順序で AWS Emulator に apply し（9つのユニットで約3分）、続けて prd のユニットをそれに対して plan する（TPL-0017）。apply できないモジュール、ほかのユニットにない出力を読むユニット、モジュールが拒む `env.hcl` の値は、ここで失敗する。
+- `make check-all` は `rehearse-infra` も実行する。stg のユニットを、デプロイと同じ順序で AWS Emulator に適用し（9つのユニットで約3分）、続けて prd のユニットをそれに対して plan する（TPL-0017）。適用できないモジュール、ほかのユニットにない出力を読むユニット、モジュールが拒む `env.hcl` の値は、ここで失敗する。
 - `make infra-lock` は、`mise.lock` と同じ4つのプラットフォームについて `providers.lock.hcl` を書く。ロックファイルにない provider があると、Terragrunt の実行はどれも失敗する。
 - これらの道具は `mise.toml` で固定してある（TPL-0022）。これらのチェックは、すべてのモジュール、`infra/live/` のユニット、`infra/local/` を検査する。
 - `infra/local/.terraform.lock.hcl` は、AWS の provider を4つのプラットフォームのハッシュとともに固定する。`tools/scripts/aws.sh` は `-lockfile=readonly` で初期化するので、ロックにない provider は入らない。
@@ -126,7 +126,7 @@ date: 2026-11-19
 ## 補足
 
 - テンプレートの設計メモには Terragrunt 1.0 と書いていた。テンプレートは、作業を始めた日の最新の 1.x のリリースから始め、その後は Renovate が更新する（TPL-0025）。インフラのマイルストーンは、Terragrunt 1.2.2 と Terraform 1.17.2 で作った。
-- [AWS にデプロイする](../../guides/deploy.ja.md)は、アカウントを準備してデプロイし、最初の apply で確かめることを挙げる。
+- [AWS にデプロイする](../../guides/deploy.ja.md)は、アカウントを準備してデプロイし、最初の適用で確かめることを挙げる。
 - OpenTofu を使いたいチームは、利用者の記録を書いて切り替えられる。モジュールは HCL のままで、Terragrunt はどちらにも対応している。
 - [Terragrunt のドキュメント](https://terragrunt.com/)
 - `use_lockfile` を含む、[Terraform の S3 のバックエンド](https://developer.hashicorp.com/terraform/language/backend/s3)の説明

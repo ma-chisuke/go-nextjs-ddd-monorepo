@@ -13,7 +13,7 @@ make up
 
 1. PostgreSQL 18。`db/bootstrap.sql` と `db/local.sql` を実行し、各文脈の `schema.sql` を適用する（`tools/scripts/db.sh up`）。
 2. AWS Emulator。`infra/local/aws-emulator/Dockerfile` からビルドする（TPL-0017）。
-3. イベントバス `contexts` と、Notification のキュー（デッドレターキューとルールも含む）。Terraform が `infra/local/` からエミュレーターの中に作る（`tools/scripts/aws.sh apply`）。エミュレーターの起動後の最初の apply には1分ほどかかる。AWS の provider が、キューを1つ作るたびに25秒ほど待つからである。変更のない apply は数秒で終わる。
+3. イベントバス `contexts` と、Notification のキュー（デッドレターキューとルールも含む）。Terraform が `infra/local/` からエミュレーターの中に作る（`tools/scripts/aws.sh apply`）。エミュレーターの起動後の最初の適用には1分ほどかかる。AWS の provider が、キューを1つ作るたびに25秒ほど待つからである。変更のない適用は数秒で終わる。
 4. Mailpit と、すべての文脈のすべてのプロセスと、フロントエンド。プロセスは `backend/Dockerfile` から、フロントエンドは `frontend/Dockerfile` からビルドする。プロセスは、Facility と Reservation の API、Reservation の中継（`reservation relay`）、Notification のワーカー（`notification`）である。`make up` は、それぞれが正常になるまで待つ。
 5. 手順2でエミュレーターが新しく起動した場合は、エミュレーターを呼ぶサービスの再起動。新しい CA を読ませるためである（[AWS Emulator が再起動したとき](#aws-emulator-が再起動したとき)）。
 
