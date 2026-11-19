@@ -2,7 +2,7 @@
 # documents written from it. They run in check-all, because they start
 # PostgreSQL in Docker. The checks of SQL are in make/sql.mk.
 
-CHECK_ALL_TARGETS += test-integration lint-db-docs
+CHECK_ALL_TARGETS += test-integration lint-db-docs test-db-image
 
 DB := tools/scripts/db.sh
 
@@ -27,7 +27,7 @@ db-down: ## Stop the local PostgreSQL and delete its data
 db-server:
 	@$(TASK) $@ '$(DB) server'
 
-test-integration selftest gen-db-docs: | db-server
+test-integration test-db-image selftest gen-db-docs: | db-server
 
 # The tests behind the build tag `integration`: the queries, the constraints,
 # and the privileges of the roles, against a real PostgreSQL (TPL-0009), and
@@ -48,6 +48,13 @@ test-integration:
 # no database: run this after a change to a schema.sql (lint-db-docs says so).
 gen-db-docs: ## Write the schema documents of every context (needs Docker)
 	@$(DB_CHECK) docs
+
+# The image that prepares the database of an environment at deploy time
+# (db/Dockerfile), built and run twice against a database of its own on the
+# local server, as a master user that is not a superuser, as on Aurora
+# (TPL-0016). It checks what the image prepared; see tools/scripts/db-image.sh.
+test-db-image:
+	@$(TASK) $@ 'if [ -n "$$($(FILES) "db" "backend/internal/*/schema.sql" "tools/scripts/db-image.sh")" ]; then tools/scripts/db-image.sh test; fi'
 
 # Every table and column has a comment, and the schema documents are what
 # gen-db-docs writes now (TPL-0023).

@@ -1,7 +1,9 @@
 -- What a database needs before any context can use it, and what pgschema
 -- does not manage: extensions, schemas, and roles (TPL-0009, TPL-0010).
 --
--- Run it as a superuser, once per database. It is safe to run again.
+-- Run it once per database, as a superuser, or as a role that owns the
+-- database and may create roles without being a superuser, such as the master
+-- user of Aurora (TPL-0016). It is safe to run again.
 -- Each bounded context gets
 --   a schema of its own,
 --   an owner role, which owns the schema and changes it (pgschema runs as it),
@@ -33,6 +35,13 @@ BEGIN
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'facility_runtime') THEN
         CREATE ROLE facility_runtime LOGIN;
     END IF;
+    -- A role that is not a superuser may hand a schema to the owner role, and
+    -- grant rights on it, only as a member of that role (PostgreSQL 16 and
+    -- later). Its creator holds the ADMIN OPTION on it, so it can join it; a
+    -- superuser needs no membership.
+    IF NOT pg_has_role('facility_owner', 'USAGE') THEN
+        GRANT facility_owner TO CURRENT_USER WITH INHERIT TRUE, SET TRUE;
+    END IF;
 END
 $$;
 
@@ -53,6 +62,9 @@ BEGIN
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'reservation_runtime') THEN
         CREATE ROLE reservation_runtime LOGIN;
     END IF;
+    IF NOT pg_has_role('reservation_owner', 'USAGE') THEN
+        GRANT reservation_owner TO CURRENT_USER WITH INHERIT TRUE, SET TRUE;
+    END IF;
 END
 $$;
 
@@ -72,6 +84,9 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'notification_runtime') THEN
         CREATE ROLE notification_runtime LOGIN;
+    END IF;
+    IF NOT pg_has_role('notification_owner', 'USAGE') THEN
+        GRANT notification_owner TO CURRENT_USER WITH INHERIT TRUE, SET TRUE;
     END IF;
 END
 $$;
