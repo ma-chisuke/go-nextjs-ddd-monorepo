@@ -77,10 +77,7 @@ API と画面が別のリポジトリにあると、エージェントは片側�
 - CI のワークフロー（TPL-0018）も同じターゲットを呼ぶ。`make check` を実行するジョブはすべてのファイルを検査し、`make check-all` の遅いチェックを加えるジョブは、プルリクエストでは変更のあったファイルに範囲を絞る（`CHECK_SCOPE=changed`）。
 - `backend/` と `contracts/` は、最初の文脈から、区切られた文脈とその契約を収める。
 - `infra/` は、イベントを扱うマイルストーンから、手元の環境と AWS が共有する Terraform のモジュールを収める。それらを AWS Emulator に適用する `infra/local/` もここにある（TPL-0015、TPL-0017）。
-
-あとから加わるものは次のとおりである。
-
-- `infra/` のほかの Terraform のモジュールと Terragrunt の設定は、デプロイとともに加わる。
+- インフラのマイルストーンから、`infra/` は AWS の環境のすべてのモジュールと、stg と prd の Terragrunt のユニットを置く `infra/live/` も収める（TPL-0015）。文脈とそのスキーマとそれを動かすインフラへの変更は、1つのプルリクエストに入る。そのプルリクエストで各環境の何が変わるかは、ワークフロー `Plan` が示す。
 
 ## 選択肢の長所と短所
 
@@ -113,4 +110,4 @@ API と画面が別のリポジトリにあると、エージェントは片側�
 - [Go モジュールのリファレンス](https://go.dev/ref/mod)
 - `backend/` と `frontend/` の中を文脈ごとにどう分けるかは、TPL-0003 で決める。
 
-<!-- i18n-source: TPL-0002-single-repository-for-go-and-nextjs.md sha256:59421f111f6a4d8e8efee1138d1c64e81c8cde4bb4794b9a7c7a6876b49b75f3 -->
+<!-- i18n-source: TPL-0002-single-repository-for-go-and-nextjs.md sha256:04e5a34a178d10040b13be339dce8b9f6eccc3da25618f24601ad38a8c428dfc -->

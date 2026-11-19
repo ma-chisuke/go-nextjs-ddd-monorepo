@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-17
+date: 2026-11-19
 ---
 
 # TPL-0025: Update dependencies and tools with Renovate
@@ -38,6 +38,7 @@ Chosen option: "Renovate for every update, with Dependabot for alerts only", bec
 The rules are as follows.
 
 - Renovate updates Go modules, npm packages, Python packages, the digests of Docker images, the SHAs of actions, the tools in `mise.toml`, and Terraform providers.
+- The providers of the environments are pinned in `infra/live/providers.hcl`, which the Terraform manager of Renovate reads (`terraform` in `renovate.json`). The group `Terraform providers` moves them together with those of `infra/local/`, which use the same providers. Renovate does not write `infra/live/providers.lock.hcl`, so a person runs `make infra-lock` on the branch of the update, as `make tools-lock` for `mise.lock`; until then, every Terragrunt run of the branch fails.
 - It waits three days after a release before it proposes the release.
 - It groups related updates into one pull request.
 - It opens pull requests on a weekly schedule. Security fixes do not wait for the schedule.
@@ -55,7 +56,8 @@ The rules are as follows.
 - Bad, because an automatic merge is only as safe as the checks. A patch release that breaks behavior that the tests do not cover is merged without a person.
 - Bad, because the Renovate app needs write access to the repository to push branches and open pull requests, which makes it one more party to trust.
 - Bad, because a mistake in the configuration can quietly stop the updates for one kind of pin, and the schema cannot tell.
-- Bad, because a pin that no manager of Renovate reads is not updated. The version of AWS Emulator and the checksums of its package, in build arguments of `infra/local/aws-emulator/Dockerfile`, are such a pin: a person updates them by hand (TPL-0017). The version of pnpm and the checksum of its package, in the `ADD` of `frontend/Dockerfile`, are another: the group `pnpm` of `renovate.json` moves `mise.toml`, `package.json`, and `pnpm-lock.yaml`, and a person changes the Dockerfile in the same pull request (TPL-0024).
+- Bad, because a pin that no manager of Renovate reads is not updated. The version of AWS Emulator and the checksums of its package, in build arguments of `infra/local/aws-emulator/Dockerfile`, are such a pin: a person updates them by hand (TPL-0017). The version of pnpm and the checksum of its package, in the `ADD` of `frontend/Dockerfile`, are another: the group `pnpm` of `renovate.json` moves `mise.toml`, `package.json`, and `pnpm-lock.yaml`, and a person changes the Dockerfile in the same pull request (TPL-0024). The version of pgschema and the checksums of its binaries, in `db/Dockerfile`, are a third: when Renovate moves pgschema in `mise.toml`, a person changes the Dockerfile, and `make test-db-image` fails until the two agree.
+- Bad, because an update of the providers needs a person to run `make infra-lock`, so it never merges on its own.
 
 ### Confirmation
 

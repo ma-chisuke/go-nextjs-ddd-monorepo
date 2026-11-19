@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-17
+date: 2026-11-19
 ---
 
 # TPL-0018: CI/CD を GitHub Actions で動かし、AWS には OIDC で入る
@@ -39,7 +39,8 @@ CI をどこで動かし、そのワークフローを手元のチェックと�
 
 ワークフローの決まりは次のとおりである。
 
-- コードのチェックアウト・mise の導入・キャッシュの復元のステップを除き、ワークフローのステップは `make setup` や `make check-all` のような `make` のターゲットを呼ぶだけにし、独自の処理を持たない。こうして、CI・人・エージェントが同じコマンドを実行する。
+- ワークフローのステップは、`make setup` や `make check-all` のような `make` のターゲットを呼ぶだけにし、独自の処理を持たない。例外は、コードのチェックアウト・mise の導入・キャッシュの復元・AWS へのサインインのステップである。こうして、CI・人・エージェントが同じコマンドを実行する。
+- ジョブは、アクション `aws-actions/configure-aws-credentials` で AWS にサインインする。このアクションは v6.3.0 のコミットに固定する。ジョブが OIDC のトークンを求めるためのトークンを、GitHub はアクションに渡し、`run` のステップには渡さない。そのため、サインインを `make` のターゲットにはできない。
 - 必須チェックの名前を `check` の1つに固定する。`check` はワークフローの最後のジョブで、ほかのすべてのジョブに依存する。そのため、ジョブを足してもルールセットは変わらない。
 - `check` は、依存するジョブが失敗したりスキップされたりしても実行される。そして、依存するジョブの結果に、成功とスキップのどちらでもないものが1つあれば失敗する。こうしておかないと、ジョブが1つ失敗しただけで GitHub は `check` をスキップする。GitHub はスキップされたジョブを、通ったチェックとして扱う。
 - 同じブランチで新しい実行が始まると、そのブランチでまだ進んでいる古い実行を取り消す。
@@ -49,13 +50,21 @@ CI をどこで動かし、そのワークフローを手元のチェックと�
 - `permissions` は既定で読み取りだけにし、各ジョブは必要な権限だけを求める。
 - どのジョブにも `timeout-minutes` を書く。
 
-デプロイの決まりは次のとおりである。これらはインフラのマイルストーンで入る。
+デプロイの決まりは次のとおりである。これらはインフラのマイルストーンで作った。
 
 - デプロイのジョブは、GitHub の OIDC プロバイダーを通して IAM ロールを引き受け、短時間で失効する認証情報を受け取る。AWS のアクセスキーは GitHub に置かない。
 - 変更を適用する各ロールの信頼ポリシーには、このリポジトリと、デプロイ先の GitHub の環境（Environment）を書く。ほかのリポジトリや環境からは、そのロールを引き受けられない。
 - 各アカウントには、プルリクエストで `terragrunt plan` を実行するための読み取り専用のロールも置く（TPL-0015）。その信頼ポリシーには、環境ではなく、このリポジトリとそのプルリクエストを書く。このロールはインフラを読めるが、変えられない。
-- stg と prd は、それぞれのアカウントに別々のロールを持つ。
-- prd へのデプロイは、レビュー担当者の承認を求める GitHub の環境を通す。
+- stg と prd は、それぞれのアカウントに別々のロールを持つ。`github-plan` と `github-deploy` であり、モジュール `infra/modules/github-oidc` とユニット `ci` が作る（TPL-0015）。
+- どちらの信頼ポリシーも、トークンのサブジェクトの全体を `StringEquals` で比べる。`github-plan` は `repo:<repository>:pull_request` を、`github-deploy` は `repo:<repository>:environment:<environment>` を信頼する。リポジトリは1つで、ワイルドカードを含まない。
+- 2026年7月15日より後に作られたリポジトリについて、GitHub はサブジェクトの中のリポジトリを不変の形で書く。`repo:<owner>@<owner id>/<name>@<repository id>:...` である。このリポジトリもその1つであり、`infra/live/system.hcl` はリポジトリをこの形で持つ。
+- `github-plan` は `ReadOnlyAccess` を持ち、state のロックファイルを書いて消せる。`github-deploy` は既定で `AdministratorAccess` を持つ。このロールは IAM ロールを作るので、ポリシーを狭めても届く範囲は限られない。範囲を限るのは、誰がこのロールを引き受けられるかである。
+- ワークフロー `Plan`（`.github/workflows/plan.yml`）は、プルリクエストで、`github-plan` として stg と prd の `make infra-plan` を実行する。フォークからのプルリクエストはトークンを得られないので、スキップする。
+- ワークフロー `Deploy`（`.github/workflows/deploy.yml`）は、`main` への push のあとに `make deploy` を実行する。まず stg、次に GitHub の環境 `prd` の中で prd である。環境 `prd` は、レビュー担当者の承認を求める。デプロイは一度に1つずつ、マージの順に動き、途中で取り消されることはない。
+- ジョブは、自分のロールの ARN を持つリポジトリの変数が設定されるまでスキップされる。その変数は `AWS_PLAN_ROLE_ARN_STG`、`AWS_PLAN_ROLE_ARN_PRD`、`AWS_DEPLOY_ROLE_ARN_STG`、`AWS_DEPLOY_ROLE_ARN_PRD` のどれかである。どのジョブも、リージョンを `AWS_REGION` から読む。これらの変数はシークレットではない。
+- `make deploy ENV=prd` は、GitHub Actions の外では実行を拒む。そのため、prd が変わるのは、人が承認したジョブを通したときだけである。
+
+この決定は1つの点で最初の計画と違う。最初の計画では、`make` の前に置けるステップは、チェックアウト・mise・キャッシュだけだった。AWS へのサインインは4つ目の種類のステップである。GitHub が OIDC のトークンを求めるためのトークンをアクションにしか渡さないからである。
 
 ### 結果
 
@@ -68,13 +77,17 @@ CI をどこで動かし、そのワークフローを手元のチェックと�
 - 悪い点：GitHub Actions が止まると、CI もデプロイも止まる。
 - 悪い点：プルリクエストでは遅いチェックが変更のあったファイルしか見ないので、そのプルリクエストが触れていないファイルの問題（ほかの文書の切れたリンクなど）は、`main` で初めて見つかる。
 - 悪い点：固定した SHA を新しく保ち続ける必要がある。この更新は Renovate が受け持つ（TPL-0025）。
+- 悪い点：デプロイするロールは、そのアカウントで何でもできる。レビューしていないコードにこのロールを渡さないのは、信頼ポリシーと、prd の環境のレビュー担当者である。
+- 悪い点：GitHub の環境とそのレビュー担当者、リポジトリの変数は、GitHub の設定である。ファイルと `make github-settings` のどちらにも含まれないので、テンプレートのコピーごとに人が設定する（[GitHub の設定](../../guides/github-settings.ja.md)）。
 
 ### 確認の方法
 
 - `make check` は、`.github/workflows/` のワークフローに4つのチェックをかける（`make/actions.mk`）。構文と式は actionlint が、テンプレートインジェクションや広すぎる権限のようなセキュリティ上の弱点は zizmor が調べる。権限とタイムアウトの方針は ghalint が、コミット SHA の全桁での固定は pinact が調べる。
 - ファイルに書き込まれた AWS のキーは、`make check` の実行する gitleaks と、GitHub のシークレットスキャン が見つける。GitHub のシークレットに置かれたキーはどちらからも見えないので、置いていないことをリポジトリの設定のレビューで確かめる。
 - ステップが `make` を呼ぶだけで独自の処理を持たないことは、レビューで確かめる。これを守らせるチェックはない。`check` を求めるルールセットは、`make github-settings` が `docs/guides/github-settings.md` と比べる。
-- IAM ロールとその信頼ポリシーは、インフラのマイルストーンで入る。それまでは AWS へのアクセスが要るワークフローはなく、デプロイの決まりもまだ効いていない。
+- `infra/modules/github-oidc` のテスト（`make check-all` の `validate-terraform`）は、読み取り専用のロールを引き受けられるのがリポジトリのプルリクエストのジョブだけであることを確かめる。デプロイするロールについては、その環境の GitHub の環境のジョブだけが引き受けられることを確かめる。また、リポジトリの不変の形を受け付けることと、リポジトリの中のワイルドカードや、リポジトリに紛れ込ませたサブジェクトを拒むことも確かめる。
+- `infra.sh deploy` は、`GITHUB_ACTIONS` が `true` でなければ prd を拒む。
+- AWS には何も適用していないので、次のことはまだ確かめていない。1つは、不変の形でのプルリクエストと環境のサブジェクトである。GitHub のドキュメントは、この形をブランチについてしか示していない。もう1つは、`ReadOnlyAccess` だけで plan のすべての読み直し（シークレットのバージョンなど）ができるかである（[AWS にデプロイする](../../guides/deploy.ja.md#最初の適用で確かめること)）。
 
 ## 選択肢の長所と短所
 
@@ -111,4 +124,4 @@ CI をどこで動かし、そのワークフローを手元のチェックと�
 - [actionlint](https://github.com/rhysd/actionlint)・[zizmor](https://github.com/zizmorcore/zizmor)・[ghalint](https://github.com/suzuki-shunsuke/ghalint)・[pinact](https://github.com/suzuki-shunsuke/pinact)
 - [Configuring OpenID Connect in Amazon Web Services](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-aws)
 
-<!-- i18n-source: TPL-0018-github-actions-with-oidc.md sha256:af900a86fa2857e6595f1ed23d2c3d09041c67df1a6b22ea91cc484c9ef08302 -->
+<!-- i18n-source: TPL-0018-github-actions-with-oidc.md sha256:4ee03c77e92e3b7ff59babe06005bd88123fdb31f7642f18483f0238fe163764 -->

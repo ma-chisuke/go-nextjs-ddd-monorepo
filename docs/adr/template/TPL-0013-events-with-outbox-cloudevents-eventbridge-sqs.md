@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-17
+date: 2026-11-19
 ---
 
 # TPL-0013: Publish integration events through an outbox to EventBridge, as CloudEvents, with an SQS queue for each consuming context
@@ -48,7 +48,8 @@ The rules are as follows.
 - A relay reads new rows from the outbox, publishes them to a dedicated EventBridge event bus, and then marks them as published. If the relay fails between the two steps, it publishes the row again, so delivery is at least once.
 - The relay is code of this repository, `backend/internal/platform/outbox`, and runs as a process of its own, from the image of its context (TPL-0014).
 - On the bus, an event is an EventBridge entry whose `source` and `detail-type` are the `source` and the `type` of its envelope, and whose `detail` is the envelope itself.
-- Each consuming context has its own SQS queue, with a dead-letter queue. An EventBridge rule selects the events that the context needs by `source` and `detail-type`, and sends the `detail` alone to the queue (the input path `$.detail`), so the queue receives the envelope as the publisher wrote it. The rule lives in the consumer's infrastructure unit (TPL-0015), so the publisher does not know its consumers.
+- Each consuming context has its own SQS queue, with a dead-letter queue. An EventBridge rule selects the events that the context needs by `source` and `detail-type`, and sends the `detail` alone to the queue (the input path `$.detail`), so the queue receives the envelope as the publisher wrote it. The rule lives in the consumer's infrastructure unit (TPL-0015), so the publisher does not know its consumers: in AWS, the unit `contexts/<context>` of the consumer creates its queue and its rule through the module `context-service`, and the unit `platform` creates the bus.
+- The task role of a publishing context may call `events:PutEvents` and `events:DescribeEventBus` on the bus alone, and the task role of a consuming context may call `sqs:ReceiveMessage` and `sqs:DeleteMessage` on its own queue alone (TPL-0014).
 - Every event uses the CloudEvents 1.0 envelope. The payload of each type of event is defined by a JSON Schema in `contracts/events/<context>/<Event>.v1.json`. A change that would break consumers is a new version of the event, in a new file.
 - An AsyncAPI 3.0 document describes the channels: which context publishes which events, and which contexts consume them.
 - Consumers are idempotent: handling the same event twice has the effect of handling it once, for example because the consumer records the `id` of each event that it has handled.
@@ -77,6 +78,7 @@ Two parts of this decision differ from the first plan.
 - Bad, because delivery is at least once and the order of events is not guaranteed, so every consumer must be idempotent and must cope with events that arrive out of order.
 - Bad, because the relay is one more part to run, and it adds a delay of up to one second, its interval, between the commit and the publishing.
 - Bad, because the relay is code that this repository maintains. It publishes one event per call, while `PutEvents` takes up to ten.
+- Bad, because a consumer whose effect is refused for good fails at every delivery of the event until the dead-letter queue takes it. A mail that Amazon SES refuses, such as one from a sender that no verified identity covers, is such an effect: a person fixes the account or the identity, and moves the events back from the dead-letter queue.
 - Bad, because an event that the broker always refuses, and a row of the outbox that cannot be read, stay in the outbox. The relay tries them again at every interval and logs each failure, with no count of attempts and no place to set them aside, so a person must find them in the log.
 - Bad, because the outbox table grows. The relay keeps published rows for seven days, and then deletes them.
 - Bad, because a test of the whole flow needs AWS or an emulator of it (TPL-0017).
@@ -93,6 +95,7 @@ These checks enforce the decision.
 - The integration tests of Reservation check that the store writes the events of a change with the change and none with a refused change, that two relays never take the same event, and that a row that cannot be read does not hold up the others.
 - The integration tests of Notification deliver one event twice, also twice at the same moment, and expect one mail.
 - The integration tests of `platform/awsevents` run the publisher and the consumer against AWS Emulator: an event reaches the handler of a subscriber through a rule and a queue, and an event whose handler keeps failing moves to the dead-letter queue. They run in `make test-integration`, part of `make check-all` and of CI.
+- The tests of `infra/modules/context-service` check that the task role of a publisher may describe the bus and put events on it, on that bus alone, and that the task role of a consumer may receive and delete the messages of its own queue alone.
 - `make smoke` books, reschedules, and cancels a reservation in the local system, and waits for the three mails in Mailpit, through the outbox, the relay, the bus, the queue, and the worker of Notification. `make e2e` does the same through the screens, in a browser.
 
 ## Pros and Cons of the Options

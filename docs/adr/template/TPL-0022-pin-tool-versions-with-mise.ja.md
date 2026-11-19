@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-17
+date: 2026-11-19
 ---
 
 # TPL-0022: 道具のバージョンはエコシステムごとに1か所で固定し、全体の土台に mise を置く
@@ -48,6 +48,7 @@ date: 2026-11-17
 - Makefile が、これらの道具をすべて `PATH` に載せる。道具は誰もグローバルに入れない。
 - `GOTOOLCHAIN=local` により、Go が mise の入れたもの以外のツールチェーンをダウンロードすることはない。
 - `mise.toml` を変えたあとは、`make tools-lock` で `mise.lock` を書き直す。
+- デプロイの道具も `mise.toml` で固定する。Terraform、Terragrunt、AWS CLI（`aws-cli`。インフラのマイルストーンでは 2.41.0）である。`tools/scripts/infra.sh` と `tools/scripts/images.sh` は、イメージのプッシュとデータベースを準備するタスクの実行に AWS CLI を使う。リハーサルは、AWS Emulator に証明書をリクエストし、ホストゾーンを作るのに AWS CLI を使う。ワークフロー `Plan` と `Deploy` は、これらの道具と `jq` を `mise.toml` から入れ、それ以外は入れない。
 
 この決定には、最初の計画と違う点が2つある。どちらも意図したものである。
 
@@ -112,4 +113,4 @@ date: 2026-11-17
 - [mise](https://mise.jdx.dev/)・[mise.lock](https://mise.jdx.dev/dev-tools/mise-lock.html)
 - これらの固定の上に築くサプライチェーンの守りは TPL-0024 に、固定の更新は TPL-0025 にある。
 
-<!-- i18n-source: TPL-0022-pin-tool-versions-with-mise.md sha256:a3b955199ef692e30a4cea7ad3822efc7628ed6e9e515817a62d37de601d0634 -->
+<!-- i18n-source: TPL-0022-pin-tool-versions-with-mise.md sha256:255feea9710b1c5f915166566bae2bf4e0f2e78ad0186b15db502a6e7e9dd244 -->

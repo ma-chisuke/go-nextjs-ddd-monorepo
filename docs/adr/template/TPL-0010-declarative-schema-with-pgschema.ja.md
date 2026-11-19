@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-18
+date: 2026-11-19
 ---
 
 # TPL-0010: スキーマを pgschema で宣言的に管理する
@@ -45,6 +45,7 @@ date: 2026-11-18
 
 - 文脈のあるべきスキーマは `backend/internal/<context>/internal/adapter/postgres/schema.sql` に書く。このファイルには、その文脈のスキーマのテーブル・インデックス・制約・コメントを書き、スキーマの外のものは書かない。
 - `pgschema plan` はデータベースと `schema.sql` を比べ、データベースをその状態にする DDL を求める。`pgschema apply` はその DDL を実行する。どちらも、その文脈の所有者のロールで実行する（TPL-0009）。
+- AWS では、データベースを準備するタスクが、デプロイのたびにすべての `schema.sql` を pgschema で適用する。適用は各文脈の所有者のロールで行い、デプロイが新しいコードを起動する前、古いコードがまだ動いているうちに行う（TPL-0016）。そのため、`schema.sql` への変更は、変更の前のコードとも後のコードとも動かなければならない。先に足し、削るのは後のデプロイにする（[スキーマを変える](../../guides/change-a-schema.ja.md)）。このタスクのイメージ `db/Dockerfile` は、`mise.toml` が固定する pgschema のリリースを持つ。
 - マイグレーションの履歴ファイルは置かない。スキーマの履歴は、`schema.sql` の Git の履歴である。
 - plan の DDL はすべて squawk で検査し、`schema.sql` を変えるプルリクエストでレビューする。
 - スキーマ・ロール・拡張は pgschema では作らない。作るのは `db/bootstrap.sql` である（TPL-0009）。
@@ -61,6 +62,7 @@ date: 2026-11-18
 - 悪い点：データの移行とバックフィルには、pgschema の助けがない。1つずつ書き、レビューし、別の手順として実行する。
 - 悪い点：名前の変更には注意が要り、決まりに書いたとおり何回かの変更に分ける必要がある。
 - 悪い点：DDL は、plan が比べるデータベースによって変わる。ある環境が main ブランチの状態からずれていると、そこで実行される DDL は、レビューした DDL と違うものになる。
+- 悪い点：AWS では、新しいコードが起動する前にスキーマが変わる。古いコードが耐えられない変更（古いコードが読む列を消す変更など）は、新しいコードが動くまで、動いているサービスを壊す。そのため、そうした変更は2回のデプロイに分ける。
 - 悪い点：pgschema は若い道具であり、1つの会社（Bytebase）が支援していて、コミュニティも小さい。開発が止まれば、テンプレートはほかの道具に替える必要がある。ただし `schema.sql` は素の SQL なので、道具を替えてもファイルはそのまま残せる。
 
 ### 確認の方法
@@ -71,6 +73,8 @@ date: 2026-11-18
 CI は、plan をまだプルリクエストに示さない。レビュアーは、チェックを実行してから `.cache/sql-plan/` で plan を読む。
 名前を変える手順の最後に古い列を削除する場合のように、ルールが禁じる変更を意図して行うこともある。そうした変更は、文脈がその SQL 文を `backend/internal/<context>/internal/adapter/postgres/schema-changes.allow` に書けば、チェックを通る。書き方は SQL 文1つにつき1行で、`<squawk のルール> | <指摘が引用するとおりの SQL 文> | <理由>` である。
 この行は、レビューで人が下す判断である。理由のない行は指摘になる（`sql-plan/allowance-format`）。いまの plan のどの SQL 文にも合わない行も指摘になる（`sql-plan/unused-allowance`）ので、スキーマを次に変える変更がその行を消し、許可は積み上がらない。そうした変更に至る手順は、[スキーマを変える](../../guides/change-a-schema.ja.md)が説明している。
+
+`make check-all` のターゲット `test-db-image` は、データベースを準備するタスクのイメージを、手元の PostgreSQL に対して2回動かす。2回目の実行がスキーマを変えたとき、またはイメージの pgschema が `mise.toml` の固定するリリースと違うときに失敗する。
 
 ## 選択肢の長所と短所
 
@@ -116,4 +120,4 @@ CI は、plan をまだプルリクエストに示さない。レビュアーは
 - PostgreSQL のマイグレーション用のリンター [squawk](https://squawkhq.com/)
 - [Atlas の機能の一覧](https://atlasgo.io/features)（Pro プランに含まれる機能も載っている）
 
-<!-- i18n-source: TPL-0010-declarative-schema-with-pgschema.md sha256:7876d8e17ca9e6738539dcafb0077d154b3c946302987b21cf725a12117704d9 -->
+<!-- i18n-source: TPL-0010-declarative-schema-with-pgschema.md sha256:1ed4e5b3488e1b3b6cfe0f3ce0f5bd4c781846131a0881fab2a204a20b819272 -->

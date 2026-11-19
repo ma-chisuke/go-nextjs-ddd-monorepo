@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-17
+date: 2026-11-19
 ---
 
 # TPL-0025: 依存と道具の更新を Renovate に任せる
@@ -38,6 +38,7 @@ date: 2026-11-17
 決まりは次のとおりである。
 
 - Renovate は、Go のモジュール・npm のパッケージ・Python のパッケージ・Docker のイメージのダイジェスト・アクションの SHA・`mise.toml` の道具・Terraform の provider を更新する。
+- 環境の provider は `infra/live/providers.hcl` で固定し、Renovate の Terraform のマネージャーがそれを読む（`renovate.json` の `terraform`）。グループ `Terraform providers` は、同じ provider を使う `infra/local/` のものと一緒にそれらを動かす。Renovate は `infra/live/providers.lock.hcl` を書かない。そこで、`mise.lock` のための `make tools-lock` と同じく、人が更新のブランチで `make infra-lock` を実行する。それまでは、そのブランチの Terragrunt の実行はどれも失敗する。
 - リリースから3日待ってから、そのリリースを提案する。
 - 関連する更新は1つのプルリクエストにまとめる。
 - プルリクエストは週1回の予定に沿って開く。セキュリティの修正は、この予定を待たない。
@@ -55,7 +56,8 @@ date: 2026-11-17
 - 悪い点：自動のマージは、チェックと同じ程度にしか安全でない。テストがカバーしていない振る舞いを壊す patch のリリースは、人を通さずにマージされる。
 - 悪い点：Renovate のアプリは、ブランチをプッシュしてプルリクエストを開くために、リポジトリへの書き込みの権限を必要とする。信頼する相手が1つ増える。
 - 悪い点：設定を誤ると、ある種類の固定の更新が知らないうちに止まることがある。スキーマではそれを見分けられない。
-- 悪い点：Renovate のどのマネージャーも読まない固定は、更新されない。`infra/local/aws-emulator/Dockerfile` のビルド引数にある、AWS Emulator のバージョンとそのパッケージのチェックサムがそれにあたり、人が手で更新する（TPL-0017）。`frontend/Dockerfile` の `ADD` にある、pnpm のバージョンとそのパッケージのチェックサムもそうである。`renovate.json` のグループ `pnpm` は `mise.toml`・`package.json`・`pnpm-lock.yaml` を動かし、人が同じプルリクエストで Dockerfile を変える（TPL-0024）。
+- 悪い点：Renovate のどのマネージャーも読まない固定は、更新されない。`infra/local/aws-emulator/Dockerfile` のビルド引数にある、AWS Emulator のバージョンとそのパッケージのチェックサムがそれにあたり、人が手で更新する（TPL-0017）。`frontend/Dockerfile` の `ADD` にある、pnpm のバージョンとそのパッケージのチェックサムもそうである。`renovate.json` のグループ `pnpm` は `mise.toml`・`package.json`・`pnpm-lock.yaml` を動かし、人が同じプルリクエストで Dockerfile を変える（TPL-0024）。`db/Dockerfile` にある、pgschema のバージョンとそのバイナリのチェックサムが3つ目である。Renovate が `mise.toml` の pgschema を動かしたら、人が Dockerfile を変える。両者がそろうまで、`make test-db-image` は失敗する。
+- 悪い点：provider の更新には、人が `make infra-lock` を実行する必要がある。そのため、この更新がひとりでにマージされることはない。
 
 ### 確認の方法
 
@@ -92,4 +94,4 @@ date: 2026-11-17
 - [Renovate のドキュメント](https://docs.renovatebot.com/)
 - 固定については TPL-0022 に、3日の待ちについては TPL-0024 に書いてある。
 
-<!-- i18n-source: TPL-0025-dependency-updates-with-renovate.md sha256:d094b06890bba9546371bb3a4e90c9b0b252b1714179adad73ae6950268423df -->
+<!-- i18n-source: TPL-0025-dependency-updates-with-renovate.md sha256:0ed6a17c10921c6078d450aa04fd07535f26040bce3f7eb50cde139c6336da1a -->

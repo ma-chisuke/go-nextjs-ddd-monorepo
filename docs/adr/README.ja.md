@@ -20,22 +20,22 @@
 | [TPL-0006](template/TPL-0006-openapi-with-oapi-codegen-strict-server.ja.md) | HTTP の契約を OpenAPI 3.1 で書き、Go のサーバーを oapi-codegen の strict server で生成する | accepted | 2026-11-18 |
 | [TPL-0007](template/TPL-0007-layered-checks-for-api-conformance.ja.md) | OpenAPI の文書と実装の一致を、層に分けたチェックで保つ | accepted | 2026-11-17 |
 | [TPL-0008](template/TPL-0008-errors-as-rfc-9457-problem-details.ja.md) | エラーはすべて RFC 9457 の problem details で返す | accepted | 2026-11-18 |
-| [TPL-0009](template/TPL-0009-one-postgresql-database-with-schema-per-context.ja.md) | PostgreSQL 18 のデータベースを1つにし、文脈ごとにスキーマとロールを分ける | accepted | 2026-11-18 |
-| [TPL-0010](template/TPL-0010-declarative-schema-with-pgschema.ja.md) | スキーマを pgschema で宣言的に管理する | accepted | 2026-11-18 |
+| [TPL-0009](template/TPL-0009-one-postgresql-database-with-schema-per-context.ja.md) | PostgreSQL 18 のデータベースを1つにし、文脈ごとにスキーマとロールを分ける | accepted | 2026-11-19 |
+| [TPL-0010](template/TPL-0010-declarative-schema-with-pgschema.ja.md) | スキーマを pgschema で宣言的に管理する | accepted | 2026-11-19 |
 | [TPL-0011](template/TPL-0011-database-access-with-sqlc.ja.md) | データベースへのアクセスに sqlc を使う | accepted | 2026-11-17 |
 | [TPL-0012](template/TPL-0012-uuidv7-primary-keys.ja.md) | 主キーに UUIDv7 を使う | accepted | 2026-11-18 |
-| [TPL-0013](template/TPL-0013-events-with-outbox-cloudevents-eventbridge-sqs.ja.md) | 統合イベントは送信箱から CloudEvents の形で EventBridge に発行し、受け取る文脈ごとに SQS のキューを置く | accepted | 2026-11-17 |
-| [TPL-0014](template/TPL-0014-deploy-each-context-to-ecs.ja.md) | 文脈ごとに ECS へデプロイし、入口を ECS Gateway にする | accepted | 2026-11-17 |
-| [TPL-0015](template/TPL-0015-terraform-and-terragrunt.ja.md) | インフラを Terraform と Terragrunt で管理し、stg と prd を別々の AWS アカウントに置く | accepted | 2026-11-17 |
-| [TPL-0016](template/TPL-0016-aurora-serverless-v2-by-default.ja.md) | Aurora は Serverless v2 を既定にし、キャパシティを環境ごとに選ぶ | accepted | 2026-11-17 |
-| [TPL-0017](template/TPL-0017-aws-emulator-for-local-development.ja.md) | 手元の環境では AWS Emulator で AWS を代用する | accepted | 2026-11-17 |
-| [TPL-0018](template/TPL-0018-github-actions-with-oidc.ja.md) | CI/CD を GitHub Actions で動かし、AWS には OIDC で入る | accepted | 2026-11-17 |
+| [TPL-0013](template/TPL-0013-events-with-outbox-cloudevents-eventbridge-sqs.ja.md) | 統合イベントは送信箱から CloudEvents の形で EventBridge に発行し、受け取る文脈ごとに SQS のキューを置く | accepted | 2026-11-19 |
+| [TPL-0014](template/TPL-0014-deploy-each-context-to-ecs.ja.md) | 文脈ごとに ECS へデプロイし、API は非公開にして、公開の入口を1つにする | accepted | 2026-11-19 |
+| [TPL-0015](template/TPL-0015-terraform-and-terragrunt.ja.md) | インフラを Terraform と Terragrunt で管理し、stg と prd を別々の AWS アカウントに置く | accepted | 2026-11-19 |
+| [TPL-0016](template/TPL-0016-aurora-serverless-v2-by-default.ja.md) | Aurora は Serverless v2 を既定にし、キャパシティを環境ごとに選ぶ | accepted | 2026-11-19 |
+| [TPL-0017](template/TPL-0017-aws-emulator-for-local-development.ja.md) | 手元の環境では AWS Emulator で AWS を代用する | accepted | 2026-11-19 |
+| [TPL-0018](template/TPL-0018-github-actions-with-oidc.ja.md) | CI/CD を GitHub Actions で動かし、AWS には OIDC で入る | accepted | 2026-11-19 |
 | [TPL-0019](template/TPL-0019-mit-0-license.ja.md) | テンプレートのライセンスを MIT-0 にする | accepted | 2026-11-17 |
 | [TPL-0020](template/TPL-0020-agent-harness-prefers-deterministic-checks.ja.md) | コーディングエージェントのハーネスでは決定的なチェックを優先し、指示は最小限から始める | accepted | 2026-11-17 |
 | [TPL-0021](template/TPL-0021-english-source-japanese-translation.ja.md) | 文書は英語で書き、どの文書にも日本語の対訳を隣に置く | accepted | 2026-11-17 |
-| [TPL-0022](template/TPL-0022-pin-tool-versions-with-mise.ja.md) | 道具のバージョンはエコシステムごとに1か所で固定し、全体の土台に mise を置く | accepted | 2026-11-17 |
-| [TPL-0023](template/TPL-0023-one-tool-per-concern.ja.md) | 1つの関心事に道具を1つだけ使い、どの道具も make から動かし、`make check` に時間の上限を設ける | accepted | 2026-11-17 |
-| [TPL-0024](template/TPL-0024-supply-chain-defenses.ja.md) | サプライチェーンを層を重ねて守る | accepted | 2026-11-17 |
-| [TPL-0025](template/TPL-0025-dependency-updates-with-renovate.ja.md) | 依存と道具の更新を Renovate に任せる | accepted | 2026-11-17 |
+| [TPL-0022](template/TPL-0022-pin-tool-versions-with-mise.ja.md) | 道具のバージョンはエコシステムごとに1か所で固定し、全体の土台に mise を置く | accepted | 2026-11-19 |
+| [TPL-0023](template/TPL-0023-one-tool-per-concern.ja.md) | 1つの関心事に道具を1つだけ使い、どの道具も make から動かし、`make check` に時間の上限を設ける | accepted | 2026-11-19 |
+| [TPL-0024](template/TPL-0024-supply-chain-defenses.ja.md) | サプライチェーンを層を重ねて守る | accepted | 2026-11-19 |
+| [TPL-0025](template/TPL-0025-dependency-updates-with-renovate.ja.md) | 依存と道具の更新を Renovate に任せる | accepted | 2026-11-19 |
 
-<!-- i18n-source: README.md sha256:98076e53647415d9a69421d94f143b45ba19efb0b41e9369d225003a4b2a8d3f -->
+<!-- i18n-source: README.md sha256:fd4105c98002eae58e9b7be03a462392fd57d8b47126991ec8aafb4d60021123 -->
