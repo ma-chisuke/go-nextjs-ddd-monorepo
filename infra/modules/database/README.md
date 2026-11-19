@@ -64,7 +64,7 @@ Secrets Manager keeps a deleted secret for 30 days, during which a secret of the
 The module has been applied to AWS Emulator only (TPL-0017), with the engine version 17.9, the newest that it knows. It accepted every resource; it gives the cluster a port of its own, so a plan after the apply shows a change of the port.
 These facts about AWS are assumed, and checked when the module is first applied.
 
-- Aurora PostgreSQL offers 18.6, and its Serverless v2 accepts a minimum of 0 ACU from 18.3 (TPL-0016 leaves this open).
+- Aurora PostgreSQL offers 18.6, and its Serverless v2 accepts a minimum of 0 ACU from 18.3. The documentation of AWS says so (TPL-0016); no cluster of this template has shown it yet.
 - The master user of Aurora PostgreSQL 18 has CREATEROLE and CREATEDB, owns the database that the cluster creates, holds the ADMIN OPTION on a role that it creates, as PostgreSQL 16 and later give the creator, and may install the extension `btree_gist`.
 - The secret of the master user holds the keys `username` and `password`, and a role reads it, and the secrets of this module, without a permission on a KMS key.
 - ECS fills one variable from one key of a JSON secret with `"<ARN>:<key>::"`, for the secret that RDS manages too.
