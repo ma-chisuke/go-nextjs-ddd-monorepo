@@ -258,6 +258,10 @@ prepare_database() {
   code=$(aws ecs describe-tasks --cluster "$cluster" --tasks "$arn" \
     --query 'tasks[0].containers[0].exitCode' --output text)
   if [ "$code" != 0 ]; then
+    # A task that never started its container, because the image or a secret
+    # could not be read, has no exit code; ECS says why it stopped.
+    aws ecs describe-tasks --cluster "$cluster" --tasks "$arn" \
+      --query 'tasks[0].[stoppedReason, containers[0].reason]' --output text >&2
     echo "infra: the task that prepares the database failed (exit code $code); its output is in the log group /$environment/db" >&2
     exit 1
   fi
