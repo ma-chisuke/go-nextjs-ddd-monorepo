@@ -327,8 +327,12 @@ resource "aws_ecs_service" "this" {
   desired_count   = var.desired_count
   launch_type     = "FARGATE"
 
-  propagate_tags         = "SERVICE"
   enable_execute_command = false
+
+  # The tasks carry the tags of their service, such as the default tags of
+  # the environment, for the bill.
+  enable_ecs_managed_tags = true
+  propagate_tags          = "SERVICE"
 
   # A deployment that does not become healthy is rolled back.
   deployment_circuit_breaker {
@@ -353,6 +357,16 @@ resource "aws_ecs_service" "this" {
   service_connect_configuration {
     enabled   = true
     namespace = var.namespace_arn
+
+    # The proxy of Service Connect logs next to the server.
+    log_configuration {
+      log_driver = "awslogs"
+      options = {
+        awslogs-group         = aws_cloudwatch_log_group.this.name
+        awslogs-region        = data.aws_region.current.region
+        awslogs-stream-prefix = "service-connect"
+      }
+    }
   }
 
   # The target group must belong to a listener before a service may use it.
