@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -454,10 +455,15 @@ func TestListReservations(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// list follows the cursors to the last page, and fails the test after
+	// more pages than the reservations could fill.
 	list := func(in app.ListReservationsInput) []string {
 		t.Helper()
 		var starts []string
-		for {
+		for pages := 1; ; pages++ {
+			if pages > 10 {
+				t.Fatalf("%+v: the cursors lead to more than 10 pages", in)
+			}
 			page, next, err := f.uc.ListReservations(t.Context(), in)
 			if err != nil {
 				t.Fatal(err)
@@ -493,8 +499,57 @@ func TestListReservations(t *testing.T) {
 		}
 	}
 
-	_, _, err := f.uc.ListReservations(t.Context(), app.ListReservationsInput{Limit: 2, Cursor: "not-a-cursor"})
+	// The last page has no cursor, even when it is full.
+	page, next, err := f.uc.ListReservations(t.Context(), app.ListReservationsInput{Limit: 5})
+	if err != nil || len(page) != 5 || next != "" {
+		t.Errorf("got %d reservations, the cursor %q, and the error %v; want all 5 and no cursor", len(page), next, err)
+	}
+	// A limit below 1 lists one reservation a page.
+	page, next, err = f.uc.ListReservations(t.Context(), app.ListReservationsInput{Limit: 0})
+	if err != nil || len(page) != 1 || next == "" {
+		t.Errorf("got %d reservations, the cursor %q, and the error %v; want 1 and a cursor", len(page), next, err)
+	}
+
+	_, _, err = f.uc.ListReservations(t.Context(), app.ListReservationsInput{Limit: 2, Cursor: "not-a-cursor"})
 	wantAppKind(t, err, app.KindInvalidCursor)
+	// A cursor is base64url text. One with a character outside that alphabet
+	// is refused, even when the text before the character decodes to a
+	// cursor of this API. The decoded cursor is filled with spaces, which
+	// JSON ignores, so that the decoder reads all of it before the character.
+	raw, err := base64.RawURLEncoding.DecodeString(next)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for len(raw)%3 != 0 {
+		raw = append(raw, ' ')
+	}
+	_, _, err = f.uc.ListReservations(t.Context(), app.ListReservationsInput{Limit: 2, Cursor: base64.RawURLEncoding.EncodeToString(raw) + "*"})
+	wantAppKind(t, err, app.KindInvalidCursor)
+}
+
+// listingStore records the queries that reach List.
+type listingStore struct {
+	*apptest.Store
+	queries []app.ListQuery
+}
+
+func (s *listingStore) List(ctx context.Context, q app.ListQuery) ([]domain.Reservation, error) {
+	s.queries = append(s.queries, q)
+	return s.Store.List(ctx, q)
+}
+
+// A page asks the store for one reservation more than it holds, to learn
+// whether another page follows, and for no more.
+func TestListReservationsAsksForOneMore(t *testing.T) {
+	t.Parallel()
+	store := &listingStore{Store: &apptest.Store{}}
+	uc := app.New(store, apptest.NewRooms(roomA), apptest.NewClock(now), &apptest.IDs{})
+	if _, _, err := uc.ListReservations(t.Context(), app.ListReservationsInput{Limit: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if len(store.queries) != 1 || store.queries[0].Limit != 3 {
+		t.Errorf("got the queries %+v, want one with the limit 3", store.queries)
+	}
 }
 
 // brokenStore fails in the method named broken, as a store whose database
