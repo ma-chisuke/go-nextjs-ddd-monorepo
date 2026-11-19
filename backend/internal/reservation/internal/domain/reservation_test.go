@@ -56,6 +56,9 @@ func TestBook(t *testing.T) {
 	// A room that is open almost all day, for the periods around midnight.
 	lateRoom := room
 	lateRoom.Hours = domain.OpeningHours{Opens: domain.NewTimeOfDay(0, 0), Closes: domain.NewTimeOfDay(23, 45)}
+	// A room without a time zone reads its opening hours in UTC.
+	utcRoom := room
+	utcRoom.TimeZone = nil
 
 	tests := []struct {
 		name      string
@@ -76,6 +79,7 @@ func TestBook(t *testing.T) {
 		{"started one step ago", room, on(18, 9, 45, 11, 0), 4, domain.KindPeriodInPast},
 		{"started yesterday", room, on(17, 10, 0, 11, 0), 4, domain.KindPeriodInPast},
 		{"nobody attends", room, on(20, 10, 0, 11, 0), 0, domain.KindNoAttendees},
+		{"the organizer alone attends", room, on(20, 10, 0, 11, 0), 1, 0},
 		{"the attendees fill the room", room, on(20, 10, 0, 11, 0), 8, 0},
 		{"one attendee too many", room, on(20, 10, 0, 11, 0), 9, domain.KindOverCapacity},
 		{"starts when the room opens", room, on(20, 9, 0, 10, 0), 4, 0},
@@ -89,6 +93,12 @@ func TestBook(t *testing.T) {
 		},
 		{"ends when a late room closes", lateRoom, on(20, 23, 0, 23, 45), 4, 0},
 		{"runs into the next day", lateRoom, domain.Period{Start: at(20, 23, 30), End: at(21, 0, 15)}, 4, domain.KindOutsideOpeningHours},
+		{
+			"inside the opening hours of a room without a time zone", utcRoom,
+			domain.Period{Start: time.Date(2026, 11, 20, 10, 0, 0, 0, time.UTC), End: time.Date(2026, 11, 20, 11, 0, 0, 0, time.UTC)},
+			4, 0,
+		},
+		{"inside the opening hours in Tokyo, before them in UTC", utcRoom, on(20, 10, 0, 11, 0), 4, domain.KindOutsideOpeningHours},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
