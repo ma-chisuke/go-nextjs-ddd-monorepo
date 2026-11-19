@@ -1,0 +1,94 @@
+# The plan of every unit of stg and prd, on a pull request that can change
+# what an environment runs (TPL-0015, TPL-0018). A reviewer reads in the log
+# of each job what a merge would change in that environment.
+#
+# A job signs in to the AWS account of its environment through the OIDC
+# provider of GitHub, as the role `github-plan`, which can read and cannot
+# change (infra/modules/github-oidc). No key is stored on GitHub. Until the
+# repository variable with the ARN of the role is set, the job is skipped;
+# docs/guides/deploy.md says how to set an environment up.
+#
+# GitHub gives no token to a pull request from a fork, so the jobs skip it.
+name: Plan
+
+on:
+  pull_request:
+    paths:
+      - infra/**
+      - backend/**
+      - frontend/**
+      - db/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - tools/scripts/infra.sh
+      - tools/scripts/images.sh
+      - tools/scripts/terraform-init.sh
+      - make/infra.mk
+      - mise.toml
+      - mise.lock
+      - .github/workflows/plan.yml
+
+permissions: {}
+
+# A new run on the same pull request cancels the older one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # renovate: datasource=github-releases depName=jdx/mise extractVersion=^v(?<version>.+)$
+  MISE_VERSION: 2026.11.8
+
+jobs:
+  stg:
+    name: plan stg
+    if: vars.AWS_PLAN_ROLE_ARN_STG != '' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write # the token that AWS exchanges for the credentials of the role
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Terraform, Terragrunt, and the AWS CLI
+        uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
+        with:
+          version: ${{ env.MISE_VERSION }}
+          install_args: terraform terragrunt aws-cli jq
+      - name: Sign in to the account of stg as the read-only role
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN_STG }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: make infra-plan
+        run: make infra-plan ENV=stg
+
+  prd:
+    name: plan prd
+    if: vars.AWS_PLAN_ROLE_ARN_PRD != '' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write # the token that AWS exchanges for the credentials of the role
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Terraform, Terragrunt, and the AWS CLI
+        uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
+        with:
+          version: ${{ env.MISE_VERSION }}
+          install_args: terraform terragrunt aws-cli jq
+      - name: Sign in to the account of prd as the read-only role
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN_PRD }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: make infra-plan
+        run: make infra-plan ENV=prd
