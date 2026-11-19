@@ -4,7 +4,7 @@ The EventBridge event bus that carries the integration events of every bounded c
 A publishing context puts its events on the bus through the relay of its outbox.
 Each consuming context adds a rule of its own with the module [event-subscription](../event-subscription/README.md), so the publisher does not know its consumers.
 
-The local environment applies this module to AWS Emulator (`infra/local/`). The environments in AWS will use the same module, from the infrastructure milestone on (TPL-0015).
+The local environment applies this module to AWS Emulator (`infra/local/`). The environments in AWS use the same module: the module [platform](../platform/README.md) calls it (TPL-0015).
 
 terraform-docs writes the lists of inputs, outputs, and resources below from the code. The descriptions in the code are in English, so the lists are in this English version only.
 

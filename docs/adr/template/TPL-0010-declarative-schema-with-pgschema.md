@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-18
+date: 2026-11-19
 ---
 
 # TPL-0010: Manage the schema declaratively with pgschema
@@ -45,6 +45,7 @@ The rules are as follows.
 
 - The desired schema of a context is `backend/internal/<context>/internal/adapter/postgres/schema.sql`. It holds the tables, indexes, constraints, and comments of that context's schema, and nothing outside it.
 - `pgschema plan` compares the database with `schema.sql` and computes the DDL that turns the database into that state. `pgschema apply` runs the DDL. The owner role of the context runs both (TPL-0009).
+- In AWS, the task that prepares the database applies every `schema.sql` with pgschema at each deployment, as the owner role of each context, before the deployment starts the new code and while the old code still runs (TPL-0016). A change to `schema.sql` must therefore work with the code before it and with the code after it: add first, and remove in a later deployment ([Change a schema](../../guides/change-a-schema.md)). The image of that task, `db/Dockerfile`, holds the release of pgschema that `mise.toml` pins.
 - There are no migration history files. The history of the schema is the Git history of `schema.sql`.
 - The DDL of every plan is linted with squawk and reviewed in the pull request that changes `schema.sql`.
 - pgschema does not create schemas, roles, or extensions. `db/bootstrap.sql` does (TPL-0009).
@@ -61,6 +62,7 @@ The rules are as follows.
 - Bad, because data migrations and backfills get no help from pgschema: each one is written, reviewed, and run as a separate step.
 - Bad, because a rename needs care and several changes, as described in the rules.
 - Bad, because the DDL depends on the database that the plan compares with. If an environment has drifted from the main branch, the DDL that runs there differs from the DDL that was reviewed.
+- Bad, because in AWS the schema changes before the new code starts. A change that the old code cannot live with, such as a column that it reads and that the change drops, breaks the running services until the new code runs, so such a change is split over two deployments.
 - Bad, because pgschema is a young tool, sponsored by one company (Bytebase), with a small community. If it stalls, the template needs another tool. `schema.sql` is plain SQL, so the file itself survives such a change.
 
 ### Confirmation
@@ -71,6 +73,8 @@ The target `lint-sql-plan` of `make check-all` lints the DDL of each change. In 
 CI does not show the plan in the pull request yet; the reviewer reads it in `.cache/sql-plan/` after running the check.
 A deliberate change that a rule forbids, such as dropping the old column at the end of a rename, gets through when the context lists the statement in `backend/internal/<context>/internal/adapter/postgres/schema-changes.allow`, one line per statement: `<squawk rule> | <statement exactly as the finding quotes it> | <reason>`.
 Such a line is the decision of a person in review. A line without a reason is a finding (`sql-plan/allowance-format`), and so is a line that matches no statement of the current plan (`sql-plan/unused-allowance`), so the next change to the schema removes it, and allowances do not pile up. [Change a schema](../../guides/change-a-schema.md) describes the steps that lead to such a change.
+
+The target `test-db-image` of `make check-all` runs the image of the task that prepares the database against the local PostgreSQL twice, and fails when the second run changes the schema, or when the image holds another release of pgschema than `mise.toml` pins.
 
 ## Pros and Cons of the Options
 

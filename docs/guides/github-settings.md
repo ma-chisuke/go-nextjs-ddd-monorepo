@@ -3,7 +3,7 @@
 Some rules of this repository live in the settings of the repository on GitHub, not in its files.
 CI protects `main` only if a ruleset requires the check of CI, and Renovate merges an update only if the repository allows automatic merges.
 The script `tools/github/apply-settings.sh` writes these settings, so that they can be reviewed in a pull request and applied again at any time.
-This guide explains how to run the script, what each setting does, and the two steps that the script cannot do: the release App and the Renovate app.
+This guide explains how to run the script, what each setting does, and the steps that the script cannot do: the release App, the environments of the deployment, and the Renovate app.
 
 ## Apply the settings
 
@@ -103,6 +103,28 @@ From then on, the commit messages on `main` decide the next version:
 - A breaking change (`feat!:`, or a `BREAKING CHANGE:` footer) raises the minor version while the version is below 1.0.0, and the major version after that.
 - `feat`, `fix`, `perf`, `revert`, `build`, `ci`, and `docs` appear in the release notes. `refactor`, `test`, `style`, and `chore` do not, and a release that would contain only those does not happen.
 
+## Set up the environments of the deployment
+
+The workflows `Plan` and `Deploy` reach the AWS accounts of stg and prd (TPL-0018). They need two GitHub environments and five repository variables, which the script neither sets nor compares. Set them by hand once the accounts are prepared, as [Deploy to AWS](deploy.md#prepare-an-account) describes; until the variable of a role is set, the jobs that need it are skipped.
+
+| Setting | Value | Why |
+|---|---|---|
+| Environment `stg` | Deployment branches: `main` only | The role `github-deploy` of stg trusts a job of this environment alone, so only a merge into `main` deploys. |
+| Environment `prd` | Deployment branches: `main` only. Required reviewers: at least one person | The job of prd waits until that person approves it. |
+| Variable `AWS_REGION` | The Region of the environments, such as `ap-northeast-1` | Every job signs in to AWS there. |
+| Variables `AWS_PLAN_ROLE_ARN_STG` and `AWS_PLAN_ROLE_ARN_PRD` | The ARN of the role `github-plan` of each account, which `make infra-bootstrap` prints | The jobs of `Plan` assume it. |
+| Variables `AWS_DEPLOY_ROLE_ARN_STG` and `AWS_DEPLOY_ROLE_ARN_PRD` | The ARN of the role `github-deploy` of each account | The jobs of `Deploy` assume it. |
+
+Create the environments in **Settings** > **Environments**, and set the variables with `gh`:
+
+```sh
+gh variable set AWS_REGION --body ap-northeast-1
+gh variable set AWS_PLAN_ROLE_ARN_STG --body '<ARN of github-plan in stg>'
+gh variable set AWS_DEPLOY_ROLE_ARN_STG --body '<ARN of github-deploy in stg>'
+```
+
+The variables are not secrets: an ARN grants nothing, and the trust policy of each role decides which jobs may assume it.
+
 ## Install Renovate
 
 Install the [Renovate GitHub App](https://github.com/apps/renovate) on the repository.
@@ -117,6 +139,10 @@ Renovate reads `renovate.json` and opens one pull request per update, or per gro
 Renovate updates `mise.lock` together with `mise.toml`.
 If a pull request from Renovate changes `mise.toml` but not `mise.lock`, `make setup` fails in CI.
 Check out the branch of that pull request, run `make tools-lock`, and push the result.
+
+Renovate also updates the Terraform providers of `infra/live/providers.hcl`, with those of `infra/local/`, in one pull request (the group `Terraform providers`).
+It does not write `infra/live/providers.lock.hcl`, so every Terragrunt run of that branch fails, `validate-live` in CI among them.
+Check out the branch, run `make infra-lock`, and push the result.
 
 pnpm and uv refuse a release younger than three days, which includes a security fix released today.
 To take such a fix at once, exclude the package from that rule in `pnpm-workspace.yaml` (`minimumReleaseAgeExclude`) or in `pyproject.toml` (`exclude-newer-package`), and remove the exception once the release is three days old.

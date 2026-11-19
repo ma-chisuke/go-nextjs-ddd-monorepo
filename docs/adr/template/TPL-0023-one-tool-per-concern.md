@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-17
+date: 2026-11-19
 ---
 
 # TPL-0023: Use one tool per concern, run every tool through make, and give `make check` a time budget
@@ -68,7 +68,11 @@ Inside `make`, each concern has one tool. Targets marked "check-all" run only in
 | Formatting of the other HCL files, such as `terragrunt.hcl` and `root.hcl` | `terragrunt hcl fmt` | `fmt-check-terragrunt` |
 | Linting of Terraform code | tflint, with the AWS ruleset | `lint-terraform` |
 | Module READMEs that are out of date | terraform-docs | `lint-terraform-docs` |
-| Validity of Terraform code | `terraform validate` | `validate-terraform` (check-all) |
+| Validity of Terraform code, and the tests of each module (`tests/*.tftest.hcl`), which plan against a mock of the AWS provider | `terraform validate` and `terraform test` | `validate-terraform` (check-all) |
+| The shape of the Terragrunt tree: the same units in every environment, a definition for each unit, the same keys in every `env.hcl`, and a unit for each context (TPL-0015) | `tools/scripts/infra.sh lint` | `lint-infra-live` |
+| Validity of every Terragrunt unit, with the outputs of the other units mocked | Terragrunt and `terraform validate` (`tools/scripts/infra.sh validate`) | `validate-live` (check-all) |
+| An environment applied to AWS Emulator in the order of a deployment, and the other environments planned against it (TPL-0017) | Terragrunt and AWS Emulator (`tools/scripts/infra.sh rehearse`) | `rehearse-infra` (check-all) |
+| The image that prepares the database, run against the local PostgreSQL as a master user that is not a superuser (TPL-0016) | Docker and psql (`tools/scripts/db-image.sh`) | `test-db-image` (check-all) |
 | SQL files | squawk | `lint-sql` |
 | The DDL of each schema change, from a pgschema plan | squawk | `lint-sql-plan` (check-all) |
 | Queries, prepared against the schema of their context | `sqlc vet` | `lint-sqlc` (check-all) |
@@ -91,7 +95,7 @@ Inside `make`, each concern has one tool. Targets marked "check-all" run only in
 | Misconfiguration of Dockerfiles and Terraform | Trivy | `scan-config` |
 | Vulnerabilities and licenses of dependencies | Trivy | `scan-deps` (check-all) |
 | Vulnerabilities in the images of the services | Trivy | `scan-images` (check-all) |
-| SBOMs of the images of the services | Trivy | `sbom`, which the workflow that publishes the images runs |
+| SBOMs of the images of the services | Trivy | `sbom`, which no workflow runs yet (TPL-0024) |
 | The hooks for agents (TPL-0020) | sample events fed to each hook (`tools/tests/hooks_test.sh`) | `test-hooks` |
 | The script that checks commit messages | sample subjects, each tried in several locales (`tools/tests/commit_msg_test.sh`) | `test-commit-msg` |
 | The checks themselves: each fails on a known-bad input and passes on a known-good one | `tools/selftest/selftest.sh` | `selftest` (check-all) |
@@ -118,6 +122,8 @@ These overlaps were resolved as follows.
 - squawk reads the SQL files and the DDL of each plan, with a configuration for each. The one for plans, `.squawk.plan.toml`, leaves the rules about what a table holds, such as the type of a column, to `lint-sql`, so such a problem is reported once, on `schema.sql`.
 - The unit tests of the frontend run on the test runner of Node, which runs TypeScript as it is, and not on a test framework such as Vitest or Jest, which would bring one more dependency tree and a configuration of its own. They cover the modules of pure logic, which import nothing of Next.js and import each other with the extension `.ts`. What a screen does is tested in a browser, by Playwright, the one tool of the end-to-end test.
 - `smoke` and `e2e` both run the local system end to end, and both wait for the mail of a booking, but each checks what the other cannot see. The smoke test checks every response against the API documents over HTTP; the end-to-end test checks the screens, the Server Functions, and the parts of a page that stream in. This overlap is accepted.
+- The modules of Terraform are tested with `terraform test`, which the pinned Terraform runs on HCL files next to each module, against `mock_provider "aws"`. Terratest is not used: it would bring Go code and a module of its own for the tests, and it applies to a real account.
+- `validate-live` and `rehearse-infra` both build every unit. The validation needs neither Docker nor the emulator and reads no value of an `env.hcl`; the rehearsal applies the values of stg and plans those of prd. This overlap is accepted.
 
 The rules for running the tools are as follows.
 

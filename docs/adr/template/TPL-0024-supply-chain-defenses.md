@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-17
+date: 2026-11-19
 ---
 
 # TPL-0024: Defend the supply chain in layers
@@ -88,8 +88,17 @@ For containers, these rules apply.
 - Base images are minimal and pinned by digest.
 - Containers run as a user other than root. In Docker Compose, the services of the product, the frontend included, also run with a read-only file system, without capabilities, and without new privileges (`x-context-service` in `compose.yaml`).
 - Trivy scans every image and writes its SBOM.
-- Builds get provenance through GitHub artifact attestations.
+- Builds get provenance through GitHub artifact attestations. This is not built yet: the workflow `Deploy` builds the images and pushes them to Amazon ECR without attesting them.
+- The repositories of Amazon ECR keep tags immutable, so a tag names one image for good, and scan each image when it is pushed.
+- The image that prepares the database (`db/Dockerfile`) builds on the image of PostgreSQL that `compose.yaml` runs, pinned by digest, and runs as the user 999. It adds the release of pgschema that `mise.toml` pins, which `ADD --checksum` checks against the SHA-256 that `mise.lock` records for Linux.
 - The image of the frontend (`frontend/Dockerfile`) builds on the official Node image, pinned by digest. Node no longer ships Corepack, so the build installs pnpm from its package on the registry of npm, which `ADD --checksum` checks against its SHA-256. It installs the dependencies of the frontend alone from `pnpm-lock.yaml`, under the settings of `pnpm-workspace.yaml`, and the image holds the standalone server of Next.js on distroless Node, as the user 65532.
+
+For the infrastructure in AWS, these rules apply.
+
+- The providers of every Terragrunt unit are pinned in `infra/live/providers.hcl`, and locked with their hashes for four platforms in `infra/live/providers.lock.hcl`. Every unit initializes with `-lockfile=readonly`, so a provider that the lock file does not name fails to install (TPL-0015).
+- Trivy checks the Terraform code for misconfiguration (`scan-config`). A finding that review accepted is listed in `.trivyignore.yaml`, with the files that it is accepted in and the reason; everywhere else the finding still fails. The file has one entry: AWS-0053, a load balancer that faces the internet, in `infra/modules/web/main.tf` alone, the one public entry of the system (TPL-0014), which the owner of the template approved. The instructions for agents forbid them to add an entry.
+- The tasks reach the AWS services through VPC endpoints, and no security group allows egress to an address range outside the VPC (TPL-0014). Trivy rates such egress as critical (AWS-0104), and no entry accepts it.
+- The load balancer keeps no access logs. A load balancer writes them only to a bucket encrypted with keys that Amazon S3 manages, and Trivy requires a customer managed key for a bucket (AWS-0132). The decision on the logs, and on that finding, is open.
 
 The local environment runs software that the product does not ship, and pins it too (TPL-0017).
 
@@ -117,6 +126,9 @@ Two parts of this decision differ from the first plan, on purpose.
 - Bad, because several defenses on GitHub are settings, not files. `make github-settings` compares them with `docs/guides/github-settings.md`, but `make check` cannot see them.
 - Bad, because no Renovate rule updates the version of AWS Emulator yet. A person changes the version and the two checksums in its Dockerfile by hand, and no wait of three days applies (TPL-0025).
 - Bad, because no Renovate rule updates the version of pnpm and the checksum of its package in `frontend/Dockerfile` either. When an update moves pnpm in `mise.toml` and `package.json`, a person changes both in the Dockerfile by hand (TPL-0025).
+- Bad, because no Renovate rule updates pgschema in `db/Dockerfile` either. When an update moves pgschema in `mise.toml`, a person changes its version and its checksums in the Dockerfile, and `make test-db-image` fails until then (TPL-0025).
+- Bad, because the images in Amazon ECR carry no provenance yet, and `scan-images` and `make sbom` cover the images of Docker Compose only, not the image that prepares the database.
+- Bad, because the public load balancer keeps no access logs until a decision on AWS-0132.
 
 ### Confirmation
 
@@ -125,11 +137,15 @@ Two parts of this decision differ from the first plan, on purpose.
 - `make check-all` runs `scan-deps` and `vuln-go`.
 - Review confirms that no workflow uses `trivy-action` or `setup-trivy`. No check enforces it.
 - CodeQL and Scorecard run as workflows. Secret scanning, push protection, private vulnerability reporting, and Dependabot alerts are settings of the repository: `make github-settings` turns them on, and reports any that differ from `docs/guides/github-settings.md`.
-- For containers, `make check` runs `lint-image-pins`, which fails on a base image without a digest, and `scan-config`, whose Trivy checks fail a Dockerfile whose image runs as root. Both check the Dockerfiles of AWS Emulator and of the frontend too. The images of the contexts (`backend/Dockerfile`) run as the user `nonroot` of distroless static, and the image of the frontend (`frontend/Dockerfile`) as the user 65532 of distroless Node.
+- For containers, `make check` runs `lint-image-pins`, which fails on a base image without a digest, and `scan-config`, whose Trivy checks fail a Dockerfile whose image runs as root. Both check the Dockerfiles of AWS Emulator, of the frontend, and of the image that prepares the database too. The images of the contexts (`backend/Dockerfile`) run as the user `nonroot` of distroless static, and the image of the frontend (`frontend/Dockerfile`) as the user 65532 of distroless Node.
 - The build of the image of the frontend fails when the package of pnpm does not match its checksum.
 - The build of the image of AWS Emulator fails when the package does not match its checksum or its signature.
 - `make check-all` runs `scan-images`, which scans the image of every context and the image of the frontend with Trivy for known vulnerabilities. `make sbom` writes a CycloneDX SBOM of each of those images to `dist/sbom/`. Neither covers the image of AWS Emulator, a tool of the local environment that nothing ships.
-- Provenance through GitHub artifact attestations arrives with the workflow that publishes the images, in the infrastructure milestone. That workflow attests the SBOMs of `make sbom` too.
+- `scan-config` applies `.trivyignore.yaml`, which accepts a finding only in the files that its entry names, so a load balancer that faces the internet in any other file fails `make check`.
+- `make test-db-image`, in `make check-all`, fails when the pgschema in the image that prepares the database differs from the one that `mise.toml` pins. The build of that image fails when the binary of pgschema does not match its checksum.
+- Every Terragrunt run fails on a provider that `infra/live/providers.lock.hcl` does not name.
+- Review confirms that no entry of `.trivyignore.yaml` was added without the approval of a person; no check can.
+- Provenance through GitHub artifact attestations is not built. The workflow `Deploy` publishes the images, and attesting them, with the SBOMs of `make sbom`, is left to a later change.
 
 ## Pros and Cons of the Options
 

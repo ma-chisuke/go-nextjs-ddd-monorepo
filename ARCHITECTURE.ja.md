@@ -1,6 +1,6 @@
 # アーキテクチャ
 
-製品の地図である。区切られた文脈とそのプロセス、文脈の中の層、それらを見せるフロントエンド、画面から API を通るリクエストの流れ、イベントの流れ、データベース、そして構成を保つチェックを示す。
+製品の地図である。区切られた文脈とそのプロセス、文脈の中の層、それらを見せるフロントエンド、画面から API を通るリクエストの流れ、イベントの流れ、データベース、AWS の環境、そして構成を保つチェックを示す。
 理由は決定の記録（[docs/adr/](docs/adr/README.ja.md)）に、手順はガイド（[docs/guides/](docs/guides/)）にある。
 
 ## 区切られた文脈
@@ -14,7 +14,7 @@ flowchart LR
     notification["Notification<br/>補完の業務領域"]
     bus["EventBridge<br/>イベントバス contexts"]
     queue["SQS のキュー<br/>notification-events"]
-    mail["メールサーバー"]
+    mail["メール<br/>手元では Mailpit、AWS では Amazon SES"]
     db[("PostgreSQL 18<br/>文脈ごとのスキーマ")]
     browser -- "ページとサーバー関数" --> web
     web -- "reservation.openapi.yaml" --> reservation
@@ -23,7 +23,7 @@ flowchart LR
     reservation -- "イベント<br/>送信箱と中継を通して" --> bus
     bus -- "Notification のルール" --> queue
     queue --> notification
-    notification -- "SMTP" --> mail
+    notification -- "SMTP または SES" --> mail
     reservation -- "reservation_runtime として" --> db
     facility -- "facility_runtime として" --> db
     notification -- "notification_runtime として" --> db
@@ -45,17 +45,17 @@ flowchart LR
 
 文脈の各プロセスは、その文脈のイメージから、文脈のコマンドかそのモードの1つで動く（TPL-0014）。フロントエンドは専用のイメージから動く。
 
-| 文脈 | プロセス | コマンド | `compose.yaml` のサービス |
-|---|---|---|---|
-| Facility | API | `facility` | `facility` |
-| Reservation | API | `reservation` | `reservation` |
-| Reservation | 送信箱の中継（ワーカー） | `reservation relay` | `reservation-relay` |
-| Notification | キューからイベントを受け取る側（ワーカー） | `notification` | `notification` |
-| （なし） | フロントエンド。Next.js のサーバー | standalone のサーバー `frontend/server.js` を Node で動かす | `web` |
+| 文脈 | プロセス | コマンド | `compose.yaml` のサービス | AWS の ECS のサービス |
+|---|---|---|---|---|
+| Facility | API | `facility` | `facility` | `facility` |
+| Reservation | API | `reservation` | `reservation` | `reservation` |
+| Reservation | 送信箱の中継（ワーカー） | `reservation relay` | `reservation-relay` | `reservation-relay` |
+| Notification | キューからイベントを受け取る側（ワーカー） | `notification` | `notification` | `notification-worker` |
+| （なし） | フロントエンド。Next.js のサーバー | standalone のサーバー `frontend/server.js` を Node で動かす | `web` | `web` |
 
 - `platform/httpserver.Main` は、文脈のコマンドか、引数で名前を指定したモード（`httpserver.Mode`）か、ヘルスチェック（`<command> healthcheck`）を動かす。コマンドは設定を環境変数から読み、その変数の一覧は `backend/cmd/<context>/main.go` の先頭のコメントにある。
 - API は `platform/httpserver.Run` の上で動く。ワーカーは `platform/httpserver.RunWorker` の上で動き、仕事と並んで `GET /healthz` に答える。そのため、イメージのヘルスチェックは、API もワーカーも同じ方法で見張れる。ワーカーのヘルスチェックが示すのは、プロセスが動いていることだけである。データベースやブローカーに届かないワーカーは、正常のまま失敗をログに書き、試し直す。
-- 中継とワーカーは、`platform/awsconfig` で AWS SDK の設定を読む。設定はリージョンと、手元では AWS Emulator のエンドポイントとその CA である（TPL-0017）。
+- 中継とワーカーは、`platform/awsconfig` で AWS SDK の設定を読む。設定はリージョンと、手元では AWS Emulator のエンドポイントとその CA である（TPL-0017）。AWS では、SDK はいつもの名前で各サービスに届き、その名前は VPC エンドポイントに解決される。
 - フロントエンドのイメージは `frontend/Dockerfile` がビルドする。中身は、`next build` の standalone の出力を distroless の Node に載せたものである。サーバーは、各 API のベース URL を `FACILITY_API_URL` と `RESERVATION_API_URL` から読む。そのヘルスチェック `GET /healthz` は 200 を返し、API を呼ばない。そのため、止まっている文脈があってもフロントエンドは再起動されない。イメージにシェルがないので、このチェックは Node が実行する（`healthcheck.mjs`）。
 
 ## 文脈の中の層
@@ -88,7 +88,8 @@ backend/internal/notification/   補完、ワーカー：トランザクショ�
     ├── app/                     ユースケース Notifier、イベントのためのモデル変換装置（events.go）、ポート Mailer
     └── adapter/
         ├── postgres/            schema.sql、queries/、sqlc の生成コード
-        └── smtp/                SMTP で送る Mailer
+        ├── smtp/                SMTP で送る Mailer。手元の環境で Mailpit に送る
+        └── ses/                 Amazon SES で送る Mailer。AWS で使う
 ```
 
 Reservation は、この製品が存在する理由である決まりを持ち、それらの決まりは互いに依存する。
@@ -100,7 +101,7 @@ Facility が確かめる決まりは、会議室が閉まるより前に開く�
 ドメイン層と、ドメイン層と行の間の詰め替えは、これらの決まりより高くつく。そこでユースケースは sqlc が生成した `Querier` を呼び、行を `app` の型へ直接詰め替える。
 
 Notification に固有の決まりは、イベント1つにつきメールを1回だけ送ることの1つだけなので、Facility と同じくトランザクションスクリプトで書く。
-そのユースケースを呼ぶのは API の操作ではなく、キューからイベントを受け取る側であり、`NewHandler` が返す `event.Handler` を通して呼ぶ。メールサーバーにはポート `Mailer` を通して届くので、テストでは `app/apptest/` の偽物を使う。
+そのユースケースを呼ぶのは API の操作ではなく、キューからイベントを受け取る側であり、`NewHandler` が返す `event.Handler` を通して呼ぶ。メールはポート `Mailer` を通して送るので、テストでは `app/apptest/` の偽物を使う。コマンドは、環境変数からアダプターを選ぶ。手元のシステムのように `SMTP_ADDR` が設定されていれば `adapter/smtp` を、AWS のように設定されていなければ `adapter/ses` を使う。
 
 `lint-arch` は、ディレクトリ `internal/domain/` があるかどうかで2つの種類を見分ける。`app` が自分の `adapter/postgres` を import してよいのは、このディレクトリのない文脈だけである。
 
@@ -222,7 +223,7 @@ sequenceDiagram
     participant queue as SQS
     participant worker as notification<br/>platform/awsevents
     participant app as Notification<br/>app
-    participant mail as メールサーバー
+    participant mail as Mailpit または SES
     store->>db: 変更のトランザクションの中で outbox に INSERT
     relay->>db: 待っているイベントを取る（FOR UPDATE SKIP LOCKED）
     relay->>bus: PutEvents、1回に1イベント
@@ -231,7 +232,7 @@ sequenceDiagram
     worker->>queue: ReceiveMessage
     worker->>app: HandleEvent(envelope)
     app->>db: notifications に INSERT（event_id は一意）
-    app->>mail: SMTP
+    app->>mail: SMTP または SES
     app->>db: コミット
     worker->>queue: DeleteMessage
 ```
@@ -244,7 +245,7 @@ sequenceDiagram
 6. ハンドラー `Notifier.HandleEvent` は、モデル変換装置（`internal/app/events.go`）でイベントのデータを読み、処理しない型のイベントは無視する。そして1つのトランザクションの中で、イベントの id を `notifications` に記録し、`Mailer` でメールを送り、コミットする。`notifications` の一意制約は2つ目の記録を拒むので、同じイベントが2回目に届いても記録が見つかり、何も送らない。
 
 配信は少なくとも1回であり、イベントは順序が入れ替わって届くこともある。そのため、受け取る側はどれも冪等である（TPL-0013）。
-AWS では、バスとキューは手元と同じモジュールから作る予定である。手元の環境では、Terraform がそれらを AWS Emulator に適用する（`infra/local/`、TPL-0015、TPL-0017）。
+AWS では、バスとキューは手元と同じモジュールから、ユニット `platform` と `contexts/notification` が作る（[インフラ](#インフラ)）。手元の環境では、Terraform がそれらを AWS Emulator に適用する（`infra/local/`、TPL-0015、TPL-0017）。
 
 ## データベース
 
@@ -261,10 +262,92 @@ PostgreSQL 18 の1つのデータベースに、すべての文脈が入る（TP
 - 文脈の各ロールの検索パスは `<context>, extensions` なので、SQL にスキーマの名前は書かない。Reservation の排他制約が必要とする拡張 `btree_gist` は、スキーマ `extensions` に置く。
 - 文脈の `schema.sql` は、そのスキーマのあるべき状態である。pgschema はこれをデータベースに適用し（`make db-apply`）、sqlc はこれを読んでクエリに型を付ける（`make gen`）。tbls は、これから `docs/generated/db/<context>/` を書く（`make gen-db-docs`）。
 - 手元では、`compose.yaml` が PostgreSQL を `127.0.0.1:15432` で動かし、`db/local.sql` が各ロールに自分の名前をパスワードとして与える。手元のシステムはデータベース `app` を使い、結合テストは同じサーバーにある専用のデータベース `app_test` を使う。
+- AWS では、データベースは Aurora PostgreSQL である。デプロイのたびに、その前に、タスクが `db/Dockerfile` のイメージをマスターユーザーとして動かす。マスターユーザーはスーパーユーザーではない。タスクは `db/bootstrap.sql` を実行し、各ロールのパスワードを Secrets Manager のシークレットから設定し、すべての `schema.sql` を適用する（TPL-0016）。
 
 ## インフラ
 
-`infra/` には、イベントのための AWS のリソースを作る Terraform を置く（TPL-0015）。
+`infra/` には、AWS の環境（stg と prd）と手元の環境の Terraform を置く（TPL-0015）。
+AWS にはまだ何も適用していない。モジュールは AWS provider のモックに対してテストし、すべてのユニットを検証し、stg のユニットを AWS Emulator でリハーサルする。[AWS にデプロイする](docs/guides/deploy.ja.md)は、アカウントを準備し、最初の適用で確かめることを挙げる。
+
+### アカウントの中で動くもの
+
+環境はそれぞれ専用の AWS アカウントであり、同じ部品を持つ。
+
+```mermaid
+flowchart LR
+    browser["ブラウザー"]
+    subgraph vpc["1つの環境の VPC"]
+        subgraph public["公開サブネット"]
+            alb["ロードバランサー<br/>HTTPS、唯一の公開の入口"]
+        end
+        subgraph private["非公開サブネット：Fargate 上の ECS と Service Connect"]
+            web["web<br/>Next.js"]
+            facility["facility<br/>API"]
+            reservation["reservation<br/>API"]
+            relay["reservation-relay"]
+            worker["notification-worker"]
+            endpoints["VPC エンドポイント<br/>ECR、S3、Logs、Secrets Manager、<br/>ECS エージェント、EventBridge、SQS、SES"]
+        end
+        subgraph data["データベースサブネット"]
+            aurora[("Aurora PostgreSQL 18<br/>文脈ごとのスキーマ")]
+        end
+    end
+    bus["EventBridge<br/>バス contexts"]
+    queue["SQS<br/>notification-events"]
+    ses["Amazon SES"]
+    browser -- "HTTPS" --> alb
+    alb --> web
+    web -- "http://facility:8080" --> facility
+    web -- "http://reservation:8080" --> reservation
+    reservation -- "http://facility:8080" --> facility
+    facility --> aurora
+    reservation --> aurora
+    relay --> aurora
+    worker --> aurora
+    relay -- "PutEvents" --> endpoints
+    worker -- "ReceiveMessage、SendEmail" --> endpoints
+    endpoints --> bus
+    bus -- "Notification のルール" --> queue
+    endpoints --> queue
+    endpoints --> ses
+```
+
+- `compose.yaml` の各プロセスは、同じイメージと同じコマンドで、ECS のサービスとして動く。文脈の API はサービス `<context>` であり、各ワーカーはサービス `<context>-<worker>` である（[プロセス](#プロセス)）。1つの文脈のサービスは、タスク実行ロールとタスクロールを1つずつ共有する。タスクロールが許すのは、その文脈が呼ぶものだけである（TPL-0014）。
+- インターネットから届くのは、モジュール `web` のロードバランサーだけである。API にはロードバランサーもパブリックアドレスもない。サービスは、ECS Service Connect を通して `http://<context>:8080` で API を呼ぶ。Docker Compose の中と同じアドレスである（TPL-0014）。
+- 非公開サブネットには、インターネットへの経路がない。タスクは VPC エンドポイントを通して AWS のサービスに届き、VPC の外のアドレス範囲を名指しするセキュリティグループはない（TPL-0014）。
+- 各サービスは、Secrets Manager にある実行時のロールのシークレットから `DATABASE_URL` を受け取る。クラスターは、stg では 0 ACU からの Aurora Serverless v2、prd では provisioned のインスタンス2つである（TPL-0016）。
+- イベントバスはユニット `platform` が作る。Notification のキュー、デッドレターキュー、ルールは Notification のユニットが作る。どちらも、手元の環境が適用するのと同じモジュールを使う（TPL-0013）。
+- 図に描いていないもの：デプロイのたびにデータベースを準備するタスク、イメージのリポジトリ、CloudWatch Logs のログ、GitHub Actions のロール。
+
+### ユニット
+
+`infra/live/<environment>/` は、どの環境でも同じユニットを持つ。Terragrunt は、各ユニットをそれぞれの state で適用する（TPL-0015）。
+
+| ユニット | モジュール | 作るもの |
+|---|---|---|
+| `ci` | `github-oidc` | GitHub Actions が引き受けるロール `github-plan` と `github-deploy`（TPL-0018） |
+| `network` | `network` | VPC、その公開・非公開・データベースのサブネット、AWS のサービスのエンドポイント |
+| `registry` | `registry` | イメージごとの Amazon ECR のリポジトリ。各文脈のもの、`web`、`db` である |
+| `database` | `database` | Aurora のクラスター、各文脈のロールのシークレット、データベースを準備するタスク |
+| `platform` | `platform` | ECS のクラスター、Service Connect の名前空間、イベントバス（`event-bus`）、サービスのセキュリティグループ |
+| `contexts/<context>` | `context-service` | 1つの文脈のサービス、ロール、ログ、購読（`event-subscription`） |
+| `web` | `web` | Next.js のサービス、公開のロードバランサー、その証明書と DNS レコード |
+
+- `infra/live/<environment>/<unit>/terragrunt.hcl` は、どれも同じファイルである。ユニットが作るものは `infra/live/_units/<unit>.hcl` に、環境が何であるかはその `env.hcl` に、すべてに共通のもの（文脈の一覧など）は `infra/live/system.hcl` にある。
+- `infra/live/root.hcl` は、各ユニットに3つのものを与える。S3 の state、その環境のアカウントしか受け付けない provider、`providers.lock.hcl` のチェックサムを伴う `infra/live/providers.hcl` の provider である。
+
+### デプロイ
+
+ワークフロー `Deploy` は、`main` へのマージのたびに `make deploy ENV=stg` を実行し、レビュー担当者がジョブを承認したあとに `make deploy ENV=prd` を実行する（TPL-0018）。デプロイは、次の4つをこの順に行う（`tools/scripts/infra.sh`）。
+
+1. ユニット `registry` を適用する。続けて、レジストリにまだないタグのイメージをビルドしてプッシュする。タグは、そのイメージの元になるファイルのハッシュである（`tools/scripts/images.sh`）。
+2. ユニット `network`、`database`、`platform` を適用する。
+3. データベースを準備するタスクを実行し、その終了を待つ。タスクは、マスターユーザーとして `db/bootstrap.sql` を実行し、ロールのパスワードを設定し、各文脈の `schema.sql` を pgschema で適用する（TPL-0010）。スキーマは、古いコードが動いているうちに変わる。
+4. すべてのユニットを適用する。新しいタスク定義を得て再起動するのは、イメージの変わったサービスだけである。タスクが正常にならないデプロイは、ECS が元に戻す。
+
+プルリクエストでは、ワークフロー `Plan` が、読めるが変えられないロールとして、stg と prd の `make infra-plan` を実行する。
+
+### 手元の環境
 
 | パス | 中身 |
 |---|---|
@@ -273,7 +356,7 @@ PostgreSQL 18 の1つのデータベースに、すべての文脈が入る（TP
 | `infra/local/` | 2つのモジュールを AWS Emulator に適用するルート。バス `contexts` と、Notification の購読を作る。このマシンの上のエンドポイントしか受け付けない |
 | `infra/local/aws-emulator/` | AWS Emulator のイメージの Dockerfile と、そのパッケージを確かめる公開鍵 |
 
-`make up`・`make smoke`・`make e2e` は、`tools/scripts/aws.sh apply`（`make aws-apply`）で `infra/local/` を適用する。ほかのモジュールと、stg と prd のための Terragrunt のユニットは、インフラのマイルストーンで加わる。
+`make up`・`make smoke`・`make e2e` は、`tools/scripts/aws.sh apply`（`make aws-apply`）で `infra/local/` を、エミュレーターのリージョン `us-east-1` に適用する。`make rehearse-infra` は、stg のユニットを同じエミュレーターの `ap-northeast-1` に適用し、手元のシステムには手を付けない（TPL-0017）。
 
 ## 決まりと、それを守らせるもの
 
@@ -319,6 +402,15 @@ PostgreSQL 18 の1つのデータベースに、すべての文脈が入る（TP
 | どのページも、ビルドの時点で文脈のデータを描かない | リクエストを待つ `outcome`。ページがキャッシュしないデータを `<Suspense>` の外で読んだときの `next build` | イメージのビルド |
 | フロントエンドの純粋なロジック（フォーム、problem、タイムゾーンの中の時刻）は、そのテストのとおりに動く | Node のテストランナーで動く単体テスト（`test-frontend`） | `make check` |
 | 人がブラウザーで会議室を登録し、予約し、変更し、取り消し、メールを受け取る。拒まれた変更は画面の言葉で表示される（TPL-0008、TPL-0017） | `make e2e`。`frontend/e2e/` のシナリオを、Playwright と Chromium で手元のシステムに対して実行する | `make check-all` |
+| どの文脈の API にも、VPC の外からは届かない（TPL-0014） | `infra/modules/context-service` のテスト（`validate-terraform`）。公開のロードバランサーを `infra/modules/web/main.tf` に限って認める Trivy（`scan-config`、`.trivyignore.yaml`） | `make check`・`make check-all` |
+| どのタスクも、VPC の外のアドレス範囲には送らない（TPL-0014） | Trivy のチェック AWS-0104（`scan-config`）。モジュールのテスト | `make check`・`make check-all` |
+| デプロイが再起動するのは、変わった文脈だけである（TPL-0014） | 元になるファイルのハッシュで付ける各イメージのタグ（`tools/scripts/images.sh`）。文脈の元になるファイルが欠けないようにする、`lint-arch` のルール `arch/context-import` | `make check` |
+| stg と prd は同じユニットを持ち、どの `terragrunt.hcl` も同じファイルで、どの `env.hcl` も同じキーを設定し、どの文脈にもユニットがある（TPL-0015） | `lint-infra-live` | `make check` |
+| ほかのユニットの出力をモックにして、どのユニットも組み立てて検証できる（TPL-0015） | `validate-live` | `make check-all` |
+| stg のユニットはデプロイと同じ順序で AWS Emulator に適用でき、prd のユニットはそれに対して plan できる（TPL-0015、TPL-0017） | `rehearse-infra` | `make check-all` |
+| どのユニットも、`infra/live/providers.lock.hcl` にある provider だけを入れる（TPL-0024） | `infra/live/root.hcl` の `-lockfile=readonly` | Terragrunt の実行のたび |
+| データベースを準備するイメージは、スーパーユーザーではないマスターユーザーとして動き、もう一度動かしても何も変えず、各実行時のロールには自分のスキーマだけを読ませる（TPL-0009、TPL-0016） | 手元の PostgreSQL に対する `test-db-image` | `make check-all` |
+| prd が変わるのは、レビュー担当者がジョブを承認したあとのワークフローを通したときだけである（TPL-0018） | GitHub Actions の外では prd を拒む `tools/scripts/infra.sh`。GitHub の環境 `prd` | 実行時 |
 
 次の決まりを守らせるチェックはまだないので、レビューで守る。
 
@@ -327,5 +419,7 @@ PostgreSQL 18 の1つのデータベースに、すべての文脈が入る（TP
 - 受け取る側がそれぞれ、受け取るものを AsyncAPI 文書で宣言すること（TPL-0013）
 - フロントエンドの機能が、自分の文脈の API だけを呼ぶこと（TPL-0003）
 - 画面が、problem の title や detail を解析しないこと（TPL-0008）
+- 公開の入口を作るモジュールが `infra/modules/web` だけであること（TPL-0014）
+- `.trivyignore.yaml` の項目を人が承認していること（TPL-0024）
 
-<!-- i18n-source: ARCHITECTURE.md sha256:bd1f2a0b859d7d9a68a864e86ed2586c82731f22318e4853d375088d332095b1 -->
+<!-- i18n-source: ARCHITECTURE.md sha256:9abea43a68e9749a2a2823f278b034a0432ccea778393d58086034aaf92ccfe8 -->

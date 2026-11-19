@@ -93,3 +93,15 @@ ban-drop-column | ALTER TABLE rooms DROP COLUMN name | since release 0.4.0 the c
 - A line lets through one statement of the current plan, with the same rule. A line that matches no statement of the plan is a finding as well (`sql-plan/unused-allowance`). Once the change is merged, the base commit holds the new schema, so the next change to that `schema.sql` plans no such statement and has to remove the line. Allowances do not pile up.
 
 An allowance is not a way around the check: it records that a person reviewed one dangerous statement of one change, and why the statement is safe now.
+
+## In AWS, the schema changes before the code
+
+A deployment applies every `schema.sql` before it starts the new code ([Deploy to AWS](deploy.md#deploy)). The task that prepares the database runs pgschema as the owner role of each context while the services still run the old code, and only then does the deployment start the services with the new code. A change to `schema.sql` must therefore work with the code before it and with the code after it (TPL-0010).
+
+- Add first. A new table, a nullable column, a column with a default, and an index work with the old code, which does not use them.
+- Remove in a later deployment. Drop a column or a table only after a deployment of code that no longer uses it has reached every environment.
+- A rule that the old code would break waits too. A `NOT NULL` column that the old code does not write, for example, is added nullable; the code that writes it is deployed; and a later change adds the constraint.
+
+Each step of [Make a change in safe steps](#make-a-change-in-safe-steps) is therefore one merge into `main`, and one deployment. The deployment of prd waits for a reviewer, so check that a step reached prd before you merge the next one.
+
+The task applies its plan without asking. What review reads is the plan of `lint-sql-plan`, against the schema of the base commit, which is the schema of an environment only when the environment runs that commit.

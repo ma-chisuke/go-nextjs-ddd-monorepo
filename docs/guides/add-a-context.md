@@ -54,15 +54,30 @@ Then decide the kind of subdomain, and whether the context answers requests or o
 
    Check: `make up` starts the worker and waits until it is healthy.
 
-6. Write the glossary, `docs/contexts/<context>/glossary.md` and `glossary.ja.md`: one table with the header `| Identifier | Term | Meaning |` (`| 識別子 | 用語 | 意味 |` in Japanese), and a row for each type that `domain` exports, or `app` in a supporting context.
+6. Give the context its units in AWS (TPL-0014, TPL-0015). Every environment has the same units, so each change below is made once, for stg and prd together.
+
+   - Add the name of the context to `contexts` in `infra/live/system.hcl`. From that list, the unit `registry` creates the repository of its image, and the unit `database` the secrets of its two roles, whose passwords the task that prepares the database sets.
+   - Write `infra/live/_units/contexts/<context>.hcl`: copy the unit of the model context, and change `name`. Keep what the context runs and calls: `api` for an API; `workers` for each worker, with its mode as `command`, such as `["relay"]`, or `[]` for a context without an API; `publishes_events = true` for a publisher; and `subscription`, with the sources and the types of the events that its AsyncAPI document receives, as in `infra/local/main.tf`. A permission beyond these goes into `iam_statements`, such as `ses:SendEmail` for Notification.
+   - Copy a `terragrunt.hcl` of the tree to `infra/live/<environment>/contexts/<context>/terragrunt.hcl`, for every environment. Every `terragrunt.hcl` is the same file.
+   - To call the API of another context, add a `dependency` on its unit and put its `api_url` in `environment_variables`, as the unit of Reservation does for Facility. If the frontend calls the new API, do the same in `infra/live/_units/web.hcl`.
+   - The roles of step 4 are what the task that prepares the database creates in AWS, as the master user of Aurora, which is not a superuser. The block of Facility in `db/bootstrap.sql` makes that user a member of the owner role; keep that part when you copy it.
+
+   ```sh
+   make check                           # lint-infra-live
+   CHECK_SCOPE=changed make check-all   # validate-live, rehearse-infra, test-db-image
+   ```
+
+   Check: `lint-infra-live` fails until the command in `backend/cmd/<context>/` is in `contexts`, has `_units/contexts/<context>.hcl`, and has a unit in every environment. [Deploy to AWS](deploy.md#change-an-environment) describes the rest of the tree.
+
+7. Write the glossary, `docs/contexts/<context>/glossary.md` and `glossary.ja.md`: one table with the header `| Identifier | Term | Meaning |` (`| 識別子 | 用語 | 意味 |` in Japanese), and a row for each type that `domain` exports, or `app` in a supporting context.
 
    Check: `make check` fails on each exported type without a row (`arch/glossary`).
 
-7. Write the README of the context, `docs/contexts/<context>/README.md` and its translation, in the form of those of Facility, Reservation, and Notification: what it is responsible for, its kind of subdomain and why, its API and problems or that it has none, its events, its rules, and what it needs from other contexts. Add the context to the tables of `ARCHITECTURE.md`, and its processes to the table of processes.
+8. Write the README of the context, `docs/contexts/<context>/README.md` and its translation, in the form of those of Facility, Reservation, and Notification: what it is responsible for, its kind of subdomain and why, its API and problems or that it has none, its events, its rules, and what it needs from other contexts. Add the context to the tables of `ARCHITECTURE.md`, and its processes to the table of processes.
 
-8. For a context with an API, write a page in `docs/problems/` for each new slug of `problems.go`. Then run `make i18n-stamp`.
+9. For a context with an API, write a page in `docs/problems/` for each new slug of `problems.go`. Then run `make i18n-stamp`.
 
-9. Finish:
+10. Finish:
 
    ```sh
    make fmt
@@ -85,5 +100,7 @@ Then decide the kind of subdomain, and whether the context answers requests or o
 | A `GRANT` to the runtime role | The integration tests of the context, which connect as that role (`test-integration`) |
 | A comment on a table or a column, or the schema documents | `lint-db-docs` |
 | The JSON Schema of an event that the context publishes, or its message in the AsyncAPI document | `lint-events` |
-| The AsyncAPI document of a consumer, or its subscription in `infra/local/main.tf` | No check yet; review (TPL-0013). `make smoke` notices a missing subscription only if it waits for what the worker does |
+| The context in `contexts` of `infra/live/system.hcl`, the definition of its unit in `infra/live/_units/contexts/`, or its unit in an environment | `lint-infra-live` |
+| An output that a unit reads and another unit does not have, or an input that a module rejects | `validate-live`, `rehearse-infra` |
+| The AsyncAPI document of a consumer, or its subscription in `infra/local/main.tf` or in its unit | No check yet; review (TPL-0013). `make smoke` notices a missing subscription only if it waits for what the worker does |
 | The README of the context | No check yet; review (TPL-0003) |

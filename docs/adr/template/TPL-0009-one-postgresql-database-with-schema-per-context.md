@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-18
+date: 2026-11-19
 ---
 
 # TPL-0009: Use one PostgreSQL 18 database, with a schema and roles for each context
@@ -46,6 +46,8 @@ The rules are as follows.
 - No foreign key, view, or query crosses from one context's schema into another's. Data that another context needs travels through APIs and events (TPL-0005).
 - No transaction spans two contexts. A change that another context must learn about is published as an event (TPL-0013).
 - `db/bootstrap.sql` creates what the schema tool does not manage: the schemas, the roles, and the extensions. The extensions live in a schema of their own, `extensions`, which is on the search path of every role, so that no context owns them. One extension is `btree_gist`, which the exclusion constraint of the sample needs.
+- `db/bootstrap.sql` runs as a superuser in the local environment, and in AWS as the master user of Aurora, which is not a superuser (TPL-0016). PostgreSQL 16 and later let such a role hand a schema to an owner role, and grant rights on that schema, only as a member of the owner role, so the bootstrap makes the caller a member of each owner role when the caller is not a superuser. On Aurora, the master user therefore inherits the rights of every owner role, and only the task that prepares the database signs in as it.
+- In AWS, each role signs in with a password that Secrets Manager holds, one secret for each role; the task that prepares the database sets the passwords on the roles before a deployment (TPL-0016).
 
 ### Consequences
 
@@ -65,6 +67,7 @@ The following checks enforce this decision.
 - The privileges of the roles make such a query fail at run time.
 - `lint-arch`, with the rule `arch/schema-reference`, fails when the `schema.sql` or a query of a context names the schema of another context, as a foreign key across contexts would.
 - The integration tests of each context (`test-integration`, in `make check-all`) connect as its runtime role, and assert that it can neither read the schema of another context, nor change its own schema, nor create objects in `public`.
+- `test-db-image`, in `make check-all`, runs the image that prepares the database against the local PostgreSQL, as a master user that owns the database and may create roles but is not a superuser, as on Aurora. It checks that a second run changes nothing, and that the runtime role of each context signs in with its password, reads every table of its own schema, and cannot read a table of another context.
 
 The integration tests run on a database of their own on the local server, `app_test`, which `tools/scripts/db.sh init` creates with every schema. The local system (`make up`, `make smoke`) uses the database `app`. So a test never meets the rows of the running system, and the relay of the system never takes an event that a test wrote to an outbox.
 

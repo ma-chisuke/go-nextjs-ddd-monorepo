@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-17
+date: 2026-11-19
 ---
 
 # TPL-0023: 1つの関心事に道具を1つだけ使い、どの道具も make から動かし、`make check` に時間の上限を設ける
@@ -68,7 +68,11 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 | それ以外の HCL のファイル（`terragrunt.hcl` や `root.hcl` など）の整形 | `terragrunt hcl fmt` | `fmt-check-terragrunt` |
 | Terraform のコードの lint | tflint（AWS のルールセットを使う） | `lint-terraform` |
 | 古くなったモジュールの README | terraform-docs | `lint-terraform-docs` |
-| Terraform のコードの妥当性 | `terraform validate` | `validate-terraform`（check-all） |
+| Terraform のコードの妥当性と、各モジュールのテスト（`tests/*.tftest.hcl`。AWS provider のモックに対して plan する） | `terraform validate` と `terraform test` | `validate-terraform`（check-all） |
+| Terragrunt のツリーの形。どの環境も同じユニットを持ち、各ユニットに定義があり、どの `env.hcl` も同じキーを持ち、各文脈にユニットがあること（TPL-0015） | `tools/scripts/infra.sh lint` | `lint-infra-live` |
+| Terragrunt のすべてのユニットの妥当性。ほかのユニットの出力はモックにする | Terragrunt と `terraform validate`（`tools/scripts/infra.sh validate`） | `validate-live`（check-all） |
+| 1つの環境をデプロイと同じ順序で AWS Emulator に適用し、ほかの環境をそれに対して plan すること（TPL-0017） | Terragrunt と AWS Emulator（`tools/scripts/infra.sh rehearse`） | `rehearse-infra`（check-all） |
+| データベースを準備するイメージ。スーパーユーザーではないマスターユーザーとして、手元の PostgreSQL に対して動かす（TPL-0016） | Docker と psql（`tools/scripts/db-image.sh`） | `test-db-image`（check-all） |
 | SQL のファイル | squawk | `lint-sql` |
 | スキーマの変更ごとの DDL（pgschema の plan） | squawk | `lint-sql-plan`（check-all） |
 | 文脈のスキーマに対して prepare したクエリ | `sqlc vet` | `lint-sqlc`（check-all） |
@@ -91,7 +95,7 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 | Dockerfile と Terraform の設定ミス | Trivy | `scan-config` |
 | 依存の脆弱性とライセンス | Trivy | `scan-deps`（check-all） |
 | サービスのイメージの脆弱性 | Trivy | `scan-images`（check-all） |
-| サービスのイメージの SBOM | Trivy | `sbom`（イメージを公開するワークフローが実行する） |
+| サービスのイメージの SBOM | Trivy | `sbom`（まだどのワークフローも実行しない。TPL-0024） |
 | エージェントのフック（TPL-0020） | 各フックに見本のイベントを与えるテスト（`tools/tests/hooks_test.sh`） | `test-hooks` |
 | コミットメッセージを検査するスクリプト | 見本の件名を、いくつかのロケールで試すテスト（`tools/tests/commit_msg_test.sh`） | `test-commit-msg` |
 | チェックそのもの（既知の悪い入力で失敗し、既知の良い入力で通るか） | `tools/selftest/selftest.sh` | `selftest`（check-all） |
@@ -118,6 +122,8 @@ Schemathesis は、それを加えるマイルストーンで加わる（TPL-000
 - squawk は、SQL のファイルと、各 plan の DDL を読む。設定はそれぞれに1つある。plan 用の `.squawk.plan.toml` は、列の型のようにテーブルが何を持つかについてのルールを `lint-sql` に任せる。そのため、そうした問題は `schema.sql` の上で1回だけ報告される。
 - フロントエンドの単体テストは、TypeScript をそのまま動かす Node のテストランナーで動かす。Vitest や Jest のようなテストのフレームワークは使わない。使えば、依存のツリーと専用の設定が1つずつ増えるからである。対象は純粋なロジックのモジュールで、これらは Next.js のものを何も import せず、互いを拡張子 `.ts` 付きで import する。画面の振る舞いは、エンドツーエンドテストの唯一の道具である Playwright がブラウザーでテストする。
 - `smoke` と `e2e` は、どちらも手元のシステムを端から端まで動かし、どちらも予約のメールを待つ。ただし、それぞれが確かめるのは、もう一方には見えないものである。スモークテストは、HTTP ですべての応答を API の文書と照らし合わせる。エンドツーエンドテストは、画面・サーバー関数・ストリーミングされるページの部分を確かめる。この重なりは認めている。
+- Terraform のモジュールは `terraform test` でテストする。固定した Terraform が、各モジュールの隣の HCL のファイルを `mock_provider "aws"` に対して実行する。Terratest は使わない。使えば、テストのための Go のコードと専用のモジュールが増える。しかも、そのテストは本物のアカウントへ適用する。
+- `validate-live` と `rehearse-infra` は、どちらもすべてのユニットを組み立てる。検証は Docker もエミュレーターも要らず、`env.hcl` の値を読まない。リハーサルは stg の値を適用し、prd の値を plan する。この重なりは認めている。
 
 道具の動かし方の決まりは次のとおりである。
 
@@ -177,4 +183,4 @@ Schemathesis は、それを加えるマイルストーンで加わる（TPL-000
 - `make help` が主なターゲットを一覧にし、`make/<area>.mk` が領域ごとのターゲットを持つ。
 - これらの道具の固定は TPL-0022 に、Trivy と GitHub の側のスキャナーを選んだ理由は TPL-0024 にある。
 
-<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:5843f34701aec9b37a43a752db87053fee507e10ea31975ac06a050c023f2aaa -->
+<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:cc102fa47f571cb2b2ae714e8e2c5b9fe6033808423253b7e4054d19a8dbed10 -->

@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-17
+date: 2026-11-19
 ---
 
 # TPL-0022: Pin tool versions in one place per ecosystem, with mise at the root
@@ -48,6 +48,7 @@ The rules are as follows.
 - The Makefile puts all of these tools on `PATH`. Nobody installs a tool globally.
 - `GOTOOLCHAIN=local` stops Go from downloading a toolchain other than the one that mise installed.
 - After a change to `mise.toml`, `make tools-lock` writes `mise.lock` again.
+- The tools of a deployment are pinned there too: Terraform, Terragrunt, and the command-line tool of AWS, `aws-cli` (2.41.0 in the infrastructure milestone). `tools/scripts/infra.sh` and `tools/scripts/images.sh` call it to push the images and to run the task that prepares the database, and the rehearsal calls it to request a certificate and create a hosted zone in AWS Emulator. The workflows `Plan` and `Deploy` install these tools, and `jq`, from `mise.toml` and nothing else.
 
 Two parts of this decision differ from the first plan, on purpose.
 

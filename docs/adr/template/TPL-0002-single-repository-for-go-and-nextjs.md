@@ -77,10 +77,7 @@ These parts exist now:
 - The CI workflows (TPL-0018) call the same targets. The job that runs `make check` checks every file; the job that adds the slow checks of `make check-all` narrows them to the changed files on a pull request (`CHECK_SCOPE=changed`).
 - `backend/` and `contracts/` hold the bounded contexts and their contracts, since the first bounded context.
 - `infra/` holds the Terraform modules that the local environment shares with AWS, and `infra/local/`, which applies them to AWS Emulator (TPL-0015, TPL-0017), since the events milestone.
-
-These parts arrive later:
-
-- The other Terraform modules and the Terragrunt configurations in `infra/` arrive with the deployment.
+- Since the infrastructure milestone, `infra/` also holds every module of the environments in AWS, and `infra/live/`, the Terragrunt units of stg and prd (TPL-0015). A change to a context, to its schema, and to the infrastructure that runs it lands in one pull request, and the workflow `Plan` shows what it would change in each environment.
 
 ## Pros and Cons of the Options
 

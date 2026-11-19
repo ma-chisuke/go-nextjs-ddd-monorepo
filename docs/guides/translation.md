@@ -194,3 +194,32 @@ Use these Japanese terms. The table grows when a new term appears; add the term 
 | throttling | スロットリング |
 | configuration set (of Amazon SES) | 設定セット |
 | bounce (of a mail) | バウンス |
+| cluster (ECS, Aurora) | クラスター |
+| container | コンテナ |
+| task, task definition (ECS) | タスク、タスク定義 |
+| task execution role, task role (ECS) | タスク実行ロール、タスクロール |
+| deployment circuit breaker (ECS) | デプロイのサーキットブレーカー |
+| namespace (of Service Connect) | 名前空間 |
+| endpoint (VPC); gateway endpoint, interface endpoint | エンドポイント。ゲートウェイエンドポイント、インターフェイスエンドポイント |
+| public subnet, private subnet | 公開サブネット、非公開サブネット |
+| load balancer | ロードバランサー |
+| Availability Zone | アベイラビリティーゾーン |
+| hosted zone (Amazon Route 53) | ホストゾーン |
+| secret (in Secrets Manager) | シークレット |
+| customer managed key (AWS KMS) | カスタマーマネージドキー |
+| lifecycle policy (Amazon ECR) | ライフサイクルポリシー |
+| push, pull (an image or a branch) | プッシュ、プル |
+| promote (an image, from stg to prd) | 昇格させる |
+| capacity (of a database) | キャパシティ |
+| connection pool | 接続プール |
+| master user (Aurora) | マスターユーザー |
+| pause, resume (Aurora Serverless v2) | 一時停止する、再開する |
+| writer, reader (instances of Aurora) | ライター、リーダー |
+| snapshot | スナップショット |
+| plan (Terraform, pgschema) | plan (not translated) |
+| apply (Terraform, pgschema) | 適用する |
+| state (of Terraform) | state (not translated) |
+| ephemeral resource, ephemeral value (Terraform) | エフェメラルリソース、エフェメラルな値 |
+| write-only argument (Terraform) | 書き込み専用の引数 |
+| mock (of a provider, or of the outputs of a unit) | モック |
+| rehearsal (`make rehearse-infra`) | リハーサル |

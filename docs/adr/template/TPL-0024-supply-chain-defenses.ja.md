@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-17
+date: 2026-11-19
 ---
 
 # TPL-0024: サプライチェーンを層を重ねて守る
@@ -88,8 +88,17 @@ Trivy は、ロックファイルをもとに、既知の脆弱性と、禁止�
 - ベースイメージは最小限のものを選び、ダイジェストで固定する。
 - コンテナは root 以外のユーザーで動かす。Docker Compose では、フロントエンドを含む製品のサービスに、さらに3つの制限をかける（`compose.yaml` の `x-context-service`）。ファイルシステムは読み取り専用で、ケーパビリティはなく、新しい特権も得られない。
 - Trivy がすべてのイメージをスキャンし、その SBOM を書く。
-- ビルドには、GitHub の artifact attestations で来歴を付ける。
+- ビルドには、GitHub の artifact attestations で来歴を付ける。これはまだ作っていない。ワークフロー `Deploy` は、イメージをビルドして Amazon ECR にプッシュするが、attestation は付けない。
+- Amazon ECR のリポジトリは、タグを変更できないようにする。1つのタグはずっと同じ1つのイメージを指す。また、プッシュされたイメージをそのつどスキャンする。
+- データベースを準備するイメージ（`db/Dockerfile`）は、`compose.yaml` が動かす PostgreSQL のイメージの上でビルドする。このベースイメージはダイジェストで固定し、イメージはユーザー 999 として動く。イメージには `mise.toml` が固定する pgschema のリリースを足す。そのバイナリは、`mise.lock` が Linux について記録する SHA-256 で、`ADD --checksum` が確かめる。
 - フロントエンドのイメージ（`frontend/Dockerfile`）は、ダイジェストで固定した Node の公式イメージの上でビルドする。Node はもう Corepack を同梱しないので、ビルドは npm のレジストリにある pnpm のパッケージから pnpm を入れる。そのパッケージは、`ADD --checksum` が SHA-256 で確かめる。依存は、`pnpm-workspace.yaml` の設定のもとで、`pnpm-lock.yaml` からフロントエンドの分だけを入れる。イメージは Next.js の standalone のサーバーを持ち、それは distroless の Node の上で、ユーザー 65532 として動く。
+
+AWS のインフラについては、次の決まりに従う。
+
+- Terragrunt のすべてのユニットの provider は、`infra/live/providers.hcl` で固定する。そして、4つのプラットフォームのハッシュとともに `infra/live/providers.lock.hcl` でロックする。どのユニットも `-lockfile=readonly` で初期化するので、ロックファイルにない provider は入らない（TPL-0015）。
+- Trivy は、Terraform のコードの設定ミスを調べる（`scan-config`）。レビューが認めた指摘は `.trivyignore.yaml` に、認めるファイルと理由とともに書く。それ以外の場所では、その指摘は引き続き失敗する。このファイルの項目は1つだけである。インターネットに面したロードバランサーの指摘 AWS-0053 を、`infra/modules/web/main.tf` に限って認める。このロードバランサーはシステムのただ1つの公開の入口であり（TPL-0014）、テンプレートの持ち主が承認した。エージェントへの指示は、エージェントが項目を足すことを禁じている。
+- タスクは VPC エンドポイントを通して AWS のサービスに届き、VPC の外のアドレス範囲への送信を許すセキュリティグループはない（TPL-0014）。Trivy はそのような送信を重大と評価し（AWS-0104）、それを認める項目はない。
+- ロードバランサーはアクセスログを残さない。ロードバランサーがログを書けるのは Amazon S3 が管理するキーで暗号化したバケットだけであり、Trivy はバケットにカスタマーマネージドキーを求める（AWS-0132）。ログとこの指摘をどう扱うかは、まだ決めていない。
 
 手元の環境は、製品が出荷しないソフトウェアも動かし、それも固定する（TPL-0017）。
 
@@ -117,6 +126,9 @@ AWS SDK for Go v2 は `backend/go.mod` のモジュールであり、前に述�
 - 悪い点：GitHub の守りのいくつかは、ファイルではなく設定である。`make github-settings` がそれらを `docs/guides/github-settings.md` と比べるが、`make check` からは見えない。
 - 悪い点：AWS Emulator のバージョンを更新する Renovate のルールは、まだない。人が Dockerfile のバージョンと2つのチェックサムを手で変えるので、3日の待ちも働かない（TPL-0025）。
 - 悪い点：`frontend/Dockerfile` にある pnpm のバージョンとそのパッケージのチェックサムを更新する Renovate のルールも、ない。更新が `mise.toml` と `package.json` の pnpm を動かしたら、人が Dockerfile の両方を手で変える（TPL-0025）。
+- 悪い点：`db/Dockerfile` の pgschema を更新する Renovate のルールも、ない。更新が `mise.toml` の pgschema を動かしたら、人が Dockerfile のバージョンとチェックサムを変える。それまでは `make test-db-image` が失敗する（TPL-0025）。
+- 悪い点：Amazon ECR のイメージには、まだ来歴がない。また、`scan-images` と `make sbom` が対象にするのは Docker Compose のイメージだけで、データベースを準備するイメージは含まない。
+- 悪い点：AWS-0132 の扱いを決めるまで、公開のロードバランサーはアクセスログを残さない。
 
 ### 確認の方法
 
@@ -125,11 +137,15 @@ AWS SDK for Go v2 は `backend/go.mod` のモジュールであり、前に述�
 - `make check-all` は `scan-deps` と `vuln-go` を実行する。
 - `trivy-action` と `setup-trivy` を使うワークフローがないことは、レビューで確かめる。これを守らせるチェックはない。
 - CodeQL と Scorecard は、ワークフローとして動く。シークレットスキャン・プッシュ保護・private vulnerability reporting・Dependabot alerts は、リポジトリの設定である。`make github-settings` がこれらを有効にし、`docs/guides/github-settings.md` と違うものがあれば報告する。
-- コンテナについては、`make check` が `lint-image-pins` と `scan-config` を実行する。`lint-image-pins` はダイジェストのないベースイメージで失敗し、`scan-config` の Trivy のチェックは root で動くイメージの Dockerfile で失敗する。どちらも、AWS Emulator とフロントエンドの Dockerfile も調べる。文脈のイメージ（`backend/Dockerfile`）は、distroless static のユーザー `nonroot` で動く。フロントエンドのイメージ（`frontend/Dockerfile`）は、distroless の Node のユーザー 65532 で動く。
+- コンテナについては、`make check` が `lint-image-pins` と `scan-config` を実行する。`lint-image-pins` はダイジェストのないベースイメージで失敗し、`scan-config` の Trivy のチェックは root で動くイメージの Dockerfile で失敗する。どちらも、AWS Emulator、フロントエンド、データベースを準備するイメージの Dockerfile も調べる。文脈のイメージ（`backend/Dockerfile`）は、distroless static のユーザー `nonroot` で動く。フロントエンドのイメージ（`frontend/Dockerfile`）は、distroless の Node のユーザー 65532 で動く。
 - pnpm のパッケージがチェックサムに合わなければ、フロントエンドのイメージのビルドは失敗する。
 - パッケージがチェックサムか署名に合わなければ、AWS Emulator のイメージのビルドは失敗する。
 - `make check-all` は `scan-images` を実行し、すべての文脈のイメージとフロントエンドのイメージに既知の脆弱性がないかを Trivy でスキャンする。`make sbom` は、それらのイメージごとに CycloneDX の SBOM を `dist/sbom/` に書く。どちらも AWS Emulator のイメージは対象にしない。これは手元の環境の道具であり、出荷されないからである。
-- GitHub の artifact attestations による来歴は、イメージを公開するワークフローと一緒に、インフラのマイルストーンで入る。そのワークフローは、`make sbom` の SBOM にも attestation を付ける。
+- `scan-config` は `.trivyignore.yaml` を読む。このファイルが指摘を認めるのは、項目が名指すファイルの中だけである。そのため、インターネットに面したロードバランサーがほかのファイルにあれば、`make check` は失敗する。
+- `make check-all` の `make test-db-image` は、データベースを準備するイメージの pgschema が `mise.toml` の固定するリリースでなければ失敗する。そのイメージのビルドは、pgschema のバイナリがチェックサムに合わなければ失敗する。
+- Terragrunt の実行はどれも、`infra/live/providers.lock.hcl` にない provider で失敗する。
+- `.trivyignore.yaml` の項目が人の承認なしに足されていないことは、レビューで確かめる。これを確かめられるチェックはない。
+- GitHub の artifact attestations による来歴は、まだ作っていない。イメージを公開するのはワークフロー `Deploy` であり、イメージと `make sbom` の SBOM に attestation を付けるのは、後の変更に任せる。
 
 ## 選択肢の長所と短所
 
@@ -161,4 +177,4 @@ AWS SDK for Go v2 は `backend/go.mod` のモジュールであり、前に述�
 - [OpenSSF Scorecard](https://github.com/ossf/scorecard)
 - 道具の固定は TPL-0022 に、1つの関心事に道具を1つだけ使う決まりは TPL-0023 に、更新は TPL-0025 にある。
 
-<!-- i18n-source: TPL-0024-supply-chain-defenses.md sha256:6acdfce464bc752f380ba2e646d2e9d2c52c3fee021bef9045d258fce74c54e3 -->
+<!-- i18n-source: TPL-0024-supply-chain-defenses.md sha256:3f671c7bb7e0b57eaab17b074506d2e7e06d7cb6142d8e6b73478c4cab542403 -->

@@ -67,8 +67,8 @@ scan-images:
 # One CycloneDX SBOM per image, dist/sbom/<service>.cdx.json (TPL-0024): the
 # packages of the base image and the modules of the binary. It lists no
 # vulnerabilities, so it needs no database; a scan of the SBOM later
-# (`trivy sbom`) reports what is known then. The workflow that publishes the
-# images attests these files with GitHub artifact attestations.
+# (`trivy sbom`) reports what is known then. No workflow attests these files
+# yet: the deployment pushes the images without an attestation (TPL-0024).
 .PHONY: sbom
 sbom: ## Write an SBOM of the image of every service to dist/sbom/
 	@mkdir -p dist/sbom .cache/trivy-docker-config

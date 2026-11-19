@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-17
+date: 2026-11-19
 ---
 
 # TPL-0017: Emulate AWS in the local environment with AWS Emulator
@@ -46,31 +46,35 @@ The rules are as follows.
 - AWS publishes AWS Emulator as RPM and deb packages, and no container image. The template builds the image from a Dockerfile of its own, `infra/local/aws-emulator/Dockerfile`: on Amazon Linux 2023 minimal, pinned by digest, it installs the RPM package of a pinned version. Before it installs the package, it checks the SHA-256 of the package for each architecture, and `rpm` checks the signature of the package against the public key of AWS, committed as `signing-key.asc` (TPL-0024).
 - AWS Emulator sends telemetry by default. The image sets `EMULATOR_TELEMETRY=off`.
 - AWS Emulator keeps its data in memory only, so the local environment creates its event bus, queues, and rules each time the emulator starts.
-- The local environment applies the Terraform modules that AWS will use, `infra/modules/event-bus` and `infra/modules/event-subscription`, to the emulator, so the local bus, queues, and rules come from the same code as in AWS (TPL-0015). The root that applies them, `infra/local/`, accepts only an endpoint on this machine. `tools/scripts/aws.sh apply` (`make aws-apply`, which `make up`, `make smoke`, and `make e2e` run) keeps the state of Terraform outside the repository, and throws it away when the emulator has restarted.
+- The local environment applies the Terraform modules that the environments in AWS use, `infra/modules/event-bus` and `infra/modules/event-subscription`, to the emulator, so the local bus, queues, and rules come from the same code as in AWS (TPL-0015). The root that applies them, `infra/local/`, accepts only an endpoint on this machine. `tools/scripts/aws.sh apply` (`make aws-apply`, which `make up`, `make smoke`, and `make e2e` run) keeps the state of Terraform outside the repository, and throws it away when the emulator has restarted.
 - The emulator serves HTTPS on port 9297. It makes its certificate at every start, for the names `localhost` and `127.0.0.1` only, and signs it with a CA that it writes to its state directory. The host gets that CA from `tools/scripts/aws.sh server` (`.cache/aws-emulator/ca.pem`). The containers of the services mount the volume that holds it, and `AWS_ENDPOINT_SERVER_NAME=localhost` tells them the name that the certificate carries, which they check rather than skip (`platform/awsconfig`, which refuses the variable without `AWS_ENDPOINT_URL`). The emulator runs as the user 65532, as the services do, because it makes the CA file readable by its owner only.
 - The emulator checks no signature of requests (`--auth off`), because it makes new credentials at every start. Its port is published on the loopback address only.
 - Every service of Docker Compose publishes its port on the loopback address only, and below 32768: PostgreSQL on 15432, AWS Emulator on 19297, Mailpit on 18025, Facility on 18081, Reservation on 18082, and the frontend on 13000. From 32768 up, Linux and macOS hand out ports by themselves, to outgoing connections too. A test that held a connection to the local PostgreSQL could sit on a port that a service was about to publish, and the service failed to start; this failed CI twice in one day, on two different ports, while the ports lay between 55432 and 59297.
 - When `make up` starts the emulator anew, it restarts the services that mount the volume of its CA, so that they read the new one. A restart of the emulator in any other way leaves them to a person ([Run the services locally](../../guides/run-locally.md)).
 - The behaviors that the template relies on each have a test that runs in CI, and the tests fail when a version of the emulator stops doing them (Confirmation).
-- Nothing in the local system calls Secrets Manager or SES. The services read their secrets from environment variables, which ECS fills in AWS (TPL-0014), and Notification sends its mail to Mailpit. So the local environment creates no secrets, and no test of Secrets Manager or SES is kept.
+- Nothing in the local system calls Secrets Manager or SES. The services read their secrets from environment variables, which ECS fills in AWS (TPL-0014), and Notification sends its mail to Mailpit. So the local environment creates no secrets. The adapter that sends the mail in AWS, `notification/internal/adapter/ses`, has integration tests against SES in the emulator, which create the identity that they send from.
+- The emulator also stands in for an AWS account in the rehearsal of an environment (`make rehearse-infra`, TPL-0015). The rehearsal applies the units of stg to it, in the order of a deployment, and plans the units of prd against them. The local system lives in the Region `us-east-1` of the emulator, and the rehearsal in `ap-northeast-1`, the Region of the environments. SQS and EventBridge are separate by Region in the emulator, so the rehearsal leaves the queues and the bus of the local system alone.
+- The limits of the emulator that the rehearsal meets are handled in `infra/live/_units/` and in `tools/scripts/infra.sh`, each with a comment, and nowhere in the modules. More Information lists them.
 
 Three parts of this decision differ from the first plan.
 
 - The first plan was to build the image from the Dockerfile that AWS publishes. The template writes its own, so that the base image is pinned by digest and the package is checked before it is installed (TPL-0024).
 - The first plan had a fallback in case the emulator could not deliver from EventBridge to SQS. It delivers, so the fallback was not built (TPL-0013).
-- The first plan named Secrets Manager among the behaviors to test. It works in the emulator, but nothing in the local system uses it, so no test is kept for it.
+- The first plan named Secrets Manager among the behaviors to test. It works in the emulator, but nothing in the local system uses it, so no test of the local system is kept for it. The rehearsal creates the secrets of the module `database`, with write-only arguments, in the emulator.
 
 ### Consequences
 
 - Good, because anyone can run the whole system, including the flow of events, without an account or a token, and CI runs it the same way.
 - Good, because AWS Emulator comes from AWS itself and is released under CC0, so it puts no license terms on a team that copies the template.
-- Good, because the local bus, queues, and rules come from the modules that AWS will use.
+- Good, because the local bus, queues, and rules come from the modules that the environments in AWS use.
+- Good, because the emulator accepts every resource of the modules, so a whole environment applies to it without an account: the nine units of stg in about three minutes.
 - Bad, because the product was released on November 11, 2026, and may change quickly. The tests cover only the behaviors that the template relies on, and one difference from AWS is known already: the emulator accepts an event for a bus that does not exist, and drops it. The relay therefore checks at start that its bus exists (`Publisher.Ready`, TPL-0013).
 - Bad, because its state is lost when it restarts, so the local environment must recreate the AWS resources every time. The first apply after a start takes about a minute, because the AWS provider waits about 25 seconds after it creates each SQS queue, and a subscription has two. The module `event-subscription` sets the policy of the queue as an argument of the queue, because a separate policy resource would wait once more.
 - Bad, because the CA changes at every start of the emulator. After the emulator restarts, the services that call it must restart too, and the host must copy the CA again. `make up` does both when it started the emulator anew; after a restart that `make up` did not cause, a person does them.
 - Bad, because the image is built locally from the Dockerfile, which adds a step and some build time to the first start on every machine.
 - Bad, because no Renovate rule updates the version of the emulator yet. An update changes the version and the two checksums in the Dockerfile by hand (TPL-0025).
 - Bad, because an emulator is not AWS. Permissions, quotas, and latency can differ, so stg remains the first place where the real services run.
+- Bad, because the emulator keeps what Terraform creates and starts nothing: no task and no database. The rehearsal therefore proves the shape of an environment, and neither that the images start, nor that the task that prepares the database succeeds, nor that the services find each other by name.
 
 ### Confirmation
 
@@ -82,6 +86,8 @@ These tests keep the behaviors of the emulator verified. They run in `make check
 - The integration tests of `platform/awsevents` (`awsevents_integration_test.go`, in `make test-integration`) run the publisher and the consumer against the emulator. A rule on a custom bus delivers the `detail` of an event to an SQS queue whose policy allows `events.amazonaws.com`. An event whose handler keeps failing, and a message that is no event, move to the dead-letter queue after `maxReceiveCount` receives. `PutEvents` answers 200 with a failed entry for a source that AWS reserves, and the publisher reports it as an error. `Publisher.Ready` tells whether a bus exists.
 - `make smoke` applies `infra/local/` with Terraform, starts the system, books, reschedules, and cancels a reservation, and waits for the three mails in Mailpit.
 - `make e2e` starts the system in the same way, and a person in a browser registers a room, books it, reschedules, and cancels; the test waits for the three mails in Mailpit.
+- The integration tests of `notification/internal/adapter/ses` (in `make test-integration`) create and verify an identity of SES in the emulator, send a mail from it with `SendEmail` of SES v2, and check that the emulator refuses a sender that no verified identity covers, with `MessageRejected`.
+- `make rehearse-infra` applies the units of stg to the emulator and plans the units of prd against them. It fails when a version of the emulator stops accepting a resource of the modules.
 
 ## Pros and Cons of the Options
 
@@ -131,3 +137,20 @@ Facts verified with version 1.0.498, on November 18, 2026:
 - An event for a bus that does not exist is accepted and dropped. AWS refuses it.
 - Terraform, with the AWS provider 6.73.0, applies `infra/local/` to the emulator. The provider waits about 25 seconds after it creates each SQS queue.
 - Secrets Manager (creating and reading a secret) and `SendEmail` of SES v2 worked in a check by hand.
+
+Facts verified with version 1.0.498 during the infrastructure milestone, in November 2026:
+
+- It accepts every resource of the modules:
+  - the network: the VPC, its subnets, routes, and flow logs, gateway and interface endpoints, and the rules of security groups;
+  - IAM, Amazon ECR, Secrets Manager with write-only arguments, CloudWatch Logs, and S3 as the backend of Terraform;
+  - ECS clusters, task definitions, and services with Service Connect, and the HTTP namespaces of Service Connect;
+  - load balancers with their listeners, Route 53, requests of certificates to ACM, and RDS clusters.
+- It knows Aurora PostgreSQL up to version 17.9, and not 18. The rehearsal applies the database with 17.9.
+- It does not know the endpoint service `email`, the API of Amazon SES. The rehearsal leaves that endpoint out.
+- ACM never issues a certificate, and a load balancer of the emulator accepts one that is not issued. The rehearsal requests a certificate, and creates the hosted zone of the domain, itself.
+- It names an ECR repository `localhost:<port>/<name>`, which the module `database` refuses as the address of an image. The rehearsal writes the address as AWS would.
+- It answers with a port of its own for an RDS cluster, so a second plan shows a change of the port.
+- With `skip_requesting_account_id`, which the rehearsal sets, the provider reads a referenced security group back as `<account>/<group>`, so a second plan shows changes.
+- It starts no task and runs no database.
+- It answers `CreateGateway` of ECS with "scaffolded but not implemented" (TPL-0014).
+- `SendEmail` of SES v2 sends from an address that a verified identity covers, and refuses any other sender with `MessageRejected`.

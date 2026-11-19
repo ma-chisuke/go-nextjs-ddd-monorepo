@@ -54,15 +54,30 @@
 
    確認：`make up` がワーカーを起動し、正常になるまで待つ。
 
-6. 用語集 `docs/contexts/<context>/glossary.md` と `glossary.ja.md` を書く。見出し行が `| Identifier | Term | Meaning |`（日本語では `| 識別子 | 用語 | 意味 |`）の表を1つ置き、`domain`（補完の文脈では `app`）がエクスポートする型ごとに行を書く。
+6. AWS での文脈のユニットを用意する（TPL-0014、TPL-0015）。どの環境も同じユニットを持つので、次の変更はどれも1回だけ行い、stg と prd の両方に効かせる。
+
+   - `infra/live/system.hcl` の `contexts` に文脈の名前を足す。この一覧から、ユニット `registry` がその文脈のイメージのリポジトリを作り、ユニット `database` が2つのロールのシークレットを作る。そのパスワードは、データベースを準備するタスクが設定する。
+   - `infra/live/_units/contexts/<context>.hcl` を書く。手本の文脈のユニットをコピーし、`name` を変える。そして、その文脈が動かすものと呼ぶものを残す。API なら `api` である。ワーカーなら `workers` で、`command` にそのモード（`["relay"]` など。API のない文脈では `[]`）を書く。発行側なら `publishes_events = true` である。受け取る側なら `subscription` で、AsyncAPI 文書が受け取るイベントの source と type を、`infra/local/main.tf` と同じく書く。これら以外に要る権限は、Notification の `ses:SendEmail` のように `iam_statements` に書く。
+   - ツリーのどれか1つの `terragrunt.hcl` を、すべての環境の `infra/live/<environment>/contexts/<context>/terragrunt.hcl` にコピーする。`terragrunt.hcl` はどれも同じファイルである。
+   - ほかの文脈の API を呼ぶなら、その文脈のユニットへの `dependency` を足し、その `api_url` を `environment_variables` に入れる。Reservation のユニットが Facility についてそうしている。フロントエンドが新しい API を呼ぶなら、`infra/live/_units/web.hcl` にも同じことをする。
+   - 手順4のロールは、AWS では、データベースを準備するタスクが Aurora のマスターユーザーとして作る。このユーザーはスーパーユーザーではない。`db/bootstrap.sql` の Facility の部分は、このユーザーを所有者のロールのメンバーにする。コピーするときは、その部分も残す。
+
+   ```sh
+   make check                           # lint-infra-live
+   CHECK_SCOPE=changed make check-all   # validate-live, rehearse-infra, test-db-image
+   ```
+
+   確認：`backend/cmd/<context>/` のコマンドが `contexts` にあり、`_units/contexts/<context>.hcl` を持ち、すべての環境にユニットを持つまで、`lint-infra-live` が失敗する。ツリーのほかの部分は、[AWS にデプロイする](deploy.ja.md#環境を変える)が説明している。
+
+7. 用語集 `docs/contexts/<context>/glossary.md` と `glossary.ja.md` を書く。見出し行が `| Identifier | Term | Meaning |`（日本語では `| 識別子 | 用語 | 意味 |`）の表を1つ置き、`domain`（補完の文脈では `app`）がエクスポートする型ごとに行を書く。
 
    確認：エクスポートされた型に行がないと、`make check` が失敗する（`arch/glossary`）。
 
-7. 文脈の README `docs/contexts/<context>/README.md` とその対訳を、Facility・Reservation・Notification の README と同じ形で書く。受け持つもの・業務領域の種類とその理由・API と problem（ないならそのこと）・イベント・決まり・ほかの文脈から必要とするものである。`ARCHITECTURE.md` の表にこの文脈を足し、プロセスの表にそのプロセスを足す。
+8. 文脈の README `docs/contexts/<context>/README.md` とその対訳を、Facility・Reservation・Notification の README と同じ形で書く。受け持つもの・業務領域の種類とその理由・API と problem（ないならそのこと）・イベント・決まり・ほかの文脈から必要とするものである。`ARCHITECTURE.md` の表にこの文脈を足し、プロセスの表にそのプロセスを足す。
 
-8. API を持つ文脈では、`problems.go` の新しい slug ごとに `docs/problems/` のページを書く。そして `make i18n-stamp` を実行する。
+9. API を持つ文脈では、`problems.go` の新しい slug ごとに `docs/problems/` のページを書く。そして `make i18n-stamp` を実行する。
 
-9. 仕上げる。
+10. 仕上げる。
 
    ```sh
    make fmt
@@ -85,7 +100,9 @@
 | 実行時のロールへの `GRANT` | そのロールで接続する、文脈の結合テスト（`test-integration`） |
 | テーブルや列のコメント、またはスキーマの文書 | `lint-db-docs` |
 | 文脈が発行するイベントの JSON Schema、または AsyncAPI 文書のそのメッセージ | `lint-events` |
-| 受け取る側の AsyncAPI 文書、または `infra/local/main.tf` のその購読 | まだチェックはなく、レビューで見つける（TPL-0013）。購読がないことに `make smoke` が気づくのは、ワーカーの結果を待つときだけである |
+| `infra/live/system.hcl` の `contexts` にある文脈の名前、`infra/live/_units/contexts/` にあるユニットの定義、またはある環境のそのユニット | `lint-infra-live` |
+| あるユニットが読むのにほかのユニットにない出力、またはモジュールが拒む入力 | `validate-live`、`rehearse-infra` |
+| 受け取る側の AsyncAPI 文書、または `infra/local/main.tf` かそのユニットの購読 | まだチェックはなく、レビューで見つける（TPL-0013）。購読がないことに `make smoke` が気づくのは、ワーカーの結果を待つときだけである |
 | 文脈の README | まだチェックはなく、レビューで見つける（TPL-0003） |
 
-<!-- i18n-source: add-a-context.md sha256:37f449261ac7500f7e48d769f6aa2a740785231f574a55ce8b7437d2018bf98b -->
+<!-- i18n-source: add-a-context.md sha256:835d359b0000af5c52e887b1db3fc93897c84a5e91ced0b7b772a9a69c3cc679 -->

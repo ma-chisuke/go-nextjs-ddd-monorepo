@@ -13,7 +13,7 @@ make up
 
 1. PostgreSQL 18。`db/bootstrap.sql` と `db/local.sql` を実行し、各文脈の `schema.sql` を適用する（`tools/scripts/db.sh up`）。
 2. AWS Emulator。`infra/local/aws-emulator/Dockerfile` からビルドする（TPL-0017）。
-3. イベントバス `contexts` と、Notification のキュー（デッドレターキューとルールも含む）。Terraform が `infra/local/` からエミュレーターの中に作る（`tools/scripts/aws.sh apply`）。エミュレーターの起動後の最初の apply には1分ほどかかる。AWS の provider が、キューを1つ作るたびに25秒ほど待つからである。変更のない apply は数秒で終わる。
+3. イベントバス `contexts` と、Notification のキュー（デッドレターキューとルールも含む）。Terraform が `infra/local/` からエミュレーターの中に作る（`tools/scripts/aws.sh apply`）。エミュレーターの起動後の最初の適用には1分ほどかかる。AWS の provider が、キューを1つ作るたびに25秒ほど待つからである。変更のない適用は数秒で終わる。
 4. Mailpit と、すべての文脈のすべてのプロセスと、フロントエンド。プロセスは `backend/Dockerfile` から、フロントエンドは `frontend/Dockerfile` からビルドする。プロセスは、Facility と Reservation の API、Reservation の中継（`reservation relay`）、Notification のワーカー（`notification`）である。`make up` は、それぞれが正常になるまで待つ。
 5. 手順2でエミュレーターが新しく起動した場合は、エミュレーターを呼ぶサービスの再起動。新しい CA を読ませるためである（[AWS Emulator が再起動したとき](#aws-emulator-が再起動したとき)）。
 
@@ -124,7 +124,7 @@ Mailpit はメールを一時的なファイルシステムに置くので、コ
 
 ## キューを見る
 
-テンプレートは AWS CLI を固定していない。AWS CLI を入れてあれば、`tools/scripts/aws.sh` が出力する環境変数で、エミュレーターに向けられる。
+`mise.toml` は、デプロイのために AWS のコマンドラインツール `aws` を固定している。mise が有効なシェルで（または各コマンドの前に `mise exec --` を付けて）、`tools/scripts/aws.sh` が出力する環境変数を読み込めば、`aws` をエミュレーターに向けられる。
 
 ```sh
 eval "$(tools/scripts/aws.sh env)"
@@ -157,6 +157,8 @@ AWS Emulator は状態をメモリにしか持たず、起動のたびに新し�
 エミュレーターを新しく起動したときは、`make up` がこの2つの手順を行う。`docker compose restart aws` など、ほかの方法でエミュレーターが再起動したときは、手で行う。
 その間、イベントは送信箱で待つので、失われない。中継は、発行できるようになった時点でそれらを発行する。
 `make aws-server` は、ほかのサービスを起動せずにエミュレーターだけを起動し、その CA をコピーする。テストはこれを使い、`make test-integration`・`make smoke`・`make e2e` は動く前にエミュレーターを起動する。
+
+`make check-all` に含まれる `make rehearse-infra` は、同じエミュレーターを別の目的に使う。stg のユニットをエミュレーターに適用し、prd のユニットをそれに対して plan する（[AWS にデプロイする](deploy.ja.md#aws-アカウントなしで確かめる)）。リハーサルはリージョン `ap-northeast-1` で動き、手元のシステムは `us-east-1` にある。キューとバスはリージョンごとに分かれているので、リハーサルは手元のシステムに手を付けない。リハーサルが作ったものは、エミュレーターが再起動するまで残る。
 
 ## API をソースから動かす
 
@@ -235,6 +237,6 @@ AWS Emulator のバージョンを更新する Renovate のルールはまだな
 
 1. Dockerfile の先頭のコメントが示す一覧で、新しいバージョンを探す。
 2. `EMULATOR_VERSION` と、2つのチェックサム `EMULATOR_SHA256_ARM64` と `EMULATOR_SHA256_AMD64` を変える。各パッケージ（`aarch64` 用と `x86_64` 用）のチェックサムは、`curl --location <パッケージの URL> | shasum -a 256` で得る。パッケージの URL は、Dockerfile の `RUN` 命令にある。
-3. `make up` でイメージをビルドしてエミュレーターのコンテナを作り直し、`CHECK_SCOPE=changed make check-all` を実行する。新しいバージョンがテンプレートの頼る動きを続けているかは、`platform/awsevents` の結合テストと `make smoke` でわかる。パッケージがチェックサムや AWS の署名に合わなければ、ビルドが失敗する。
+3. `make up` でイメージをビルドしてエミュレーターのコンテナを作り直し、`CHECK_SCOPE=changed make check-all` を実行する。新しいバージョンがテンプレートの頼る動きを続けているかは、次のものでわかる。`platform/awsevents` と `notification/internal/adapter/ses` の結合テスト、`make smoke`、`make rehearse-infra` である。パッケージがチェックサムや AWS の署名に合わなければ、ビルドが失敗する。
 
-<!-- i18n-source: run-locally.md sha256:e7f392051129650e7758c1f8b697e2805b5aaf2e4546ee3626587aaaa9e3ced2 -->
+<!-- i18n-source: run-locally.md sha256:7e9bb8d208550f13ed15740003656ba4fa46f74268b32ebf86cbf1ffea2438a2 -->
