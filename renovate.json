@@ -28,6 +28,10 @@
     "schedule": ["at any time"],
     "labels": ["dependencies", "security"]
   },
+  "terraform": {
+    "description": "The providers of every unit are pinned in infra/live/providers.hcl, in the Terraform language. After an update, `make infra-lock` writes the checksums (docs/guides/github-settings.md).",
+    "managerFilePatterns": ["/^infra/live/providers\\.hcl$/"]
+  },
   "customManagers": [
     {
       "description": "The lefthook schema that `make check-all` validates lefthook.yml against follows the lefthook version in mise.toml.",
@@ -93,6 +97,11 @@
       "description": "pnpm in mise.toml, packageManager in package.json, and pnpm-lock.yaml name the same version.",
       "matchDepNames": ["pnpm"],
       "groupName": "pnpm"
+    },
+    {
+      "description": "The local system (infra/local) and the environments (infra/live/providers.hcl) use the same providers.",
+      "matchDatasources": ["terraform-provider"],
+      "groupName": "Terraform providers"
     },
     {
       "description": "lefthook in mise.toml and the schema URL in make/repo.mk name the same version.",

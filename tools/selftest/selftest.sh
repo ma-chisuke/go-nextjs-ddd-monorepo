@@ -958,6 +958,33 @@ EOF
   passes
 }
 
+case_lint_infra_live() {
+  run mkdir -p infra/live/stg/cache
+  run cp infra/live/stg/network/terragrunt.hcl infra/live/stg/cache/terragrunt.hcl
+  fails 'infra/live/stg/cache/terragrunt.hcl:1: [infra-live] the unit has no definition'
+  prints 'prd has no unit cache: every environment has the same units'
+  put infra/live/_units/cache.hcl << 'EOF'
+terraform {
+  source = "${get_repo_root()}/infra/modules//network"
+}
+EOF
+  run mkdir -p infra/live/prd/cache
+  run cp infra/live/stg/network/terragrunt.hcl infra/live/prd/cache/terragrunt.hcl
+  passes
+}
+
+# An environment that sets a key of its own, and a context without a unit.
+case_lint_infra_live__environment() {
+  printf '\nlocals {\n  only_here = true\n}\n' >> "$COPY/infra/live/prd/env.hcl"
+  fails 'infra/live/stg/env.hcl:1: [infra-live] the key only_here of infra/live/prd/env.hcl is missing'
+  run git checkout -q -- infra/live/prd/env.hcl
+  run mkdir -p backend/cmd/billing
+  put backend/cmd/billing/main.go 'package main'
+  fails 'infra/live/system.hcl:1: [infra-live] the context billing of backend/cmd/ is not in'
+  drop backend/cmd/billing
+  passes
+}
+
 case_validate_terraform__test() {
   put infra/modules/plain/variables.tf << 'EOF'
 variable "name" {

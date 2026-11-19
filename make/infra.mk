@@ -61,3 +61,51 @@ lint-terraform-docs:
 # `terraform init`, which downloads the providers.
 validate-terraform:
 	@$(TASK) $@ '$(call tf-dirs,$(TF_GLOBS)) | xargs -r tools/scripts/terraform-validate.sh'
+
+# The environments (infra/live/): the units that Terragrunt runs, one state
+# each, for stg and prd (TPL-0015). The steps are in tools/scripts/infra.sh.
+
+CHECK_TARGETS += lint-infra-live
+CHECK_ALL_TARGETS += validate-live rehearse-infra
+
+INFRA := tools/scripts/infra.sh
+
+# What an environment is made of: a change to it starts the checks that run
+# every unit.
+LIVE_SOURCES := "infra/live/*" "infra/modules/*" "tools/scripts/infra.sh"
+
+.PHONY: infra-lock infra-bootstrap infra-plan deploy
+
+# The shape of the tree: every environment has the same units, every unit has
+# a definition, and every bounded context has a unit.
+lint-infra-live:
+	@$(TASK) $@ 'if [ -n "$$($(FILES) "infra/live/*" "backend/cmd/*" "tools/scripts/infra.sh")" ]; then $(INFRA) lint; fi'
+
+# `terraform validate` of every unit, as Terragrunt builds it, with the
+# outputs of the other units mocked. One environment stands for all, because
+# they have the same units (lint-infra-live). It needs no account and no Docker;
+# `terraform init` downloads the providers.
+validate-live:
+	@$(TASK) $@ 'if [ -n "$$($(FILES) $(LIVE_SOURCES))" ]; then $(INFRA) validate; fi'
+
+# The rehearsal of an environment without an AWS account: the units of stg
+# are applied to AWS Emulator, in the order of a deployment, and the units of
+# prd are planned against it. A module that does not apply, a unit that reads
+# an output that another unit does not have, or a value of an env.hcl that a
+# module rejects fails here (TPL-0017). make/aws.mk starts the emulator first.
+rehearse-infra:
+	@$(TASK) $@ 'if [ -n "$$($(FILES) $(LIVE_SOURCES))" ]; then $(INFRA) rehearse; fi'
+
+infra-lock: ## Update the lock file of the providers after a change to infra/live/providers.hcl
+	@$(INFRA) lock
+
+# The targets below reach AWS, with the credentials of the environment ENV.
+
+infra-bootstrap: ## Once per account, as an administrator: the state bucket and the roles of GitHub Actions (ENV=stg)
+	@$(INFRA) bootstrap "$(ENV)"
+
+infra-plan: ## Plan every unit of an environment (ENV=stg)
+	@$(INFRA) plan "$(ENV)"
+
+deploy: ## Push the images, prepare the database, and apply every unit of an environment (ENV=stg)
+	@$(INFRA) deploy "$(ENV)"
