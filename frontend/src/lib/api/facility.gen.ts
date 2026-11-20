@@ -55,7 +55,8 @@ export interface components {
         /** @description What is needed to register a room. */
         NewRoom: {
             /**
-             * @description The name that people use for the room.
+             * @description The name that people use for the room. It has no NUL character
+             *     (U+0000), which the API cannot store.
              * @example Aoba
              */
             name: string;

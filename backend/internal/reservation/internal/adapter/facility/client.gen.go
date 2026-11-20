@@ -34,7 +34,9 @@ type NewRoom struct {
 	// Examples: 8
 	Capacity int32 `json:"capacity"`
 
-	// Name The name that people use for the room.
+	// Name The name that people use for the room. It has no NUL character
+	// (U+0000), which the API cannot store.
+	//
 	//
 	// Examples: Aoba
 	Name string `json:"name"`

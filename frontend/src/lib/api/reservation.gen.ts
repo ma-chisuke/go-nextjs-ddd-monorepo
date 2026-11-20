@@ -172,7 +172,8 @@ export interface components {
          */
         Attendees: number;
         /**
-         * @description The email address of the person who organizes the meeting.
+         * @description The email address of the person who organizes the meeting. It has no
+         *     NUL character (U+0000), which the API cannot store.
          * @example organizer@example.com
          */
         EmailAddress: string;
