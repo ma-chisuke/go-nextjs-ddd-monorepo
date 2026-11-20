@@ -112,6 +112,9 @@ func TestRegisterRoomRejections(t *testing.T) {
 		{"capacity is over the limit", with("capacity", 1001), "validation-error", http.StatusUnprocessableEntity, "/capacity"},
 		{"name is empty", with("name", ""), "validation-error", http.StatusUnprocessableEntity, "/name"},
 		{"name is missing", without("name"), "validation-error", http.StatusUnprocessableEntity, "/name"},
+		// PostgreSQL stores no U+0000 in text, so the document refuses it
+		// before the store fails with 500.
+		{"name holds U+0000", with("name", "Aoba\x00"), "validation-error", http.StatusUnprocessableEntity, "/name"},
 		{"openFrom is not a time of day", with("openFrom", "9am"), "validation-error", http.StatusUnprocessableEntity, "/openFrom"},
 		// The error points at the object that holds the unknown property.
 		{"a property is unknown", with("floor", 3), "validation-error", http.StatusUnprocessableEntity, ""},
