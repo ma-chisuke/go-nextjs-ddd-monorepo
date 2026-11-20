@@ -1,0 +1,55 @@
+{
+  "task": "rename-room",
+  "arm": "harness",
+  "model": "sonnet",
+  "commit": "4c00b79258b835a6ab598c648d8805f8a57ee952",
+  "started": "20261120T121548Z",
+  "cli": "2.1.328 (Claude Code)",
+  "seconds": 1998,
+  "agent": {
+    "outcome": "success",
+    "turns": 2,
+    "cost_usd": 0.7695769,
+    "output_tokens": 19422,
+    "refused_commands": 0
+  },
+  "changed_lines": 792,
+  "criteria": [
+    {
+      "name": "renames-a-room",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "real-store-renames",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "operation-in-the-document",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "api-tests-of-the-operation",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "context-readme-names-the-operation",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "rules-kept",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "checks-pass",
+      "pass": true,
+      "detail": ""
+    }
+  ],
+  "passed": true
+}

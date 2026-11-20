@@ -15,7 +15,7 @@ The template was built in milestones. The quality foundation came first, so that
 | M2 | Events: outbox, EventBridge, SQS, and the local AWS emulator, with the Notification context | Done |
 | M3 | Next.js front end and end-to-end tests | Done |
 | M4 | Terraform and Terragrunt for stg and prd, and deployment | Done, and not yet applied to AWS: the modules are tested against a mock of the AWS provider, every unit is validated, and stg is rehearsed on AWS Emulator |
-| M5 | Evaluation of the agent harness, property-based API tests, mutation tests | Done, with two things open: the frontend has no mutation test, and the evaluation has four runs, a first look rather than a measurement |
+| M5 | Evaluation of the agent harness, property-based API tests, mutation tests | Done, with one thing open: the evaluation has twelve runs, one for each arm of six tasks, a first look rather than a measurement |
 
 The sample business is meeting-room booking, with three bounded contexts: Facility, Reservation, and Notification.
 

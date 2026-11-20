@@ -59,10 +59,11 @@ The evaluation in `evals/` measures the harness, and works as follows.
 - A grader decides each run by the criteria of the task and by two criteria that every change must meet: `make check` passes, and the change weakens no check.
 - `make test-evals`, in `make check-all`, proves the graders without an agent. `make eval` starts an agent, and only a person runs it, because a run costs usage and time.
 
-The first runs, on November 20, 2026, gave each of the two tasks once to each arm, with the model `sonnet`, and three of the four runs passed every criterion.
+The first runs, on November 20, 2026, gave each of six tasks once to each arm, with the model `sonnet`: two small tasks, and then one task for each kind of change that the guides describe, an endpoint, a schema change, an event, and a screen. Five of the twelve runs passed every criterion, three with the harness and two without it.
 Without the harness, the agent did the work of the task `booking-horizon` and never ran `make check`, which then reported five findings: generated code that was stale in two files, a Go file that was not formatted, and two sentences of a translation. With the harness, the agent ran `make gen` and `make check` before it stopped.
 In the task `read-the-logs`, both arms updated the translation; without the harness, the agent computed the marker of the translation by hand.
-No criterion failed with the harness, so no instruction was added. Four runs prove nothing: they are a first look, and the records of the evaluation, `evals/results/README.md`, say what they cannot show.
+In the four larger tasks, every run with the harness ended with `make check` passing. Three of them failed a criterion all the same, and on the same thing as the run without the harness: an ignore comment like the seven that the code has, an integration test that only `make check-all` runs, and a scenario in a browser that only a guide asks for. What a fast check holds was kept. What a sentence, a guide, or a slow check holds was not.
+No instruction was added: each of the three failures asks for a check or for a change of the code before it asks for a sentence, and one run is no ground for either. Twelve runs prove nothing: they are a first look, and the records of the evaluation, `evals/results/README.md`, say what they cannot show.
 
 ### Consequences
 
@@ -72,10 +73,10 @@ No criterion failed with the harness, so no instruction was added. Four runs pro
 - Good, because a new instruction rests on runs, not on a guess: the evaluation gives the same task to an agent with the harness and without it, under the same checks.
 - Bad, because some rules cannot be checked, such as naming, the shape of a domain model, or whether a test tests the right thing. They depend on review, and on the subagent that reviews.
 - Bad, because few findings name their record: those of the checks that this repository writes itself do, and so do the findings of Trivy on licenses. The other findings, including the ones that this repository reformats into one line (gitleaks, Trivy, ESLint, tflint, and others), give the rule and a fix or a link, and the agent has to find the reason from the name of the rule.
-- Bad, because the evaluation is small. Two tasks cover two kinds of change, and four runs are a first look, so whether the short `AGENTS.md` is enough is not measured yet; the choice still rests on the study and on judgment.
+- Bad, because the evaluation is small. Six tasks cover the kinds of change that the guides describe, and twelve runs, one for each arm of each task, are a first look, so whether the short `AGENTS.md` is enough is not measured yet; the choice still rests on the study and on judgment.
 - Bad, because the hooks work only in Claude Code. Other agents get the checks through `make check`, lefthook, and CI alone.
 - Bad, because the evaluation runs Claude Code only.
-- Bad, because a run spends the usage of the account of whoever starts it, and takes between a few minutes and half an hour, so no check starts it, and nobody is made to run it.
+- Bad, because a run spends the usage of the account of whoever starts it, and takes between a minute and three quarters of an hour, so no check starts it, and nobody is made to run it.
 
 ### Confirmation
 

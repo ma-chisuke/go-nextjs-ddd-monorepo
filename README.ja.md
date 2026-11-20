@@ -15,7 +15,7 @@ Go の API と Next.js の画面を1つのリポジトリに置く製品のた�
 | M2 | イベント：送信箱、EventBridge、SQS、手元の AWS エミュレーターと、文脈 Notification | 完了 |
 | M3 | Next.js のフロントエンドと、エンドツーエンドテスト | 完了 |
 | M4 | stg と prd の Terraform・Terragrunt と、デプロイ | 完了。ただし AWS にはまだ適用していない。モジュールは AWS provider のモックに対してテストし、すべてのユニットを検証し、stg を AWS Emulator でリハーサルしている |
-| M5 | エージェントのハーネスの評価、性質にもとづく API のテスト、ミューテーションテスト | 完了。ただし2つが残っている。フロントエンドにはミューテーションテストがない。評価の実行は4回だけで、測定ではなく最初の観察にとどまる |
+| M5 | エージェントのハーネスの評価、性質にもとづく API のテスト、ミューテーションテスト | 完了。ただし1つが残っている。評価の実行は、6つの作業のそれぞれの条件で1回ずつ、計12回だけである。測定ではなく最初の観察にとどまる |
 
 見本の業務は会議室の予約で、施設（Facility）・予約（Reservation）・通知（Notification）の3つの文脈からなる。
 
@@ -117,4 +117,4 @@ make check   # 速いチェック。数秒で終わる
 
 [MIT No Attribution](LICENSE)。表示を残さずに、テンプレートをコピーして自分のものにできる。
 
-<!-- i18n-source: README.md sha256:4b45c67d07f8b145bbe8cfff575bd98cddd88bd13ab7c1f98c7bee6587e486c6 -->
+<!-- i18n-source: README.md sha256:1fb5aed1d01132b424e70051f3fdced332d464ffd1fbfc9bfdb4d1cda9f0da59 -->

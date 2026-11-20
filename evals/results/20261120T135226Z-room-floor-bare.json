@@ -1,0 +1,50 @@
+{
+  "task": "room-floor",
+  "arm": "bare",
+  "model": "sonnet",
+  "commit": "4c00b79258b835a6ab598c648d8805f8a57ee952",
+  "started": "20261120T135226Z",
+  "cli": "2.1.328 (Claude Code)",
+  "seconds": 1137,
+  "agent": {
+    "outcome": "success",
+    "turns": 1,
+    "cost_usd": 0.7999944999999998,
+    "output_tokens": 19524,
+    "refused_commands": 0
+  },
+  "changed_lines": 251,
+  "criteria": [
+    {
+      "name": "floor-in-the-api",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "real-store-keeps-the-floor",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "schema-change-is-safe",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "property-in-the-document",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "rules-kept",
+      "pass": false,
+      "detail": "the change adds an ignore comment: nolint"
+    },
+    {
+      "name": "checks-pass",
+      "pass": true,
+      "detail": ""
+    }
+  ],
+  "passed": false
+}
