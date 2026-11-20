@@ -8,7 +8,7 @@ d6e6f40aedd659e11e5461d607771529699942a121a96121c97a1df03082c60d  TPL-0003-split
 39f132d55ea5bc7ceb3ae5abfaa0416217f9e3b833d00ed7415182beeb30e340  TPL-0004-clean-architecture-with-io-free-domain.md
 ded8eb8ea620260ace76a524806eb52b299d0aaf4d556f356a280cbc91e14704  TPL-0005-contexts-integrate-through-apis-and-events.ja.md
 22fa73a62130f30b828aa0aa269b9da926d3fce158823196206b032ac68391e6  TPL-0005-contexts-integrate-through-apis-and-events.md
-804e81b2eaa06b3fe97d1dc6a59a7a864e1798872da1cce26030574502f14b88  TPL-0006-openapi-with-oapi-codegen-strict-server.ja.md
+db2e8527cebf059030e4accdb484817c697853c84934c590acf15995a44e9213  TPL-0006-openapi-with-oapi-codegen-strict-server.ja.md
 687f21cf743bf9b319ec386d2228ab58290fe161127b8974985ab72a27122926  TPL-0006-openapi-with-oapi-codegen-strict-server.md
 733b6221d58b69c919cb32ebaca65270862eb897b72c46b4ba695f5aaa9df10e  TPL-0007-layered-checks-for-api-conformance.ja.md
 34876676c64b3349dda070a79089f3611122d9f5634f46eac611c905a4dab310  TPL-0007-layered-checks-for-api-conformance.md
