@@ -1,0 +1,7 @@
+The mail that confirms a reservation shows its start and its end in UTC. Our rooms are in Tokyo, and people read "01:00 UTC" as the time of the meeting, and come nine hours early or late.
+
+The mail should show the times on the clock of the room, with the name of its time zone, such as `Asia/Tokyo`. For that, the event `reservation.ReservationConfirmed.v1` gets an optional property `timeZone`: the IANA name of the time zone of the room. Reservation knows the room when it books a room and when it reschedules a reservation, and both publish the event.
+
+The change must be compatible: the event stays at version 1, and a consumer that does not know the property goes on working. The events that were published before the change lack the property, and Notification may still receive one of them: for such an event, the mail stays as it is today, in UTC.
+
+Finish the change so that it is ready to be merged.
