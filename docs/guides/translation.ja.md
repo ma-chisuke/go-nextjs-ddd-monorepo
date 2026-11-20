@@ -230,6 +230,7 @@
 | allowance（`equivalent-mutants.allow` に書く、等価なミュータントの） | 許可 |
 | deterministic mode（Schemathesis の） | 決定的なモード |
 | stateful phase（Schemathesis の） | ステートフルな段階 |
+| link（OpenAPI 文書の操作のあいだの） | リンク |
 | arm（評価の。`harness` または `bare`） | 条件 |
 | task（評価の） | 作業 |
 | criterion（評価の作業の） | 基準 |
@@ -238,4 +239,4 @@
 | record（評価の実行の） | 実行の記録（文脈から明らかなときは「記録」） |
 | usage（エージェントを動かすアカウントの） | 利用枠 |
 
-<!-- i18n-source: translation.md sha256:0e48a91b82b9a24dd0fa223acfa4a99375acc7c26cba9b43bd0a5afda781c873 -->
+<!-- i18n-source: translation.md sha256:9fd2fd66f6286becba69988bd8169506b803eadc6604c7397bafd4222e6027b2 -->

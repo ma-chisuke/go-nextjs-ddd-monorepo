@@ -230,6 +230,7 @@ Use these Japanese terms. The table grows when a new term appears; add the term 
 | allowance (of an equivalent mutant, in `equivalent-mutants.allow`) | 許可 |
 | deterministic mode (of Schemathesis) | 決定的なモード |
 | stateful phase (of Schemathesis) | ステートフルな段階 |
+| link (between operations of an OpenAPI document) | リンク |
 | arm (of the evaluation: `harness` or `bare`) | 条件 |
 | task (of the evaluation) | 作業 |
 | criterion (of a task of the evaluation) | 基準 |

@@ -461,9 +461,16 @@ verify() {
       status=1
     fi
 
+    # A solution holds no generated code (*.gen.go, *.gen.ts): `make gen`
+    # writes it after the solution, as whoever does the task runs it. A
+    # change to a document or to a generator would otherwise break every
+    # solution that holds the code generated from it.
     if [ -f "$tasks/$task/solution.patch" ]; then
       if ! git -C "$dir" apply --whitespace=nowarn "$repo/$tasks/$task/solution.patch" 2> "$criteria.apply"; then
         echo "$tasks/$task/solution.patch:1: [evals] the solution does not apply to the repository any more: $(tail -n 1 "$criteria.apply")"
+        status=1
+      elif ! (cd "$dir" && make gen) > "$criteria.gen" 2>&1; then
+        echo "$tasks/$task/solution.patch:1: [evals] make gen fails after the solution: $(tail -n 1 "$criteria.gen")"
         status=1
       else
         grade "$task" "$dir" all
@@ -478,7 +485,7 @@ verify() {
       echo "$tasks/$task/grade.sh:1: [evals] the task has no solution.patch: nothing proves that it can be done"
       status=1
     fi
-    rm -rf "${dir:?}" "$criteria" "$criteria.apply"
+    rm -rf "${dir:?}" "$criteria" "$criteria.apply" "$criteria.gen"
   done
   return "$status"
 }

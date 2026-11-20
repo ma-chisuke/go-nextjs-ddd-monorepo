@@ -36,8 +36,8 @@ export type Result<Value> = { ok: true; value: Value } | { ok: false; problem: P
  * way compares this, not the title or the detail.
  */
 export function problemKind(problem: Problem): string {
-  const last = problem.type.split("/").pop() ?? "";
-  return last.replace(/\.md$/, "");
+  const page = problem.type.slice(problem.type.lastIndexOf("/") + 1);
+  return page.replace(/\.md$/, "");
 }
 
 /**
@@ -49,8 +49,8 @@ export function problemKind(problem: Problem): string {
 export function fieldErrors(problem: Problem): Record<string, string> {
   const messages: Record<string, string> = {};
   for (const invalid of problem.errors ?? []) {
-    const field = invalid.pointer.replace(/^\//, "").split("/")[0] ?? "";
-    if (field !== "" && !(field in messages)) {
+    const field = invalid.pointer.split("/").find((part) => part !== "");
+    if (field !== undefined && !(field in messages)) {
       messages[field] = invalid.detail;
     }
   }

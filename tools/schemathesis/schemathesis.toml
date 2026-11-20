@@ -6,8 +6,9 @@
 # Every check of Schemathesis runs on every operation, in its four phases:
 # the examples of the document, requests that cover each constraint of the
 # document from both sides, generated requests, and sequences that follow the
-# Location headers of the answers. The exceptions are below, each with its
-# reason.
+# links between operations, those that the document declares and those that
+# Schemathesis infers from the answers. The exceptions are below, each with
+# its reason.
 
 # One request at a time, so that the APIs see the requests in the same order
 # in every run.
@@ -33,10 +34,10 @@ deterministic = true
 # The number of generated requests for each operation in the fuzzing phase,
 # and of sequences in the stateful phase. The examples and the coverage phase
 # send what the document gives, whatever this number. With 100, the default
-# of Hypothesis, `make test-api-fuzz` sent about 1,900 requests to the two
-# APIs and took 45 to 50 seconds on a laptop in November 2026, half of it to
-# build the APIs and to create the database; 1 minute 47 seconds while other
-# checks kept the same laptop busy.
+# of Hypothesis, `make test-api-fuzz` sent about 2,600 test cases to the two
+# APIs (764 to Facility, 1,842 to Reservation, about 3,400 requests) and took
+# 22 seconds on a quiet laptop in November 2026, with the APIs built before;
+# 2 minutes 26 seconds while other work kept the same laptop busy.
 max-examples = 100
 
 # The cache keeps what a run discovered, and the next run sends it again: a
@@ -50,6 +51,19 @@ enabled = false
 # repeated, and the APIs take no credentials.
 [output.sanitization]
 enabled = false
+
+# The values that generated requests cannot make up: the ids of rooms that
+# Facility knows, and instants that make periods which the rules of a
+# reservation accept, or break one rule at a time. tools/scripts/api-fuzz.sh
+# registers the rooms and writes these files before Schemathesis starts, and
+# says which values they hold and why (step 4). A path is relative to this
+# file. The operations of the Reservation API below draw from them.
+[dictionaries]
+room-ids = { from-file = "../../.cache/api-fuzz/data/room-ids.dict" }
+starts = { from-file = "../../.cache/api-fuzz/data/starts.dict" }
+ends = { from-file = "../../.cache/api-fuzz/data/ends.dict" }
+accepted-starts = { from-file = "../../.cache/api-fuzz/data/accepted-starts.dict" }
+accepted-ends = { from-file = "../../.cache/api-fuzz/data/accepted-ends.dict" }
 
 # positive_data_acceptance expects a request that the document allows to
 # succeed. A JSON Schema cannot state every rule of an operation, so an API
@@ -96,11 +110,33 @@ checks.positive_data_acceptance.expected-statuses = [
 [[project]]
 title = "Reservation API"
 
+# The document declares the links from a reservation in an answer to the
+# operations that read, reschedule, or cancel it, with the ETag of the answer
+# in If-Match. The links that Schemathesis infers from the Location header of
+# a booking lead to the same operations without If-Match, so they meet only
+# 428 and 412; the links of the dependency analysis, such as from a list to
+# one of its reservations, stay.
+#
+# A sequence takes up to 10 steps instead of 6, so that one that books a room
+# goes on to read, reschedule, and cancel the reservation more often: with 6,
+# the sequences rescheduled 2 or 3 reservations in a run, with 10 about 20.
+[project.phases.stateful]
+inference = { algorithms = ["dependency-analysis"] }
+max-steps = 10
+
+# A booking names a room that Facility knows and a period that the rules may
+# accept, most of the time; the rest of the time Schemathesis makes them up,
+# which meets unknown-room and the rules of a period on other values. The
+# dictionaries say which values, and why.
+#
 # The rules of a period, of the attendees, and of the room, which the
 # description of the operation names: period-out-of-order and the other
 # problems of the domain, unknown-room, and idempotency-key-reused, all 422.
 [[project.operations]]
 include-operation-id = "bookRoom"
+parameters."body.roomId" = { dictionary = "room-ids", probability = 0.9 }
+parameters."body.startsAt" = { dictionary = "starts", probability = 0.9 }
+parameters."body.endsAt" = { dictionary = "ends", probability = 0.9 }
 checks.positive_data_acceptance.expected-statuses = [
   "2xx",
   "3xx",
@@ -113,10 +149,13 @@ checks.positive_data_acceptance.expected-statuses = [
   "5xx",
 ]
 
+# Half of the lists name a room of the dictionary, so that they hold items.
+#
 # The cursor is one that the API returned (invalid-cursor), and `to` is later
 # than `from` (validation-error), both 422.
 [[project.operations]]
 include-operation-id = "listReservations"
+parameters."query.roomId" = { dictionary = "room-ids", probability = 0.5 }
 checks.positive_data_acceptance.expected-statuses = [
   "2xx",
   "3xx",
@@ -128,6 +167,14 @@ checks.positive_data_acceptance.expected-statuses = [
   "429",
   "5xx",
 ]
+
+# A rescheduling moves a reservation to a period that the rules accept, most
+# of the time, so that sequences reach its success; the bookings break the
+# rules of a period.
+[[project.operations]]
+include-operation-id = "rescheduleReservation"
+parameters."body.startsAt" = { dictionary = "accepted-starts", probability = 0.9 }
+parameters."body.endsAt" = { dictionary = "accepted-ends", probability = 0.9 }
 
 # The document leaves If-Match optional, so that a request without it gets
 # 428 precondition-required from the operation rather than 422 from the

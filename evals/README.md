@@ -73,12 +73,13 @@ A criterion that fails with the harness, and that `make check` did not catch, is
 2. Write `task.txt` as that person would: what is wanted and why, without the list of files to touch. The list is what the evaluation measures.
 3. Write `grade.sh` with a function `grade_task` that calls `criterion <name> <command>...`. Judge the behavior from outside, as the acceptance test of `booking-horizon` does through the API; a criterion that looks for a name that only one solution would choose fails good work.
    A grader needs no Docker of its own and no network. What the copy does not hold, it takes from the helpers that `run.sh` names under "What a grader may use": a database of its own on the local PostgreSQL, with the schema of the copy (`with_database`), a free port (`free_port`), the integration tests of a context (`integration_tests`), and the packages of Node installed in the copy (`own_dependencies`). A grader that starts a server stops it, also when it fails.
-4. Do the task yourself, and save the change as `solution.patch`. Stage new files with `git add -N` first. Leave out the lines that name the objects of Git, and the text after the line numbers of a hunk, which Git cuts off in the middle of a word: the spelling check would read both as words:
+4. Do the task yourself, and save the change as `solution.patch`:
 
    ```sh
-   git diff | sed -e '/^index /d' -e 's/^\(@@ [^@]* @@\).*/\1/' > evals/tasks/<task>/solution.patch
+   git add --all && git diff --cached -- . ':!*.gen.go' ':!*.gen.ts' | sed -e '/^index /d' -e 's/^\(@@ [^@]* @@\).*/\1/' > evals/tasks/<task>/solution.patch
    ```
 
+   The command leaves out the generated code, which `make test-evals` writes again with `make gen` after it applies the solution, so that a change to an API document does not break the solution of every task that touches the API. It also leaves out the lines that name the objects of Git, and the text after the line numbers of a hunk, which Git cuts off in the middle of a word: the spelling check would read both as words.
 5. Run `make test-evals`, which starts the local PostgreSQL if it does not run. It fails when the repository as it is already passes the criteria of the task, when the solution does not apply any more, or when the solution fails a criterion. Break the solution in the way that each criterion is there to catch, and see the criterion fail.
 
 `make test-evals` is part of `make check-all`, and runs when a file of `evals/` or a file that a solution changes is in scope. A change to the code under a solution therefore fails until the solution follows it.

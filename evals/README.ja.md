@@ -73,12 +73,13 @@ make eval-report
 2. `task.txt` を、その人が頼むように書く。何がほしいかと、その理由を書き、触るファイルの一覧は書かない。その一覧こそ、評価が測るものである。
 3. `grade.sh` に、関数 `grade_task` を書く。この関数が、基準ごとに `criterion <name> <command>...` を呼ぶ。動作は外から判定する。`booking-horizon` の受け入れテストが API を通して判定するのと同じである。ある1つの解答だけが選ぶ名前を探す基準は、よい仕事を不合格にする。
    採点は、自分用の Docker もネットワークも使わない。コピーにないものは、`run.sh` が「What a grader may use」の下に挙げる関数から得る。`with_database` は、コピーのスキーマを当てた自分用のデータベースを、手元の PostgreSQL に作る。`free_port` は、空いているポートを返す。`integration_tests` は、文脈の統合テストを実行する。`own_dependencies` は、Node のパッケージをコピーの中にインストールする。サーバーを起動した採点は、失敗したときも含めて、そのサーバーを止める。
-4. 自分でその作業をし、変更を `solution.patch` として保存する。新しいファイルは、先に `git add -N` でステージする。Git のオブジェクトの名前を書いた行と、各ハンクの行番号に続く文字列は除く。後者は、Git が単語の途中で切ってしまう。どちらも、つづりのチェックが単語として読んでしまう。コマンドは次のとおりである。
+4. 自分でその作業をし、変更を `solution.patch` として保存する。
 
    ```sh
-   git diff | sed -e '/^index /d' -e 's/^\(@@ [^@]* @@\).*/\1/' > evals/tasks/<task>/solution.patch
+   git add --all && git diff --cached -- . ':!*.gen.go' ':!*.gen.ts' | sed -e '/^index /d' -e 's/^\(@@ [^@]* @@\).*/\1/' > evals/tasks/<task>/solution.patch
    ```
 
+   このコマンドは、生成されたコードを除く。`make test-evals` が、解答を当てたあとに `make gen` で生成し直すからである。こうすると、API 文書を変更しても、API に触れる作業の解答が一斉に壊れることがない。Git のオブジェクトの名前を書いた行と、各ハンクの行番号に続く文字列も除く。後者は、Git が単語の途中で切ってしまう。どちらも、つづりのチェックが単語として読んでしまう。
 5. `make test-evals` を実行する。手元の PostgreSQL が動いていなければ、このターゲットが起動する。いまのリポジトリがすでに作業の基準に合格するとき、解答がもう適用できないとき、解答が基準に不合格のときに、失敗する。それぞれの基準が捕まえるはずの壊し方で解答を壊し、その基準が不合格になることも確かめる。
 
 `evals/` の外の文書は、このディレクトリの中にリンクを張らず、パスで名指しする。実行は、コピーからこのディレクトリを取り除く。リンクがあると、コピーの中でそれが切れ、作業と関係のない理由で `make check` が失敗する。解答も同じ種類のコピーで採点するので、`make test-evals` はそのようなリンクで失敗する。
@@ -89,4 +90,4 @@ make eval-report
 
 `make eval-report` が表を出力する。これまでの実行が示したことと、回数が少なくて示せていないことは、[results/README.ja.md](results/README.ja.md) にある。
 
-<!-- i18n-source: README.md sha256:fdc47babbfe38d94c5bd5745d0cba44b3d0e1b551a6b0e285b524af50ba2ce78 -->
+<!-- i18n-source: README.md sha256:ae3efe2afacc3357073d4413c03aed5e04a64102c157e426ff75aea826f4468e -->

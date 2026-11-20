@@ -1190,9 +1190,9 @@ case_lint_contracts__openapi() {
 
 # A small API document. $1: info.version. $2: the request property floor, as
 # "optional", "required", or nothing. $3: "no-name" leaves the response
-# property name out.
+# property name out. $4: "pattern" gives the request property name a pattern.
 sample_openapi() {
-  local floor='' required='[name]' returned='[id, name]' name="
+  local floor='' pattern='' required='[name]' returned='[id, name]' name="
                   name:
                     type: string"
   case "${2:-}" in
@@ -1208,6 +1208,10 @@ sample_openapi() {
   if [ "${3:-}" = no-name ]; then
     returned='[id]'
     name=''
+  fi
+  if [ "${4:-}" = pattern ]; then
+    pattern="
+                  pattern: ^[a-z]*\$"
   fi
   put contracts/http/sample.openapi.yaml << EOF
 openapi: 3.1.0
@@ -1227,7 +1231,7 @@ paths:
               required: $required
               properties:
                 name:
-                  type: string$floor
+                  type: string$pattern$floor
       responses:
         "201":
           description: The room.
@@ -1259,6 +1263,11 @@ case_lint_contracts_breaking() {
   sample_openapi 0.2.0 required
   passes CHECK_BASE=HEAD
   sample_openapi 0.1.0 optional
+  passes CHECK_BASE=HEAD
+  # A change that oasdiff rates as a warning needs the raised version too.
+  sample_openapi 0.1.0 '' '' pattern
+  fails 'contracts/http/sample.openapi.yaml:19: [request-property-pattern-added] POST /rooms:' CHECK_BASE=HEAD
+  sample_openapi 0.2.0 '' '' pattern
   passes CHECK_BASE=HEAD
   # Without a base (no origin/main in the copy), nothing is compared.
   sample_openapi 0.1.0 required

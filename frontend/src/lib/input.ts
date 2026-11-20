@@ -16,20 +16,16 @@ export type FieldErrors<Field extends string> = Partial<Record<Field, string>>;
 
 /**
  * The text of a field of a form, without the spaces around it. A field that
- * is missing, or that holds a file, has no text.
+ * is missing, or that holds a file, has no text: "".
  */
-export function formText(form: FormData, name: string): string | undefined {
+export function formText(form: FormData, name: string): string {
   const value = form.get(name);
-  return typeof value === "string" ? value.trim() : undefined;
+  return typeof value === "string" ? value.trim() : "";
 }
 
 /** A whole number from `min` to `max`, written in decimal digits, or undefined. */
-export function wholeNumber(
-  value: string | undefined,
-  min: number,
-  max: number,
-): number | undefined {
-  if (value === undefined || !/^\d{1,9}$/.test(value)) {
+export function wholeNumber(value: string, min: number, max: number): number | undefined {
+  if (!/^\d{1,9}$/.test(value)) {
     return undefined;
   }
   const number = Number(value);
@@ -39,18 +35,20 @@ export function wholeNumber(
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Whether a value is a UUID, the form of every id of the APIs. */
-export function isUuid(value: string | undefined): value is string {
-  return value !== undefined && uuidPattern.test(value);
+export function isUuid(value: string): boolean {
+  return uuidPattern.test(value);
 }
 
-// The pattern and the lengths of an email address in the API documents.
+// The pattern and the longest email address of the API documents. The
+// pattern needs at least three characters, which is the shortest length that
+// the documents allow. The documents also refuse U+0000, which the API
+// cannot store; it is checked apart, because a pattern with a control
+// character is hard to read.
 const emailPattern = /^[^@\s]+@[^@\s]+$/;
 
 /** Whether a value is an email address as the API documents accept one. */
-export function isEmailAddress(value: string | undefined): value is string {
-  return (
-    value !== undefined && value.length >= 3 && value.length <= 254 && emailPattern.test(value)
-  );
+export function isEmailAddress(value: string): boolean {
+  return value.length <= 254 && !value.includes("\u0000") && emailPattern.test(value);
 }
 
 /**

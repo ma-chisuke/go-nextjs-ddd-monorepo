@@ -16,17 +16,21 @@
 # noticed it. An allowance is a line `<mutant> | <original> -> <replacement> |
 # <reason>`: a mutant that a person showed to be equivalent, which no test can
 # kill. It lets that mutant live. An allowance of a package of the run that
-# matches no living mutant is itself a finding, so allowances do not rot.
+# matches no living mutant is itself a finding, so allowances do not rot. A
+# line whose mutant names a JavaScript or TypeScript file belongs to the
+# frontend (tools/stryker/findings.jq), and is left out here.
 def squash: (. // "") | gsub("\\s+"; " ") | gsub("^ | $"; "");
 def change: "\(.original | squash) -> \(.replacement | squash)";
 def fileof: split(":")[0];
 def dir: sub("/[^/]*$"; "");
+def script: fileof | test("\\.[cm]?[jt]sx?$");
 def fix: "(docs/guides/mutation-tests.md). See TPL-0023.";
 
 ($packages | split("\n") | map(select(. != ""))) as $pkgs
 | ($allow | split("\n") | to_entries
    | map(select(.value | test("^\\s*(#.*)?$") | not))
-   | map({line: (.key + 1), parts: (.value | split(" | "))})) as $entries
+   | map({line: (.key + 1), parts: (.value | split(" | "))})
+   | map(select(.parts[0] | squash | script | not))) as $entries
 | ($entries | map(select((.parts | length) < 3 or (.parts[-1] | test("^\\s*$"))))) as $malformed
 | ($entries - $malformed
    | map({line, id: (.parts[0] | squash), change: (.parts[1:-1] | join(" | ") | squash)})
