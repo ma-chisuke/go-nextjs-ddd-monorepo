@@ -15,7 +15,6 @@
 # Docker. lint-db-docs in `make check-all` reports them.
 
 api=backend/internal/facility/internal/adapter/http
-schema=backend/internal/facility/internal/adapter/postgres/schema.sql
 
 # The tests of the task, in the package of the API tests, and away again.
 put_acceptance() {
@@ -39,21 +38,14 @@ floor_in_the_api() {
 
 # The same over the real store, with the integration tests of Facility, in a
 # database of the grader's own with the schema of the copy: the floor goes
-# into the table and comes back.
+# into the table and comes back. No criterion looks for the column by its
+# name: a solution may name it as it likes.
 real_store_keeps_the_floor() {
   put_acceptance
   local status=0
   with_database integration_tests internal/facility || status=$?
   remove_acceptance
   return "$status"
-}
-
-# The table of the rooms has a column for the floor.
-column_in_the_schema() {
-  if ! grep -q -i -E '^[[:space:]]+"?[a-z_]*floor[a-z_]*"?[[:space:]]+[a-z]' "$schema"; then
-    echo "$schema has no column for the floor"
-    return 1
-  fi
 }
 
 # The DDL that the change plans against a database that holds the schema of
@@ -87,7 +79,6 @@ EOF
 grade_task() {
   criterion floor-in-the-api floor_in_the_api
   criterion real-store-keeps-the-floor real_store_keeps_the_floor
-  criterion column-in-the-schema column_in_the_schema
   criterion schema-change-is-safe schema_change_is_safe
   criterion property-in-the-document property_in_the_document
 }
