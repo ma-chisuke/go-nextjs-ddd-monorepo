@@ -1,0 +1,492 @@
+diff --git a/backend/cmd/notification/main.go b/backend/cmd/notification/main.go
+--- a/backend/cmd/notification/main.go
++++ b/backend/cmd/notification/main.go
+@@ -33,6 +33,10 @@
+ 	"io"
+ 	"time"
+ 
++	// The time zone database, so that the time zones of rooms that the
++	// events carry resolve in a container image that has none.
++	_ "time/tzdata"
++
+ 	"github.com/ma-chisuke/go-nextjs-ddd-monorepo/backend/internal/notification"
+ 	"github.com/ma-chisuke/go-nextjs-ddd-monorepo/backend/internal/platform/awsconfig"
+ 	"github.com/ma-chisuke/go-nextjs-ddd-monorepo/backend/internal/platform/awsevents"
+diff --git a/backend/internal/notification/internal/app/events.go b/backend/internal/notification/internal/app/events.go
+--- a/backend/internal/notification/internal/app/events.go
++++ b/backend/internal/notification/internal/app/events.go
+@@ -46,6 +46,24 @@
+ 	booking
+ 
+ 	Attendees int `json:"attendees"`
++	// TimeZone is the IANA name of the time zone of the room, such as
++	// Asia/Tokyo. The events of before Reservation added it lack it.
++	TimeZone string `json:"timeZone"`
++}
++
++// zone returns the time zone in which the mail shows the period: the one of
++// the room, or UTC for an event without it, and for a zone that the time
++// zone database of Notification does not know, so that the mail still goes
++// out, with the times right.
++func (c confirmation) zone() *time.Location {
++	if c.TimeZone == "" {
++		return time.UTC
++	}
++	location, err := time.LoadLocation(c.TimeZone)
++	if err != nil || c.TimeZone == "Local" {
++		return time.UTC
++	}
++	return location
+ }
+ 
+ // cancellation is the data of reservation.ReservationCancelled.v1: the
+@@ -123,24 +141,29 @@
+ 	return problems
+ }
+ 
+-// The texts of the mails. An event names the room only by its id and carries
+-// no time zone, so the mail shows the id and the period in UTC.
++// The texts of the mails. An event names the room only by its id, so the mail
++// shows the id. The mail of a confirmation shows the period on the clock of
++// the room, with the name of its time zone; the event of a cancellation
++// carries no time zone, so its mail shows the period in UTC.
+ 
+-// instantLayout writes an instant for people, such as
+-// "Fri, 20 Nov 2026 01:00 UTC".
+-const instantLayout = "Mon, 2 Jan 2006 15:04 MST"
++// instantLayout writes an instant for people, such as "Fri, 20 Nov 2026
++// 10:00", which the name of the time zone follows.
++const instantLayout = "Mon, 2 Jan 2006 15:04"
+ 
+-func instant(t time.Time) string {
+-	return t.UTC().Format(instantLayout)
++// instant writes t on the clock of the time zone, such as "Fri, 20 Nov 2026
++// 10:00 Asia/Tokyo", or "Fri, 20 Nov 2026 01:00 UTC".
++func instant(t time.Time, zone *time.Location) string {
++	return t.In(zone).Format(instantLayout) + " " + zone.String()
+ }
+ 
+ func confirmedMail(c confirmation) Message {
++	zone := c.zone()
+ 	return Message{
+ 		To:      c.Organizer,
+-		Subject: "Reservation confirmed: " + instant(c.StartsAt),
++		Subject: "Reservation confirmed: " + instant(c.StartsAt, zone),
+ 		Body: "Your reservation of a meeting room is confirmed.\n" +
+ 			"If you rescheduled it, this period replaces the one before.\n\n" +
+-			details(c.booking) +
++			details(c.booking, zone) +
+ 			fmt.Sprintf("Attendees:   %d\n", c.Attendees),
+ 	}
+ }
+@@ -148,14 +171,14 @@
+ func cancelledMail(c cancellation) Message {
+ 	return Message{
+ 		To:      c.Organizer,
+-		Subject: "Reservation cancelled: " + instant(c.StartsAt),
++		Subject: "Reservation cancelled: " + instant(c.StartsAt, time.UTC),
+ 		Body: "Your reservation of a meeting room is cancelled.\n" +
+ 			"The room is free again for this period.\n\n" +
+-			details(c.booking),
++			details(c.booking, time.UTC),
+ 	}
+ }
+ 
+-func details(b booking) string {
++func details(b booking, zone *time.Location) string {
+ 	return fmt.Sprintf("Reservation: %s\nRoom:        %s\nFrom:        %s\nUntil:       %s\n",
+-		b.ReservationID, b.RoomID, instant(b.StartsAt), instant(b.EndsAt))
++		b.ReservationID, b.RoomID, instant(b.StartsAt, zone), instant(b.EndsAt, zone))
+ }
+diff --git a/backend/internal/notification/internal/app/events_test.go b/backend/internal/notification/internal/app/events_test.go
+--- a/backend/internal/notification/internal/app/events_test.go
++++ b/backend/internal/notification/internal/app/events_test.go
+@@ -27,18 +27,53 @@
+ 
+ func TestTheTextOfEachMail(t *testing.T) {
+ 	t.Parallel()
+-	// Times with an offset, to show that the mail writes them in UTC.
++	// Times with an offset, to show that the mail writes them on the clock of
++	// the time zone of the event, and in UTC without one.
+ 	const period = `"reservationId": "0193a6f0-7b5c-7e2a-9c3d-1f2e3d4c5b6a",
+ 		"roomId": "0193a6f0-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+ 		"startsAt": "2026-11-20T10:00:00+09:00",
+ 		"endsAt": "2026-11-20T11:00:00+09:00",
+ 		"organizerEmail": "organizer@example.com"`
++	confirmedIn := func(zone, start, end string) Message {
++		return Message{
++			To:      "organizer@example.com",
++			Subject: "Reservation confirmed: " + start + " " + zone,
++			Body: "Your reservation of a meeting room is confirmed.\n" +
++				"If you rescheduled it, this period replaces the one before.\n" +
++				"\n" +
++				"Reservation: 0193a6f0-7b5c-7e2a-9c3d-1f2e3d4c5b6a\n" +
++				"Room:        0193a6f0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\n" +
++				"From:        " + start + " " + zone + "\n" +
++				"Until:       " + end + " " + zone + "\n" +
++				"Attendees:   4\n",
++		}
++	}
+ 	tests := []struct {
++		name      string
+ 		eventType string
+ 		data      string
+ 		want      Message
+ 	}{
+ 		{
++			name:      "a confirmation in the time zone of the room",
++			eventType: "reservation.ReservationConfirmed.v1",
++			data:      `{` + period + `, "attendees": 4, "timeZone": "Asia/Tokyo"}`,
++			want:      confirmedIn("Asia/Tokyo", "Fri, 20 Nov 2026 10:00", "Fri, 20 Nov 2026 11:00"),
++		},
++		{
++			name:      "a confirmation in a time zone on another date",
++			eventType: "reservation.ReservationConfirmed.v1",
++			data:      `{` + period + `, "attendees": 4, "timeZone": "America/New_York"}`,
++			want:      confirmedIn("America/New_York", "Thu, 19 Nov 2026 20:00", "Thu, 19 Nov 2026 21:00"),
++		},
++		{
++			name:      "a confirmation in a time zone that Notification does not know",
++			eventType: "reservation.ReservationConfirmed.v1",
++			data:      `{` + period + `, "attendees": 4, "timeZone": "Mars/Olympus"}`,
++			want:      confirmedIn("UTC", "Fri, 20 Nov 2026 01:00", "Fri, 20 Nov 2026 02:00"),
++		},
++		{
++			name:      "a confirmation published before events carried a time zone",
+ 			eventType: "reservation.ReservationConfirmed.v1",
+ 			data:      `{` + period + `, "attendees": 4}`,
+ 			want: Message{
+@@ -55,6 +90,7 @@
+ 			},
+ 		},
+ 		{
++			name:      "a cancellation, whose event carries no time zone",
+ 			eventType: "reservation.ReservationCancelled.v1",
+ 			data:      `{` + period + `}`,
+ 			want: Message{
+@@ -71,7 +107,7 @@
+ 		},
+ 	}
+ 	for _, tt := range tests {
+-		t.Run(tt.eventType, func(t *testing.T) {
++		t.Run(tt.name, func(t *testing.T) {
+ 			t.Parallel()
+ 			got, known, err := compose(envelope(t, tt.eventType, tt.data))
+ 			if err != nil || !known {
+@@ -116,10 +152,19 @@
+ 				RoomID         string    `json:"roomId"`
+ 				StartsAt       time.Time `json:"startsAt"`
+ 				OrganizerEmail string    `json:"organizerEmail"`
++				TimeZone       string    `json:"timeZone"`
+ 			}
+ 			if err := json.Unmarshal(example, &want); err != nil {
+ 				t.Fatal(err)
+ 			}
++			// The mail shows the start on the clock of the room, and in UTC
++			// without a time zone.
++			zone := time.UTC
++			if want.TimeZone != "" {
++				if zone, err = time.LoadLocation(want.TimeZone); err != nil {
++					t.Fatalf("%s, example %d: %v", eventType, i, err)
++				}
++			}
+ 			m, known, err := compose(e)
+ 			if err != nil || !known {
+ 				t.Errorf("%s, example %d: compose = %v, known %t, want a mail", eventType, i, err, known)
+@@ -128,7 +173,7 @@
+ 			if m.To != want.OrganizerEmail {
+ 				t.Errorf("%s, example %d: the mail goes to %q, want the organizer %q", eventType, i, m.To, want.OrganizerEmail)
+ 			}
+-			for _, part := range []string{want.ReservationID, want.RoomID, instant(want.StartsAt)} {
++			for _, part := range []string{want.ReservationID, want.RoomID, instant(want.StartsAt, zone)} {
+ 				if !strings.Contains(m.Body, part) {
+ 					t.Errorf("%s, example %d: the mail does not say %q:\n%s", eventType, i, part, m.Body)
+ 				}
+diff --git a/backend/internal/reservation/internal/adapter/postgres/events.go b/backend/internal/reservation/internal/adapter/postgres/events.go
+--- a/backend/internal/reservation/internal/adapter/postgres/events.go
++++ b/backend/internal/reservation/internal/adapter/postgres/events.go
+@@ -30,6 +30,9 @@
+ 	EndsAt         time.Time `json:"endsAt"`
+ 	Attendees      int       `json:"attendees"`
+ 	OrganizerEmail string    `json:"organizerEmail"`
++	// TimeZone is the IANA name of the time zone of the room, such as
++	// Asia/Tokyo.
++	TimeZone string `json:"timeZone"`
+ }
+ 
+ // reservationCancelledData is the data of reservation.ReservationCancelled.v1.
+@@ -58,6 +61,7 @@
+ 				EndsAt:         e.Period.End.UTC(),
+ 				Attendees:      e.Attendees,
+ 				OrganizerEmail: e.Organizer,
++				TimeZone:       e.TimeZone.String(),
+ 			})
+ 	case domain.ReservationCancelled:
+ 		return event.New(id, event.Source(contextName), typeReservationCancelled, e.Reservation.String(), e.OccurredAt,
+diff --git a/backend/internal/reservation/internal/adapter/postgres/events_test.go b/backend/internal/reservation/internal/adapter/postgres/events_test.go
+--- a/backend/internal/reservation/internal/adapter/postgres/events_test.go
++++ b/backend/internal/reservation/internal/adapter/postgres/events_test.go
+@@ -41,10 +41,11 @@
+ 	"ReservationConfirmed": {
+ 		event: domain.ReservationConfirmed{
+ 			Reservation: sampleReservation, Room: sampleRoom, Period: samplePeriod, Attendees: 4,
+-			Organizer: "organizer@example.com", OccurredAt: sampleTime,
++			Organizer: "organizer@example.com", TimeZone: sampleZone, OccurredAt: sampleTime,
+ 		},
+ 		data: `{"reservationId":"0193a6f0-7b5c-7e2a-9c3d-1f2e3d4c5b6a","roomId":"0193a6f0-1a2b-7c3d-8e4f-5a6b7c8d9e0f",` +
+-			`"startsAt":"2026-11-20T01:00:00Z","endsAt":"2026-11-20T02:00:00Z","attendees":4,"organizerEmail":"organizer@example.com"}`,
++			`"startsAt":"2026-11-20T01:00:00Z","endsAt":"2026-11-20T02:00:00Z","attendees":4,"organizerEmail":"organizer@example.com",` +
++			`"timeZone":"Asia/Tokyo"}`,
+ 	},
+ 	"ReservationCancelled": {
+ 		event: domain.ReservationCancelled{
+diff --git a/backend/internal/reservation/internal/adapter/postgres/outbox_integration_test.go b/backend/internal/reservation/internal/adapter/postgres/outbox_integration_test.go
+--- a/backend/internal/reservation/internal/adapter/postgres/outbox_integration_test.go
++++ b/backend/internal/reservation/internal/adapter/postgres/outbox_integration_test.go
+@@ -351,7 +351,10 @@
+ func TestTheRelayPublishesABooking(t *testing.T) {
+ 	store, room, pool := newStore(t)
+ 	ctx := t.Context()
+-	rooms := apptest.NewRooms(domain.Room{ID: room, Capacity: 8, Hours: domain.OpeningHours{Closes: domain.NewTimeOfDay(23, 0)}})
++	// The room is in Tokyo, where the period is from 19:00 to 20:00, and the
++	// event names its time zone.
++	tokyo := time.FixedZone("Asia/Tokyo", 9*60*60)
++	rooms := apptest.NewRooms(domain.Room{ID: room, Capacity: 8, Hours: domain.OpeningHours{Closes: domain.NewTimeOfDay(23, 0)}, TimeZone: tokyo})
+ 	newID := app.IDGeneratorFunc(func() (domain.ReservationID, error) {
+ 		id, err := uuid.NewV7()
+ 		return domain.ReservationID(id), err
+@@ -396,7 +399,7 @@
+ 	}
+ 	// PostgreSQL keeps jsonb in a form of its own, so the data comes back
+ 	// with the same members in another order.
+-	wantData := fmt.Sprintf(`{"reservationId":%q,"roomId":%q,"startsAt":"2030-06-03T10:00:00Z","endsAt":"2030-06-03T11:00:00Z","attendees":3,"organizerEmail":"organizer@example.com"}`,
++	wantData := fmt.Sprintf(`{"reservationId":%q,"roomId":%q,"startsAt":"2030-06-03T10:00:00Z","endsAt":"2030-06-03T11:00:00Z","attendees":3,"organizerEmail":"organizer@example.com","timeZone":"Asia/Tokyo"}`,
+ 		booked.Reservation.ID(), uuid.UUID(room))
+ 	var got, want map[string]any
+ 	if err := json.Unmarshal(e.Data, &got); err != nil {
+diff --git a/backend/internal/reservation/internal/app/reservations_test.go b/backend/internal/reservation/internal/app/reservations_test.go
+--- a/backend/internal/reservation/internal/app/reservations_test.go
++++ b/backend/internal/reservation/internal/app/reservations_test.go
+@@ -72,7 +72,7 @@
+ func confirmedEvent(id domain.ReservationID, period domain.Period, attendees int) domain.Event {
+ 	return domain.ReservationConfirmed{
+ 		Reservation: id, Room: roomA.ID, Period: period, Attendees: attendees,
+-		Organizer: "organizer@example.com", OccurredAt: now,
++		Organizer: "organizer@example.com", TimeZone: roomA.TimeZone, OccurredAt: now,
+ 	}
+ }
+ 
+diff --git a/backend/internal/reservation/internal/domain/events.go b/backend/internal/reservation/internal/domain/events.go
+--- a/backend/internal/reservation/internal/domain/events.go
++++ b/backend/internal/reservation/internal/domain/events.go
+@@ -18,6 +18,9 @@
+ 	Period      Period
+ 	Attendees   int
+ 	Organizer   string
++	// TimeZone is the time zone of the room, whose clock a person reads the
++	// period on: UTC for a room without one.
++	TimeZone *time.Location
+ 	// OccurredAt is when the reservation was confirmed.
+ 	OccurredAt time.Time
+ }
+diff --git a/backend/internal/reservation/internal/domain/reservation.go b/backend/internal/reservation/internal/domain/reservation.go
+--- a/backend/internal/reservation/internal/domain/reservation.go
++++ b/backend/internal/reservation/internal/domain/reservation.go
+@@ -81,7 +81,7 @@
+ 		organizer: organizer,
+ 		status:    StatusConfirmed,
+ 	}
+-	return r, []Event{r.confirmed(now)}, nil
++	return r, []Event{r.confirmed(room, now)}, nil
+ }
+ 
+ // Reschedule moves the reservation to period and changes the number of its
+@@ -100,7 +100,7 @@
+ 	changed := r
+ 	changed.period = period
+ 	changed.attendees = attendees
+-	return changed, []Event{changed.confirmed(now)}, nil
++	return changed, []Event{changed.confirmed(room, now)}, nil
+ }
+ 
+ // Cancel cancels the reservation at now, which is at the latest
+@@ -140,13 +140,15 @@
+ 	}
+ }
+ 
+-func (r Reservation) confirmed(now time.Time) ReservationConfirmed {
++// confirmed returns the event that confirms the reservation in room at now.
++func (r Reservation) confirmed(room Room, now time.Time) ReservationConfirmed {
+ 	return ReservationConfirmed{
+ 		Reservation: r.id,
+ 		Room:        r.room,
+ 		Period:      r.period,
+ 		Attendees:   r.attendees,
+ 		Organizer:   r.organizer,
++		TimeZone:    room.location(),
+ 		OccurredAt:  now,
+ 	}
+ }
+diff --git a/backend/internal/reservation/internal/domain/reservation_test.go b/backend/internal/reservation/internal/domain/reservation_test.go
+--- a/backend/internal/reservation/internal/domain/reservation_test.go
++++ b/backend/internal/reservation/internal/domain/reservation_test.go
+@@ -118,9 +118,15 @@
+ 				r.Attendees() != tt.attendees || r.Organizer() != "organizer@example.com" || r.Status() != domain.StatusConfirmed {
+ 				t.Errorf("the reservation is not the one that was booked: %+v", r)
+ 			}
++			// The event carries the time zone of the room, and UTC for a room
++			// without one.
++			zone := tt.room.TimeZone
++			if zone == nil {
++				zone = time.UTC
++			}
+ 			want := domain.ReservationConfirmed{
+ 				Reservation: reservationID, Room: roomID, Period: tt.period,
+-				Attendees: tt.attendees, Organizer: "organizer@example.com", OccurredAt: now,
++				Attendees: tt.attendees, Organizer: "organizer@example.com", TimeZone: zone, OccurredAt: now,
+ 			}
+ 			if len(events) != 1 || events[0] != want {
+ 				t.Errorf("got the events %+v, want one %+v", events, want)
+@@ -145,7 +151,7 @@
+ 	}
+ 	want := domain.ReservationConfirmed{
+ 		Reservation: reservationID, Room: roomID, Period: on(20, 14, 0, 16, 0),
+-		Attendees: 6, Organizer: "organizer@example.com", OccurredAt: now,
++		Attendees: 6, Organizer: "organizer@example.com", TimeZone: tokyo, OccurredAt: now,
+ 	}
+ 	if len(events) != 1 || events[0] != want {
+ 		t.Errorf("got the events %+v, want one %+v", events, want)
+diff --git a/contracts/events/reservation/ReservationConfirmed.v1.json b/contracts/events/reservation/ReservationConfirmed.v1.json
+--- a/contracts/events/reservation/ReservationConfirmed.v1.json
++++ b/contracts/events/reservation/ReservationConfirmed.v1.json
+@@ -35,6 +35,12 @@
+       "type": "string",
+       "minLength": 3,
+       "maxLength": 254
++    },
++    "timeZone": {
++      "description": "The IANA name of the time zone of the room, such as Asia/Tokyo, whose clock people read the period on; UTC for a room without one. The events that Reservation published before it added this property lack it, and a consumer reads those in UTC.",
++      "type": "string",
++      "minLength": 1,
++      "maxLength": 64
+     }
+   },
+   "examples": [
+@@ -44,6 +50,15 @@
+       "startsAt": "2026-11-20T01:00:00Z",
+       "endsAt": "2026-11-20T02:00:00Z",
+       "attendees": 4,
++      "organizerEmail": "organizer@example.com",
++      "timeZone": "Asia/Tokyo"
++    },
++    {
++      "reservationId": "0193a6f0-7b5c-7e2a-9c3d-1f2e3d4c5b6b",
++      "roomId": "0193a6f0-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
++      "startsAt": "2026-11-20T05:00:00Z",
++      "endsAt": "2026-11-20T06:30:00Z",
++      "attendees": 2,
+       "organizerEmail": "organizer@example.com"
+     }
+   ]
+diff --git a/docs/contexts/notification/README.ja.md b/docs/contexts/notification/README.ja.md
+--- a/docs/contexts/notification/README.ja.md
++++ b/docs/contexts/notification/README.ja.md
+@@ -21,7 +21,7 @@
+ 
+ | イベント | データの契約 | Notification がすること |
+ |---|---|---|
+-| `reservation.ReservationConfirmed.v1` | [`ReservationConfirmed.v1.json`](../../../contracts/events/reservation/ReservationConfirmed.v1.json) | 予約が確定したことを、時間帯と参加人数を添えて、メールで主催者に知らせる。Reservation は予約を変更したときにもこのイベントを発行するので、変更のたびに、新しい時間帯を書いた同じ種類のメールがもう1通届く。 |
++| `reservation.ReservationConfirmed.v1` | [`ReservationConfirmed.v1.json`](../../../contracts/events/reservation/ReservationConfirmed.v1.json) | 予約が確定したことを、時間帯と参加人数を添えて、メールで主催者に知らせる。メールは時間帯を、イベントが示す会議室のタイムゾーンの時刻で書く。タイムゾーンを持たないイベントでは、時間帯を UTC で書く。Reservation がこのプロパティを加える前に発行したイベントがそれにあたる。Reservation は予約を変更したときにもこのイベントを発行するので、変更のたびに、新しい時間帯を書いた同じ種類のメールがもう1通届く。 |
+ | `reservation.ReservationCancelled.v1` | [`ReservationCancelled.v1.json`](../../../contracts/events/reservation/ReservationCancelled.v1.json) | 予約が取り消されたことを、メールで主催者に知らせる。 |
+ 
+ ワーカーは、コマンド `notification` である（TPL-0014）。ワーカーは、`EVENTS_QUEUE_URL` が指す SQS のキュー `notification-events` からイベントを読む。このキューには、Notification のルールが、この2種類のイベントをイベントバスから選んで送る。キューと、そのデッドレターキュー `notification-events-dlq` と、ルールは、モジュール `infra/modules/event-subscription` が作る。手元では、`infra/local/main.tf` がこのモジュールを呼ぶ。
+@@ -58,7 +58,8 @@
+ 
+ ## サンプルとしての制約
+ 
+-- メールは、会議室を id で示し、時間帯を UTC で書く。イベントには会議室の名前もタイムゾーンも含まれないからである。製品では、それらを加えた新しいバージョンのイベントを発行するか、メールを送るたびに Facility へ問い合わせることになる。
++- メールは、会議室を id で示す。イベントには会議室の名前が含まれないからである。製品では、名前をイベントに加えるか、メールを送るたびに Facility へ問い合わせることになる。
++- 予約の取り消しのメールは、時間帯を UTC で書く。`ReservationCancelled` はタイムゾーンを含まないからである。`ReservationConfirmed` と同じように、プロパティ `timeZone` を加えることになる。
+ - アダプター `smtp` は、認証も TLS もない素の SMTP で送る。この送り方が通用するのは、手元の環境の Mailpit だけである。AWS では、メールは Amazon SES を通る。
+ - Notification は、どのメールがバウンスしたかも、どのメールを宛先の人が迷惑メールとして報告したかも知らない。知るには、これらのイベントを発行する SES の設定セットと、それを受け取る側が要る。
+ 
+@@ -68,4 +69,4 @@
+ - Facility からは何も必要としない。
+ - メールサーバーが要る。[メールの送り方](#メールの送り方)が説明するとおり、手元の環境では SMTP サーバー、AWS では Amazon SES である。
+ 
+-<!-- i18n-source: README.md sha256:d93e31429763d5502bc6089d3fbbcc9c8222cd8817c6935ed2cb8f5404f2de0d -->
++<!-- i18n-source: README.md sha256:980b6d8dd931f9d04b51ada210e5418abfab0667c52fd8249a516ec803f4276a -->
+diff --git a/docs/contexts/notification/README.md b/docs/contexts/notification/README.md
+--- a/docs/contexts/notification/README.md
++++ b/docs/contexts/notification/README.md
+@@ -21,7 +21,7 @@
+ 
+ | Event | Contract of its data | What Notification does |
+ |---|---|---|
+-| `reservation.ReservationConfirmed.v1` | [`ReservationConfirmed.v1.json`](../../../contracts/events/reservation/ReservationConfirmed.v1.json) | Sends the organizer a mail that the reservation is confirmed, with its period and attendees. Reservation publishes this event again when a reservation is rescheduled, so a rescheduling sends another such mail, with the new period. |
++| `reservation.ReservationConfirmed.v1` | [`ReservationConfirmed.v1.json`](../../../contracts/events/reservation/ReservationConfirmed.v1.json) | Sends the organizer a mail that the reservation is confirmed, with its period and attendees. The mail shows the period on the clock of the room, in the time zone that the event names; an event without one, as Reservation published them before it added the property, gives the period in UTC. Reservation publishes this event again when a reservation is rescheduled, so a rescheduling sends another such mail, with the new period. |
+ | `reservation.ReservationCancelled.v1` | [`ReservationCancelled.v1.json`](../../../contracts/events/reservation/ReservationCancelled.v1.json) | Sends the organizer a mail that the reservation is cancelled. |
+ 
+ The worker is the command `notification` (TPL-0014). It reads the events from the SQS queue that `EVENTS_QUEUE_URL` names, `notification-events`, into which a rule of Notification selects these two types from the event bus. The module `infra/modules/event-subscription` creates the queue, its dead-letter queue `notification-events-dlq`, and the rule; locally, `infra/local/main.tf` calls it.
+@@ -58,7 +58,8 @@
+ 
+ ## Known limits of the sample
+ 
+-- A mail shows the room by its id and the period in UTC, because the events carry neither the name of the room nor its time zone. A product would add them to the events, in a new version of each, or ask Facility for each mail.
++- A mail shows the room by its id, because the events do not carry the name of the room. A product would add it to the events, or ask Facility for each mail.
++- The mail of a cancellation shows the period in UTC, because `ReservationCancelled` carries no time zone. It would get the property `timeZone` in the same way as `ReservationConfirmed`.
+ - The adapter `smtp` speaks plain SMTP, without authentication or TLS, which suits Mailpit in the local environment only. In AWS, the mail goes through Amazon SES.
+ - Notification does not learn which mail bounced, or which mail a recipient marked as spam. It would need a configuration set of SES that publishes these events, and a consumer of them.
+ 
+diff --git a/docs/contexts/notification/glossary.ja.md b/docs/contexts/notification/glossary.ja.md
+--- a/docs/contexts/notification/glossary.ja.md
++++ b/docs/contexts/notification/glossary.ja.md
+@@ -11,8 +11,8 @@
+ | `Message` | メール | 1人に宛てた、プレーンテキストのメッセージ。 |
+ | `Message.To` | 宛先 | メールを届けるメールアドレス。予約の主催者のアドレスである。 |
+ | `Message.Subject` | 件名 | メールが何についてのものかを示す1行。予約の確定とその開始時刻などを書く。 |
+-| `Message.Body` | 本文 | メールの文面。予約に何が起きたか、予約の id、会議室の id、UTC で書いた時間帯を書く。 |
++| `Message.Body` | 本文 | メールの文面。予約に何が起きたか、予約の id、会議室の id、時間帯を書く。時間帯は、イベントがタイムゾーンを示すときは会議室の時計で、示さないときは UTC で書く。 |
+ | `Mailer` | メーラー | メールをメールサーバーに渡すもの。手元の環境では SMTP で Mailpit に送り、AWS では Amazon SES を呼ぶ。 |
+ | `Mailer.Send` | メールを送る | メールをメールサーバーに渡す。サーバーが受け取ったときに限り、メールは送ったことになる。 |
+ 
+-<!-- i18n-source: glossary.md sha256:035fffb77d0753b66505aa24c4311f976fd9ff9d2e5e8591008e0ba73d166778 -->
++<!-- i18n-source: glossary.md sha256:0a694b2638cdd1e5392c9daaf6511f943f5ed3fe2b12b7351391803e7dd7f300 -->
+diff --git a/docs/contexts/notification/glossary.md b/docs/contexts/notification/glossary.md
+--- a/docs/contexts/notification/glossary.md
++++ b/docs/contexts/notification/glossary.md
+@@ -11,6 +11,6 @@
+ | `Message` | mail | A message in plain text to one person. |
+ | `Message.To` | recipient | The email address that a mail goes to: the organizer of the reservation. |
+ | `Message.Subject` | subject | The one line that names what a mail is about, such as the confirmation of a reservation and when it starts. |
+-| `Message.Body` | body | The text of a mail: what happened to the reservation, its id, the id of its room, and its period in UTC. |
++| `Message.Body` | body | The text of a mail: what happened to the reservation, its id, the id of its room, and its period: on the clock of the room when the event names its time zone, and in UTC when it does not. |
+ | `Mailer` | mailer | What hands mail to a mail server. Locally it speaks SMTP to Mailpit, and in AWS it calls Amazon SES. |
+ | `Mailer.Send` | send a mail | Hand a mail to the mail server. A mail counts as sent only when the server took it. |
+diff --git a/docs/contexts/reservation/glossary.ja.md b/docs/contexts/reservation/glossary.ja.md
+--- a/docs/contexts/reservation/glossary.ja.md
++++ b/docs/contexts/reservation/glossary.ja.md
+@@ -14,9 +14,9 @@
+ | `Period` | 時間帯 | 予約が会議室を押さえる時間。始まりを含み、終わりを含まないので、ある予約が終わる時刻に次の予約を始められる。 |
+ | `Status` | 状態 | 予約が会議室を押さえているかどうか。確定か取り消しのどちらかである。 |
+ | `Event` | ドメインイベント | 予約に起きたことのうち、業務のほかの部分が応じうるもの。 |
+-| `ReservationConfirmed` | 予約の確定 | 予約が、その時間帯と参加人数で会議室を押さえたこと。会議室を予約したときと、予約を変更したときに起きる。 |
++| `ReservationConfirmed` | 予約の確定 | 予約が、その時間帯と参加人数で会議室を押さえたこと。会議室を予約したときと、予約を変更したときに起きる。人が時間帯を読むときの時計として、会議室のタイムゾーンを示す。 |
+ | `ReservationCancelled` | 予約の取り消し | 予約が取り消され、その時間帯の会議室が空いたこと。 |
+ | `Kind` | 業務エラーの種類 | リクエストが、予約のどの決まりに反するか。 |
+ | `Error` | 業務エラー | 予約の決まりがリクエストを拒むこと。 |
+ 
+-<!-- i18n-source: glossary.md sha256:cac6b40579197d09f7292da62dd350201eb19e8573d58d0adb8779d969e26c91 -->
++<!-- i18n-source: glossary.md sha256:10b52554ada65e4e3156da5c86f63331f0d1920aaf98d1d468ae6f98c06e3be0 -->
+diff --git a/docs/contexts/reservation/glossary.md b/docs/contexts/reservation/glossary.md
+--- a/docs/contexts/reservation/glossary.md
++++ b/docs/contexts/reservation/glossary.md
+@@ -14,7 +14,7 @@
+ | `Period` | period | The time during which a reservation holds a room. It includes its start and excludes its end, so one reservation may end when the next starts. |
+ | `Status` | status | Whether a reservation holds its room: confirmed or cancelled. |
+ | `Event` | domain event | Something that happened to a reservation, which other parts of the business may act on. |
+-| `ReservationConfirmed` | reservation confirmed | A reservation holds its room for its period, with its attendees: the room was booked, or the reservation was rescheduled. |
++| `ReservationConfirmed` | reservation confirmed | A reservation holds its room for its period, with its attendees: the room was booked, or the reservation was rescheduled. It names the time zone of the room, on whose clock people read the period. |
+ | `ReservationCancelled` | reservation cancelled | A reservation was cancelled, and its room is free for its period. |
+ | `Kind` | kind of business error | Which rule of reservations a request breaks. |
+ | `Error` | business error | A rule of reservations rejects the request. |

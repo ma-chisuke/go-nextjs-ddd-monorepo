@@ -16,6 +16,11 @@ EVALS := evals/run.sh
 test-evals:
 	@$(TASK) $@ 'if [ -n "$$($(FILES) "evals/*" $$(sed -n "s|^+++ b/||p" evals/tasks/*/solution.patch 2> /dev/null | sort -u))" ]; then $(EVALS) verify; fi'
 
+# Some graders run tests against a database of their own on the local
+# PostgreSQL, and lint-sql-plan (with_database in evals/run.sh), so the
+# server starts before them, once, as for the targets of make/db.mk.
+test-evals: | db-server
+
 # The targets below start a coding agent, which costs time and money, so no
 # check runs them.
 

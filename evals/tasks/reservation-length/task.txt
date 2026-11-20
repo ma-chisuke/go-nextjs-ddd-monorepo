@@ -1,0 +1,5 @@
+The page of a room lists the reservations of a day, each with its start and its end, such as "10:00 to 11:30". People have to subtract to see how long a meeting is, and they get it wrong.
+
+Each reservation in that list should also show its length, written in hours and minutes: `1 h 30 min` for an hour and a half, `45 min` for a reservation shorter than an hour, and `2 h` when the minutes are zero. The rest of the list stays as it is.
+
+Finish the change so that it is ready to be merged.

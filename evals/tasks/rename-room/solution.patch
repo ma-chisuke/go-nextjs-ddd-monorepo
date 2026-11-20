@@ -1,0 +1,386 @@
+diff --git a/backend/internal/facility/internal/adapter/http/handler.go b/backend/internal/facility/internal/adapter/http/handler.go
+--- a/backend/internal/facility/internal/adapter/http/handler.go
++++ b/backend/internal/facility/internal/adapter/http/handler.go
+@@ -88,6 +88,15 @@
+ 	return GetRoom200JSONResponse(roomResponse(room)), nil
+ }
+ 
++// RenameRoom implements the operation renameRoom.
++func (h *operations) RenameRoom(ctx context.Context, request RenameRoomRequestObject) (RenameRoomResponseObject, error) {
++	room, err := h.rooms.RenameRoom(ctx, request.RoomId, request.Body.Name)
++	if err != nil {
++		return nil, toProblem(err)
++	}
++	return RenameRoom200JSONResponse(roomResponse(room)), nil
++}
++
+ // ListRooms implements the operation listRooms.
+ func (h *operations) ListRooms(ctx context.Context, request ListRoomsRequestObject) (ListRoomsResponseObject, error) {
+ 	limit := defaultLimit
+diff --git a/backend/internal/facility/internal/adapter/http/handler_test.go b/backend/internal/facility/internal/adapter/http/handler_test.go
+--- a/backend/internal/facility/internal/adapter/http/handler_test.go
++++ b/backend/internal/facility/internal/adapter/http/handler_test.go
+@@ -177,6 +177,111 @@
+ 	wantProblem(t, client.Do(http.MethodGet, "/rooms/not-a-uuid", nil), "validation-error", http.StatusUnprocessableEntity)
+ }
+ 
++func TestRenameRoom(t *testing.T) {
++	t.Parallel()
++	client := newClient(t)
++	var registered facilityhttp.Room
++	client.Do(http.MethodPost, "/rooms", newRoom("Aoab")).JSON(t, &registered)
++
++	res := client.Do(http.MethodPatch, "/rooms/"+registered.Id.String(), map[string]any{"name": "Aoba"})
++	if res.Status != http.StatusOK {
++		t.Fatalf("got status %d, want 200\n%s", res.Status, res.Body)
++	}
++	var renamed facilityhttp.Room
++	res.JSON(t, &renamed)
++	want := registered
++	want.Name = "Aoba"
++	if renamed != want {
++		t.Errorf("got %+v, want the registered room with the new name %+v", renamed, want)
++	}
++
++	var got facilityhttp.Room
++	client.Do(http.MethodGet, "/rooms/"+registered.Id.String(), nil).JSON(t, &got)
++	if got != want {
++		t.Errorf("got %+v after the rename, want %+v", got, want)
++	}
++
++	// The old name is free for another room.
++	if res := client.Do(http.MethodPost, "/rooms", newRoom("Aoab")); res.Status != http.StatusCreated {
++		t.Errorf("registering a room under the old name: got status %d, want 201\n%s", res.Status, res.Body)
++	}
++}
++
++// A room may be renamed to the name that it has.
++func TestRenameRoomToItsOwnName(t *testing.T) {
++	t.Parallel()
++	client := newClient(t)
++	var registered facilityhttp.Room
++	client.Do(http.MethodPost, "/rooms", newRoom("Aoba")).JSON(t, &registered)
++
++	res := client.Do(http.MethodPatch, "/rooms/"+registered.Id.String(), map[string]any{"name": "Aoba"})
++	if res.Status != http.StatusOK {
++		t.Fatalf("got status %d, want 200\n%s", res.Status, res.Body)
++	}
++	var got facilityhttp.Room
++	res.JSON(t, &got)
++	if got != registered {
++		t.Errorf("got %+v, want the room as it was %+v", got, registered)
++	}
++}
++
++func TestRenameRoomRejections(t *testing.T) {
++	t.Parallel()
++	client := newClient(t)
++	var birch facilityhttp.Room
++	client.Do(http.MethodPost, "/rooms", newRoom("Aoba"))
++	client.Do(http.MethodPost, "/rooms", newRoom("Birch")).JSON(t, &birch)
++	target := "/rooms/" + birch.Id.String()
++
++	tests := []struct {
++		name    string
++		target  string
++		body    any
++		slug    string
++		status  int
++		pointer string
++	}{
++		{"another room has the name", target, map[string]any{"name": "Aoba"}, "room-name-taken", http.StatusConflict, ""},
++		{"the room does not exist", "/rooms/0193a6f0-7b5c-7e2a-9c3d-1f2e3d4c5b6a", map[string]any{"name": "Cedar"}, "room-not-found", http.StatusNotFound, ""},
++		{"the id is not a UUID", "/rooms/not-a-uuid", map[string]any{"name": "Cedar"}, "validation-error", http.StatusUnprocessableEntity, ""},
++		{"the JSON is broken", target, []byte(`{"name":`), "malformed-request", http.StatusBadRequest, ""},
++		{"name is empty", target, map[string]any{"name": ""}, "validation-error", http.StatusUnprocessableEntity, "/name"},
++		{"name is too long", target, map[string]any{"name": strings.Repeat("n", 101)}, "validation-error", http.StatusUnprocessableEntity, "/name"},
++		{"name is missing", target, map[string]any{}, "validation-error", http.StatusUnprocessableEntity, ""},
++		{"a property is unknown", target, map[string]any{"name": "Cedar", "capacity": 4}, "validation-error", http.StatusUnprocessableEntity, ""},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			p := wantProblem(t, client.Do(http.MethodPatch, tt.target, tt.body), tt.slug, tt.status)
++			if tt.pointer == "" {
++				return
++			}
++			for _, invalid := range p.Errors {
++				if invalid.Pointer == tt.pointer {
++					return
++				}
++			}
++			t.Errorf("no error points at %q: %+v", tt.pointer, p.Errors)
++		})
++	}
++
++	// A refused rename changes nothing.
++	var got facilityhttp.Room
++	client.Do(http.MethodGet, target, nil).JSON(t, &got)
++	if got != birch {
++		t.Errorf("got %+v after the refused renames, want the room as it was %+v", got, birch)
++	}
++}
++
++func TestRenameRoomWithAnotherMediaType(t *testing.T) {
++	t.Parallel()
++	client := newClient(t)
++	var registered facilityhttp.Room
++	client.Do(http.MethodPost, "/rooms", newRoom("Aoba")).JSON(t, &registered)
++	res := client.Do(http.MethodPatch, "/rooms/"+registered.Id.String(), []byte("name=Birch"), apitest.Header("Content-Type", "text/plain"))
++	wantProblem(t, res, "unsupported-media-type", http.StatusUnsupportedMediaType)
++}
++
+ func TestListRoomsInPages(t *testing.T) {
+ 	t.Parallel()
+ 	client := newClient(t)
+diff --git a/backend/internal/facility/internal/adapter/postgres/postgrestest/fake.go b/backend/internal/facility/internal/adapter/postgres/postgrestest/fake.go
+--- a/backend/internal/facility/internal/adapter/postgres/postgrestest/fake.go
++++ b/backend/internal/facility/internal/adapter/postgres/postgrestest/fake.go
+@@ -52,6 +52,25 @@
+ 	return postgres.Room{}, pgx.ErrNoRows
+ }
+ 
++// UpdateRoomName renames the room with the id, or returns pgx.ErrNoRows. It
++// fails like the database when another room has the name.
++func (f *Fake) UpdateRoomName(_ context.Context, arg postgres.UpdateRoomNameParams) (postgres.Room, error) {
++	f.mu.Lock()
++	defer f.mu.Unlock()
++	for _, room := range f.rooms {
++		if room.Name == arg.Name && room.ID != arg.ID {
++			return postgres.Room{}, &pgconn.PgError{Code: "23505", ConstraintName: "rooms_name_key"}
++		}
++	}
++	for i := range f.rooms {
++		if f.rooms[i].ID == arg.ID {
++			f.rooms[i].Name = arg.Name
++			return f.rooms[i], nil
++		}
++	}
++	return postgres.Room{}, pgx.ErrNoRows
++}
++
+ // ListRooms returns the rooms after (AfterName, AfterID) in the order of
+ // (name, id), at most PageSize of them.
+ func (f *Fake) ListRooms(_ context.Context, arg postgres.ListRoomsParams) ([]postgres.Room, error) {
+diff --git a/backend/internal/facility/internal/adapter/postgres/queries/rooms.sql b/backend/internal/facility/internal/adapter/postgres/queries/rooms.sql
+--- a/backend/internal/facility/internal/adapter/postgres/queries/rooms.sql
++++ b/backend/internal/facility/internal/adapter/postgres/queries/rooms.sql
+@@ -18,3 +18,11 @@
+ WHERE (name, id) > (sqlc.arg(after_name)::text, sqlc.arg(after_id)::uuid)
+ ORDER BY name, id
+ LIMIT sqlc.arg(page_size);
++
++-- name: UpdateRoomName :one
++-- Gives the room a new name. The unique constraint on the name refuses a
++-- name that another room has; the room may keep the name that it has.
++UPDATE rooms
++SET name = sqlc.arg(name)
++WHERE id = sqlc.arg(id)
++RETURNING id, name, capacity, open_from, open_until, time_zone, created_at;
+diff --git a/backend/internal/facility/internal/app/rooms.go b/backend/internal/facility/internal/app/rooms.go
+--- a/backend/internal/facility/internal/app/rooms.go
++++ b/backend/internal/facility/internal/app/rooms.go
+@@ -98,6 +98,24 @@
+ 	return roomFrom(row), nil
+ }
+ 
++// RenameRoom gives the room with the given id a new name, and changes nothing
++// else about it. No other room may have the name; the room may keep the name
++// that it has. It takes no version: of two renames at the same time, the
++// last one wins.
++func (r *Rooms) RenameRoom(ctx context.Context, id uuid.UUID, name string) (Room, error) {
++	row, err := r.queries.UpdateRoomName(ctx, postgres.UpdateRoomNameParams{ID: id, Name: name})
++	if errors.Is(err, pgx.ErrNoRows) {
++		return Room{}, newError(KindRoomNotFound, fmt.Sprintf("no room has the id %s", id))
++	}
++	if postgres.IsUniqueViolation(err, "rooms_name_key") {
++		return Room{}, newError(KindRoomNameTaken, fmt.Sprintf("a room named %q exists", name))
++	}
++	if err != nil {
++		return Room{}, fmt.Errorf("rename room: %w", err)
++	}
++	return roomFrom(row), nil
++}
++
+ // cursor is the position after the last room of a page: rooms are listed in
+ // the order of (name, id).
+ type cursor struct {
+diff --git a/backend/internal/facility/internal/app/rooms_integration_test.go b/backend/internal/facility/internal/app/rooms_integration_test.go
+--- a/backend/internal/facility/internal/app/rooms_integration_test.go
++++ b/backend/internal/facility/internal/app/rooms_integration_test.go
+@@ -9,6 +9,7 @@
+ 	"testing"
+ 	"time"
+ 
++	"github.com/google/uuid"
+ 	"github.com/jackc/pgx/v5/pgxpool"
+ 
+ 	"github.com/ma-chisuke/go-nextjs-ddd-monorepo/backend/internal/facility/internal/adapter/postgres"
+@@ -69,6 +70,44 @@
+ 	wantKind(t, err, app.KindRoomNameTaken)
+ }
+ 
++func TestRenameRoomInTheDatabase(t *testing.T) {
++	t.Parallel()
++	rooms, prefix, _ := newRooms(t)
++	ctx := t.Context()
++
++	created, err := rooms.RegisterRoom(ctx, input(prefix+"Aoab"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	renamed, err := rooms.RenameRoom(ctx, created.ID, prefix+"Aoba")
++	if err != nil {
++		t.Fatal(err)
++	}
++	want := created
++	want.Name = prefix + "Aoba"
++	if renamed != want {
++		t.Errorf("got %+v, want the registered room with the new name %+v", renamed, want)
++	}
++	if got, err := rooms.GetRoom(ctx, created.ID); err != nil || got != want {
++		t.Errorf("got %+v and %v after the rename, want %+v", got, err, want)
++	}
++
++	// The room may keep its name, and the unique constraint refuses the name
++	// of another room, which frees the old name.
++	if _, err := rooms.RenameRoom(ctx, created.ID, prefix+"Aoba"); err != nil {
++		t.Errorf("renaming the room to its own name: %v", err)
++	}
++	other, err := rooms.RegisterRoom(ctx, input(prefix+"Aoab"))
++	if err != nil {
++		t.Fatalf("registering a room under the old name: %v", err)
++	}
++	_, err = rooms.RenameRoom(ctx, other.ID, prefix+"Aoba")
++	wantKind(t, err, app.KindRoomNameTaken)
++
++	_, err = rooms.RenameRoom(ctx, uuid.Must(uuid.NewV7()), prefix+"Cedar")
++	wantKind(t, err, app.KindRoomNotFound)
++}
++
+ func TestListRoomsInTheDatabase(t *testing.T) {
+ 	t.Parallel()
+ 	rooms, prefix, _ := newRooms(t)
+diff --git a/contracts/http/facility.openapi.yaml b/contracts/http/facility.openapi.yaml
+--- a/contracts/http/facility.openapi.yaml
++++ b/contracts/http/facility.openapi.yaml
+@@ -101,6 +101,42 @@
+           $ref: "#/components/responses/Problem"
+         "500":
+           $ref: "#/components/responses/Problem"
++    patch:
++      operationId: renameRoom
++      summary: Rename a room
++      description: |
++        Gives a room a new name, which no other room may have, and changes
++        nothing else about it. A room may be renamed to the name that it has.
++        The operation takes no precondition: when two requests rename a room
++        at the same time, the last one wins.
++      tags: [rooms]
++      parameters:
++        - $ref: "#/components/parameters/RoomId"
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema:
++              $ref: "#/components/schemas/RoomRename"
++      responses:
++        "200":
++          description: The room was renamed.
++          content:
++            application/json:
++              schema:
++                $ref: "#/components/schemas/Room"
++        "400":
++          $ref: "#/components/responses/Problem"
++        "404":
++          $ref: "#/components/responses/Problem"
++        "409":
++          $ref: "#/components/responses/Problem"
++        "415":
++          $ref: "#/components/responses/Problem"
++        "422":
++          $ref: "#/components/responses/Problem"
++        "500":
++          $ref: "#/components/responses/Problem"
+ components:
+   parameters:
+     RoomId:
+@@ -169,6 +205,18 @@
+           minLength: 1
+           maxLength: 64
+           examples: [Asia/Tokyo]
++    RoomRename:
++      type: object
++      description: The new name of a room.
++      required: [name]
++      additionalProperties: false
++      properties:
++        name:
++          type: string
++          description: The name that people use for the room, under the same rules as at registration.
++          minLength: 1
++          maxLength: 100
++          examples: [Aoba]
+     Room:
+       type: object
+       description: A meeting room.
+diff --git a/docs/contexts/facility/README.ja.md b/docs/contexts/facility/README.ja.md
+--- a/docs/contexts/facility/README.ja.md
++++ b/docs/contexts/facility/README.ja.md
+@@ -19,6 +19,7 @@
+ | `POST /rooms`（`registerRoom`） | 会議室を登録し、201 と、`Location` に入れたその URL で答える | [room-name-taken](../../problems/room-name-taken.ja.md)、[invalid-opening-hours](../../problems/invalid-opening-hours.ja.md)、[unknown-time-zone](../../problems/unknown-time-zone.ja.md) |
+ | `GET /rooms`（`listRooms`） | 会議室を名前の順に、1ページずつ一覧する | [invalid-cursor](../../problems/invalid-cursor.ja.md) |
+ | `GET /rooms/{roomId}`（`getRoom`） | 1つの会議室を返す | [room-not-found](../../problems/room-not-found.ja.md) |
++| `PATCH /rooms/{roomId}`（`renameRoom`） | 会議室に新しい名前を付け、その会議室で答える。2つの要求が同時に名前を変えると、後の要求の名前が残る | [room-not-found](../../problems/room-not-found.ja.md)、[room-name-taken](../../problems/room-name-taken.ja.md) |
+ 
+ どの操作も、すべての API に共通する problem で答えることもある。[malformed-request](../../problems/malformed-request.ja.md)・[validation-error](../../problems/validation-error.ja.md)・[unsupported-media-type](../../problems/unsupported-media-type.ja.md)・[not-found](../../problems/not-found.ja.md)・[method-not-allowed](../../problems/method-not-allowed.ja.md)・[internal-error](../../problems/internal-error.ja.md) である。
+ この API は独自の認証を持たない。この API に届くのはプライベートなネットワークからだけだからである（TPL-0014）。
+@@ -53,4 +54,4 @@
+ - フォームは、room-name-taken を名前についてのメッセージとして表示する。invalid-opening-hours は閉まる時刻の項目に、unknown-time-zone はタイムゾーンの項目に表示する（`registration.ts`）。ほかの problem は、title と detail をそのまま表示する。
+ - 存在しない会議室では、`frontend/src/app/rooms/[roomId]/not-found.tsx` のページを表示する。
+ 
+-<!-- i18n-source: README.md sha256:4b60719d4c6d5c6758eec208a43dd8c978e1cb585adedbd661900d7d90c58d19 -->
++<!-- i18n-source: README.md sha256:f9f28557e2fccde1f92a3a72cfc5499501fff9bab7e943853da8e799ed25b344 -->
+diff --git a/docs/contexts/facility/README.md b/docs/contexts/facility/README.md
+--- a/docs/contexts/facility/README.md
++++ b/docs/contexts/facility/README.md
+@@ -19,6 +19,7 @@
+ | `POST /rooms` (`registerRoom`) | Registers a room, and answers 201 with its URL in `Location` | [room-name-taken](../../problems/room-name-taken.md), [invalid-opening-hours](../../problems/invalid-opening-hours.md), [unknown-time-zone](../../problems/unknown-time-zone.md) |
+ | `GET /rooms` (`listRooms`) | Lists the rooms in the order of their names, a page at a time | [invalid-cursor](../../problems/invalid-cursor.md) |
+ | `GET /rooms/{roomId}` (`getRoom`) | Returns one room | [room-not-found](../../problems/room-not-found.md) |
++| `PATCH /rooms/{roomId}` (`renameRoom`) | Gives a room a new name, and answers with the room. The last of two renames at the same time wins | [room-not-found](../../problems/room-not-found.md), [room-name-taken](../../problems/room-name-taken.md) |
+ 
+ Every operation can also answer with the problems that every API shares: [malformed-request](../../problems/malformed-request.md), [validation-error](../../problems/validation-error.md), [unsupported-media-type](../../problems/unsupported-media-type.md), [not-found](../../problems/not-found.md), [method-not-allowed](../../problems/method-not-allowed.md), and [internal-error](../../problems/internal-error.md).
+ The API has no authentication of its own, because only the private network reaches it (TPL-0014).
+diff --git a/docs/contexts/facility/glossary.ja.md b/docs/contexts/facility/glossary.ja.md
+--- a/docs/contexts/facility/glossary.ja.md
++++ b/docs/contexts/facility/glossary.ja.md
+@@ -13,10 +13,11 @@
+ | `Room.OpenUntil` | 閉まる時刻 | 会議室を使える終わりの時刻。開く時刻より遅いので、日付をまたいで開いている会議室はない。 |
+ | `Room.TimeZone` | タイムゾーン | 会議室の開く時刻と閉まる時刻を読むときの、IANA のタイムゾーン（`Asia/Tokyo` など）。 |
+ | `TimeOfDay` | 時刻 | 24 時間制の時と分で表す、日付を持たない時刻。 |
+-| `Rooms` | 会議室のユースケース | 会議室についてのユースケースをまとめたもの。会議室を登録する、1つの会議室を取得する、会議室の一覧を返す、の3つがある。 |
++| `Rooms` | 会議室のユースケース | 会議室についてのユースケースをまとめたもの。会議室を登録する、1つの会議室を取得する、会議室の一覧を返す、会議室の名前を変える、の4つがある。 |
+ | `Rooms.RegisterRoom` | 会議室を登録する | 名前、定員、開く時刻と閉まる時刻、タイムゾーンを決めて、会議室を加える。 |
+ | `RegisterRoomInput` | 会議室の登録内容 | 会議室を登録するのに要るもの。 |
++| `Rooms.RenameRoom` | 会議室の名前を変える | ほかのどの会議室も持たない新しい名前を会議室に付け、ほかは何も変えない。2つの変更が同時に来たら、後の変更が残る。 |
+ | `Error` | 業務エラー | Facility が理解したが、Facility の規則が拒んだリクエストのエラー。 |
+ | `Kind` | 業務エラーの種類 | リクエストを拒んだ規則。API は種類ごとに別の problem を返す。 |
+ 
+-<!-- i18n-source: glossary.md sha256:6a9c78f5869884b060a0c6f0292ea66c40fb93a58c409f328220d626a5f57ee4 -->
++<!-- i18n-source: glossary.md sha256:8716debffc473d2ba04e5d66a6a285dbd1f769e1a63703e92b86ee836aaccdc2 -->
+diff --git a/docs/contexts/facility/glossary.md b/docs/contexts/facility/glossary.md
+--- a/docs/contexts/facility/glossary.md
++++ b/docs/contexts/facility/glossary.md
+@@ -13,8 +13,9 @@
+ | `Room.OpenUntil` | closing time | The time of day until which a room can be used. It is later than the opening time, so no room is open across midnight. |
+ | `Room.TimeZone` | time zone | The IANA time zone, such as `Asia/Tokyo`, in which the opening time and the closing time of a room are read. |
+ | `TimeOfDay` | time of day | A time on a 24-hour clock, in hours and minutes, without a date. |
+-| `Rooms` | room use cases | The use cases about rooms: register a room, get one room, and list the rooms. |
++| `Rooms` | room use cases | The use cases about rooms: register a room, get one room, list the rooms, and rename a room. |
+ | `Rooms.RegisterRoom` | register a room | Add a room, with its name, its capacity, its opening and closing times, and its time zone. |
+ | `RegisterRoomInput` | room registration | What the registration of a room needs. |
++| `Rooms.RenameRoom` | rename a room | Give a room a new name, which no other room has, and change nothing else about it. Of two renames at the same time, the last one wins. |
+ | `Error` | business error | The error of a request that Facility understood, but that a rule of Facility rejects. |
+ | `Kind` | kind of business error | The rule that rejected a request. The API answers each kind with a problem of its own. |

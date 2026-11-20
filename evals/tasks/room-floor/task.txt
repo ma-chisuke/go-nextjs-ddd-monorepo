@@ -1,0 +1,9 @@
+Visitors do not find the meeting rooms: the name of a room says nothing about where it is. Each room should say on which floor of the building it is.
+
+In the Facility API, a room gets an optional property `floor`: a whole number from -5 to 200, negative for a floor below the ground. A registration (`POST /rooms`) may give it, and every answer that holds a room gives it back, alone and in the list. A floor outside that range is refused with 422, as other invalid values of a registration are.
+
+A room registered without a floor has none. The answer gives `"floor": null` for such a room, the way a page of rooms gives `"nextCursor": null` on the last page. The rooms that exist today have no floor.
+
+This change is about the API: the screens will show the floor in a later change.
+
+Finish the change so that it is ready to be merged.

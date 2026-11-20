@@ -1,0 +1,451 @@
+diff --git a/backend/internal/facility/internal/adapter/http/handler.go b/backend/internal/facility/internal/adapter/http/handler.go
+--- a/backend/internal/facility/internal/adapter/http/handler.go
++++ b/backend/internal/facility/internal/adapter/http/handler.go
+@@ -69,6 +69,7 @@
+ 		OpenFrom:  openFrom,
+ 		OpenUntil: openUntil,
+ 		TimeZone:  body.TimeZone,
++		Floor:     body.Floor,
+ 	})
+ 	if err != nil {
+ 		return nil, toProblem(err)
+@@ -120,6 +121,7 @@
+ 		OpenFrom:  room.OpenFrom.String(),
+ 		OpenUntil: room.OpenUntil.String(),
+ 		TimeZone:  room.TimeZone,
++		Floor:     room.Floor,
+ 		CreatedAt: room.CreatedAt,
+ 	}
+ }
+diff --git a/backend/internal/facility/internal/adapter/http/handler_test.go b/backend/internal/facility/internal/adapter/http/handler_test.go
+--- a/backend/internal/facility/internal/adapter/http/handler_test.go
++++ b/backend/internal/facility/internal/adapter/http/handler_test.go
+@@ -1,6 +1,7 @@
+ package http_test
+ 
+ import (
++	"fmt"
+ 	"log/slog"
+ 	"net/http"
+ 	"strings"
+@@ -69,6 +70,10 @@
+ 	if created.Name != "Aoba" || created.Capacity != 8 || created.OpenFrom != "09:00" || created.OpenUntil != "18:00" || created.TimeZone != "Asia/Tokyo" {
+ 		t.Errorf("the registered room is not the one that was sent: %+v", created)
+ 	}
++	// A room registered without a floor has none, and says so with null.
++	if !strings.Contains(string(res.Body), `"floor":null`) {
++		t.Errorf("the room has no floor, and the answer does not say null: %s", res.Body)
++	}
+ 	if !created.CreatedAt.Equal(registeredAt) {
+ 		t.Errorf("got createdAt %s, want %s", created.CreatedAt, registeredAt)
+ 	}
+@@ -88,6 +93,45 @@
+ 	}
+ }
+ 
++// A floor is a whole number from -5 to 200, and every answer with the room
++// gives it back.
++func TestRegisterRoomOnAFloor(t *testing.T) {
++	t.Parallel()
++	for _, floor := range []int32{-5, 0, 3, 200} {
++		t.Run(fmt.Sprint(floor), func(t *testing.T) {
++			t.Parallel()
++			client := newClient(t)
++			room := newRoom("Aoba")
++			room["floor"] = floor
++			wantFloor := func(what string, got facilityhttp.Room) {
++				t.Helper()
++				if got.Floor == nil || *got.Floor != floor {
++					t.Errorf("%s: got the floor %v, want %d", what, got.Floor, floor)
++				}
++			}
++
++			res := client.Do(http.MethodPost, "/rooms", room)
++			if res.Status != http.StatusCreated {
++				t.Fatalf("got status %d, want 201\n%s", res.Status, res.Body)
++			}
++			var created facilityhttp.Room
++			res.JSON(t, &created)
++			wantFloor("the registration", created)
++
++			var got facilityhttp.Room
++			client.Do(http.MethodGet, "/rooms/"+created.Id.String(), nil).JSON(t, &got)
++			wantFloor("the room", got)
++
++			var page facilityhttp.RoomPage
++			client.Do(http.MethodGet, "/rooms", nil).JSON(t, &page)
++			if len(page.Items) != 1 {
++				t.Fatalf("the list holds %d rooms, want 1", len(page.Items))
++			}
++			wantFloor("the list", page.Items[0])
++		})
++	}
++}
++
+ func TestRegisterRoomRejections(t *testing.T) {
+ 	t.Parallel()
+ 	with := func(key string, value any) map[string]any {
+@@ -116,8 +160,11 @@
+ 		// before the store fails with 500.
+ 		{"name holds U+0000", with("name", "Aoba\x00"), "validation-error", http.StatusUnprocessableEntity, "/name"},
+ 		{"openFrom is not a time of day", with("openFrom", "9am"), "validation-error", http.StatusUnprocessableEntity, "/openFrom"},
++		{"floor is below the lowest", with("floor", -6), "validation-error", http.StatusUnprocessableEntity, "/floor"},
++		{"floor is above the highest", with("floor", 201), "validation-error", http.StatusUnprocessableEntity, "/floor"},
++		{"floor is not a whole number", with("floor", 2.5), "validation-error", http.StatusUnprocessableEntity, "/floor"},
+ 		// The error points at the object that holds the unknown property.
+-		{"a property is unknown", with("floor", 3), "validation-error", http.StatusUnprocessableEntity, ""},
++		{"a property is unknown", with("wing", "east"), "validation-error", http.StatusUnprocessableEntity, ""},
+ 		{"the room closes before it opens", with("openUntil", "08:00"), "invalid-opening-hours", http.StatusUnprocessableEntity, ""},
+ 		{"the room opens and closes at the same time", with("openUntil", "09:00"), "invalid-opening-hours", http.StatusUnprocessableEntity, ""},
+ 		{"the time zone does not exist", with("timeZone", "Mars/Olympus"), "unknown-time-zone", http.StatusUnprocessableEntity, ""},
+diff --git a/backend/internal/facility/internal/adapter/postgres/queries/rooms.sql b/backend/internal/facility/internal/adapter/postgres/queries/rooms.sql
+--- a/backend/internal/facility/internal/adapter/postgres/queries/rooms.sql
++++ b/backend/internal/facility/internal/adapter/postgres/queries/rooms.sql
+@@ -1,19 +1,19 @@
+ -- name: InsertRoom :one
+-INSERT INTO rooms (id, name, capacity, open_from, open_until, time_zone, created_at)
++INSERT INTO rooms (id, name, capacity, open_from, open_until, time_zone, created_at, floor)
+ VALUES (
+     sqlc.arg(id), sqlc.arg(name), sqlc.arg(capacity), sqlc.arg(open_from),
+-    sqlc.arg(open_until), sqlc.arg(time_zone), sqlc.arg(created_at)
++    sqlc.arg(open_until), sqlc.arg(time_zone), sqlc.arg(created_at), sqlc.narg(floor)
+ )
+-RETURNING id, name, capacity, open_from, open_until, time_zone, created_at;
++RETURNING id, name, capacity, open_from, open_until, time_zone, created_at, floor;
+ 
+ -- name: GetRoom :one
+-SELECT id, name, capacity, open_from, open_until, time_zone, created_at
++SELECT id, name, capacity, open_from, open_until, time_zone, created_at, floor
+ FROM rooms
+ WHERE id = sqlc.arg(id);
+ 
+ -- name: ListRooms :many
+ -- One page of rooms in the order of (name, id), after the given pair.
+-SELECT id, name, capacity, open_from, open_until, time_zone, created_at
++SELECT id, name, capacity, open_from, open_until, time_zone, created_at, floor
+ FROM rooms
+ WHERE (name, id) > (sqlc.arg(after_name)::text, sqlc.arg(after_id)::uuid)
+ ORDER BY name, id
+diff --git a/backend/internal/facility/internal/adapter/postgres/schema.sql b/backend/internal/facility/internal/adapter/postgres/schema.sql
+--- a/backend/internal/facility/internal/adapter/postgres/schema.sql
++++ b/backend/internal/facility/internal/adapter/postgres/schema.sql
+@@ -11,10 +11,12 @@
+     open_until time NOT NULL,
+     time_zone text NOT NULL,
+     created_at timestamptz NOT NULL,
++    floor integer,
+     CONSTRAINT rooms_pkey PRIMARY KEY (id),
+     CONSTRAINT rooms_name_key UNIQUE (name),
+     CONSTRAINT rooms_capacity_check CHECK (capacity >= 1 AND capacity <= 1000),
+-    CONSTRAINT rooms_open_hours_check CHECK (open_from < open_until)
++    CONSTRAINT rooms_open_hours_check CHECK (open_from < open_until),
++    CONSTRAINT rooms_floor_check CHECK (floor >= -5 AND floor <= 200)
+ );
+ 
+ -- The runtime role reads and writes rows, and nothing else. pgschema manages
+@@ -29,3 +31,4 @@
+ COMMENT ON COLUMN rooms.open_until IS 'The time of day until which the room can be used, in time_zone.';
+ COMMENT ON COLUMN rooms.time_zone IS 'The IANA time zone in which open_from and open_until are read.';
+ COMMENT ON COLUMN rooms.created_at IS 'When the room was registered.';
++COMMENT ON COLUMN rooms.floor IS 'The floor of the building on which the room is, from -5 to 200, below the ground when negative. NULL when the room was registered without it.';
+diff --git a/backend/internal/facility/internal/app/rooms.go b/backend/internal/facility/internal/app/rooms.go
+--- a/backend/internal/facility/internal/app/rooms.go
++++ b/backend/internal/facility/internal/app/rooms.go
+@@ -32,6 +32,10 @@
+ 	// TimeZone is the name of an IANA time zone.
+ 	TimeZone  string
+ 	CreatedAt time.Time
++	// Floor is the floor of the building on which the room is, from -5 to
++	// 200, below the ground when negative. Nil when the room was registered
++	// without one.
++	Floor *int32
+ }
+ 
+ // Rooms holds the use cases about rooms.
+@@ -53,6 +57,8 @@
+ 	OpenFrom  TimeOfDay
+ 	OpenUntil TimeOfDay
+ 	TimeZone  string
++	// Floor is nil when the room is registered without one.
++	Floor *int32
+ }
+ 
+ // RegisterRoom registers a room. The room must open before it closes, its
+@@ -76,6 +82,7 @@
+ 		OpenUntil: in.OpenUntil.pg(),
+ 		TimeZone:  in.TimeZone,
+ 		CreatedAt: r.now(),
++		Floor:     floorPg(in.Floor),
+ 	})
+ 	if postgres.IsUniqueViolation(err, "rooms_name_key") {
+ 		return Room{}, newError(KindRoomNameTaken, fmt.Sprintf("a room named %q exists", in.Name))
+@@ -150,9 +157,24 @@
+ 		OpenUntil: timeOfDayFrom(row.OpenUntil),
+ 		TimeZone:  row.TimeZone,
+ 		CreatedAt: row.CreatedAt.UTC(),
++		Floor:     floorFrom(row.Floor),
+ 	}
+ }
+ 
++func floorPg(floor *int32) pgtype.Int4 {
++	if floor == nil {
++		return pgtype.Int4{}
++	}
++	return pgtype.Int4{Int32: *floor, Valid: true}
++}
++
++func floorFrom(floor pgtype.Int4) *int32 {
++	if !floor.Valid {
++		return nil
++	}
++	return &floor.Int32
++}
++
+ // TimeOfDay is a time of day in minutes after midnight.
+ type TimeOfDay int
+ 
+diff --git a/backend/internal/facility/internal/app/rooms_integration_test.go b/backend/internal/facility/internal/app/rooms_integration_test.go
+--- a/backend/internal/facility/internal/app/rooms_integration_test.go
++++ b/backend/internal/facility/internal/app/rooms_integration_test.go
+@@ -69,6 +69,37 @@
+ 	wantKind(t, err, app.KindRoomNameTaken)
+ }
+ 
++func TestRoomFloorInTheDatabase(t *testing.T) {
++	t.Parallel()
++	rooms, prefix, _ := newRooms(t)
++	ctx := t.Context()
++
++	below := input(prefix + "Basement")
++	floor := int32(-2)
++	below.Floor = &floor
++	withFloor, err := rooms.RegisterRoom(ctx, below)
++	if err != nil {
++		t.Fatal(err)
++	}
++	withoutFloor, err := rooms.RegisterRoom(ctx, input(prefix+"Aoba"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	if withFloor.Floor == nil || *withFloor.Floor != -2 || withoutFloor.Floor != nil {
++		t.Errorf("got the floors %v and %v from the registrations, want -2 and none", withFloor.Floor, withoutFloor.Floor)
++	}
++
++	for _, want := range []app.Room{withFloor, withoutFloor} {
++		got, err := rooms.GetRoom(ctx, want.ID)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if (got.Floor == nil) != (want.Floor == nil) || (got.Floor != nil && *got.Floor != *want.Floor) {
++			t.Errorf("%s: got the floor %v from the database, want %v", want.Name, got.Floor, want.Floor)
++		}
++	}
++}
++
+ func TestListRoomsInTheDatabase(t *testing.T) {
+ 	t.Parallel()
+ 	rooms, prefix, _ := newRooms(t)
+@@ -107,20 +138,23 @@
+ func TestRoomConstraints(t *testing.T) {
+ 	t.Parallel()
+ 	_, prefix, pool := newRooms(t)
+-	insert := `INSERT INTO rooms (name, capacity, open_from, open_until, time_zone, created_at)
+-		VALUES ($1, $2, $3::time, $4::time, 'Asia/Tokyo', now())`
++	insert := `INSERT INTO rooms (name, capacity, open_from, open_until, time_zone, created_at, floor)
++		VALUES ($1, $2, $3::time, $4::time, 'Asia/Tokyo', now(), $5)`
+ 	tests := []struct {
+ 		name      string
+ 		capacity  int
+ 		openFrom  string
+ 		openUntil string
++		floor     int
+ 	}{
+-		{"zero-capacity", 0, "09:00", "18:00"},
+-		{"huge-capacity", 1001, "09:00", "18:00"},
+-		{"closes-before-it-opens", 8, "18:00", "09:00"},
++		{"zero-capacity", 0, "09:00", "18:00", 1},
++		{"huge-capacity", 1001, "09:00", "18:00", 1},
++		{"closes-before-it-opens", 8, "18:00", "09:00", 1},
++		{"too-deep", 8, "09:00", "18:00", -6},
++		{"too-high", 8, "09:00", "18:00", 201},
+ 	}
+ 	for _, tt := range tests {
+-		if _, err := pool.Exec(t.Context(), insert, prefix+tt.name, tt.capacity, tt.openFrom, tt.openUntil); err == nil {
++		if _, err := pool.Exec(t.Context(), insert, prefix+tt.name, tt.capacity, tt.openFrom, tt.openUntil, tt.floor); err == nil {
+ 			t.Errorf("%s: the database accepted the row", tt.name)
+ 		}
+ 	}
+diff --git a/backend/internal/reservation/internal/adapter/facility/directory_test.go b/backend/internal/reservation/internal/adapter/facility/directory_test.go
+--- a/backend/internal/reservation/internal/adapter/facility/directory_test.go
++++ b/backend/internal/reservation/internal/adapter/facility/directory_test.go
+@@ -33,6 +33,7 @@
+ 	"openFrom": "09:00",
+ 	"openUntil": "18:00",
+ 	"timeZone": "Asia/Tokyo",
++	"floor": 3,
+ 	"createdAt": "2026-11-18T09:00:00Z"
+ }`
+ 
+diff --git a/contracts/http/facility.openapi.yaml b/contracts/http/facility.openapi.yaml
+--- a/contracts/http/facility.openapi.yaml
++++ b/contracts/http/facility.openapi.yaml
+@@ -169,10 +169,17 @@
+           minLength: 1
+           maxLength: 64
+           examples: [Asia/Tokyo]
++        floor:
++          type: integer
++          format: int32
++          description: The floor of the building on which the room is, below the ground when negative. Leave it out when the room has none to give.
++          minimum: -5
++          maximum: 200
++          examples: [3]
+     Room:
+       type: object
+       description: A meeting room.
+-      required: [id, name, capacity, openFrom, openUntil, timeZone, createdAt]
++      required: [id, name, capacity, openFrom, openUntil, timeZone, floor, createdAt]
+       properties:
+         id:
+           type: string
+@@ -192,6 +199,10 @@
+         timeZone:
+           type: string
+           description: The IANA time zone in which `openFrom` and `openUntil` are read.
++        floor:
++          type: [integer, "null"]
++          format: int32
++          description: The floor of the building on which the room is, below the ground when negative, or null when the room was registered without one.
+         createdAt:
+           type: string
+           format: date-time
+diff --git a/docs/contexts/facility/README.ja.md b/docs/contexts/facility/README.ja.md
+--- a/docs/contexts/facility/README.ja.md
++++ b/docs/contexts/facility/README.ja.md
+@@ -1,6 +1,6 @@
+ # Facility
+ 
+-Facility は、人が予約できる会議室を受け持つ。会議室の名前・定員・利用時間・タイムゾーンである。
++Facility は、人が予約できる会議室を受け持つ。会議室の名前・定員・利用時間・タイムゾーン・階である。
+ ある時刻に会議室が空いているかや、誰が予約したかは受け持たない。それは Reservation が受け持つ。
+ 以下の言葉は[用語集](glossary.ja.md)の言葉である。
+ 
+@@ -33,8 +33,9 @@
+ - 定員は 1 から 1000 までの整数である。
+ - 開く時刻は閉まる時刻より早い。そのため、日付をまたいで開いている会議室はない。
+ - タイムゾーンは IANA のタイムゾーンであり、開く時刻と閉まる時刻はこのタイムゾーンで読む。
++- 会議室は、建物の何階にあるかを示せる。階は -5 から 200 までの整数で、負の数は地下を表す。階を付けずに登録した会議室は階を持たず、API はその階を `null` で返す。
+ 
+-最初の3つの決まりは、データベースも `rooms` の制約として持つ。タイムゾーンを確かめるのはユースケースだけである。
++タイムゾーン以外の決まりは、データベースも `rooms` の制約として持つ。タイムゾーンを確かめるのはユースケースだけである。
+ 
+ ## ほかの文脈から必要とするもの
+ 
+@@ -53,4 +54,4 @@
+ - フォームは、room-name-taken を名前についてのメッセージとして表示する。invalid-opening-hours は閉まる時刻の項目に、unknown-time-zone はタイムゾーンの項目に表示する（`registration.ts`）。ほかの problem は、title と detail をそのまま表示する。
+ - 存在しない会議室では、`frontend/src/app/rooms/[roomId]/not-found.tsx` のページを表示する。
+ 
+-<!-- i18n-source: README.md sha256:4b60719d4c6d5c6758eec208a43dd8c978e1cb585adedbd661900d7d90c58d19 -->
++<!-- i18n-source: README.md sha256:7b6464cce672d9a904d06d9bd93c28d564c3f2b5262b9a3317f386ec0571a501 -->
+diff --git a/docs/contexts/facility/README.md b/docs/contexts/facility/README.md
+--- a/docs/contexts/facility/README.md
++++ b/docs/contexts/facility/README.md
+@@ -1,6 +1,6 @@
+ # Facility
+ 
+-Facility is responsible for the meeting rooms that people can book: their names, capacities, opening hours, and time zones.
++Facility is responsible for the meeting rooms that people can book: their names, capacities, opening hours, time zones, and floors.
+ It is not responsible for whether a room is free at a given time, or for who booked it: Reservation is.
+ The words below are those of the [glossary](glossary.md).
+ 
+@@ -33,8 +33,9 @@
+ - Its capacity is a whole number from 1 to 1000.
+ - Its opening time is earlier than its closing time, so no room is open across midnight.
+ - Its time zone is an IANA time zone, in which its opening and closing times are read.
++- It may say on which floor of the building it is: a whole number from -5 to 200, below the ground when negative. A room registered without a floor has none, and the API gives `null` for it.
+ 
+-The database holds the first three rules as constraints of `rooms` as well. Only the use case checks the time zone.
++The database holds the rules as constraints of `rooms` as well, all but the one on the time zone, which only the use case checks.
+ 
+ ## What Facility needs from other contexts
+ 
+diff --git a/docs/contexts/facility/glossary.ja.md b/docs/contexts/facility/glossary.ja.md
+--- a/docs/contexts/facility/glossary.ja.md
++++ b/docs/contexts/facility/glossary.ja.md
+@@ -12,11 +12,12 @@
+ | `Room.OpenFrom` | 開く時刻 | 会議室を使い始められる時刻。 |
+ | `Room.OpenUntil` | 閉まる時刻 | 会議室を使える終わりの時刻。開く時刻より遅いので、日付をまたいで開いている会議室はない。 |
+ | `Room.TimeZone` | タイムゾーン | 会議室の開く時刻と閉まる時刻を読むときの、IANA のタイムゾーン（`Asia/Tokyo` など）。 |
++| `Room.Floor` | 階 | 会議室がある建物の階。-5 から 200 までの整数で、負の数は地下を表す。階を付けずに登録した会議室は階を持たない。 |
+ | `TimeOfDay` | 時刻 | 24 時間制の時と分で表す、日付を持たない時刻。 |
+ | `Rooms` | 会議室のユースケース | 会議室についてのユースケースをまとめたもの。会議室を登録する、1つの会議室を取得する、会議室の一覧を返す、の3つがある。 |
+-| `Rooms.RegisterRoom` | 会議室を登録する | 名前、定員、開く時刻と閉まる時刻、タイムゾーンを決めて、会議室を加える。 |
++| `Rooms.RegisterRoom` | 会議室を登録する | 名前、定員、開く時刻と閉まる時刻、タイムゾーン、それに階があれば階を決めて、会議室を加える。 |
+ | `RegisterRoomInput` | 会議室の登録内容 | 会議室を登録するのに要るもの。 |
+ | `Error` | 業務エラー | Facility が理解したが、Facility の規則が拒んだリクエストのエラー。 |
+ | `Kind` | 業務エラーの種類 | リクエストを拒んだ規則。API は種類ごとに別の problem を返す。 |
+ 
+-<!-- i18n-source: glossary.md sha256:6a9c78f5869884b060a0c6f0292ea66c40fb93a58c409f328220d626a5f57ee4 -->
++<!-- i18n-source: glossary.md sha256:3178b0cbfd891e96ffb6ce2814d9feed511ae9bf048b124e4987253fe861f5fe -->
+diff --git a/docs/contexts/facility/glossary.md b/docs/contexts/facility/glossary.md
+--- a/docs/contexts/facility/glossary.md
++++ b/docs/contexts/facility/glossary.md
+@@ -12,9 +12,10 @@
+ | `Room.OpenFrom` | opening time | The time of day from which a room can be used. |
+ | `Room.OpenUntil` | closing time | The time of day until which a room can be used. It is later than the opening time, so no room is open across midnight. |
+ | `Room.TimeZone` | time zone | The IANA time zone, such as `Asia/Tokyo`, in which the opening time and the closing time of a room are read. |
++| `Room.Floor` | floor | The floor of the building on which a room is, a whole number from -5 to 200, below the ground when negative. A room registered without one has none. |
+ | `TimeOfDay` | time of day | A time on a 24-hour clock, in hours and minutes, without a date. |
+ | `Rooms` | room use cases | The use cases about rooms: register a room, get one room, and list the rooms. |
+-| `Rooms.RegisterRoom` | register a room | Add a room, with its name, its capacity, its opening and closing times, and its time zone. |
++| `Rooms.RegisterRoom` | register a room | Add a room, with its name, its capacity, its opening and closing times, its time zone, and its floor if it has one. |
+ | `RegisterRoomInput` | room registration | What the registration of a room needs. |
+ | `Error` | business error | The error of a request that Facility understood, but that a rule of Facility rejects. |
+ | `Kind` | kind of business error | The rule that rejected a request. The API answers each kind with a problem of its own. |
+diff --git a/docs/generated/db/facility/README.md b/docs/generated/db/facility/README.md
+--- a/docs/generated/db/facility/README.md
++++ b/docs/generated/db/facility/README.md
+@@ -4,7 +4,7 @@
+ 
+ | Name | Columns | Comment | Type |
+ | ---- | ------- | ------- | ---- |
+-| [facility.rooms](facility.rooms.md) | 7 | Meeting rooms that can be booked. | BASE TABLE |
++| [facility.rooms](facility.rooms.md) | 8 | Meeting rooms that can be booked. | BASE TABLE |
+ 
+ ## Relations
+ 
+@@ -20,6 +20,7 @@
+   time_without_time_zone open_until
+   text time_zone
+   timestamp_with_time_zone created_at
++  integer floor
+ }
+ ```
+ 
+diff --git a/docs/generated/db/facility/facility.rooms.md b/docs/generated/db/facility/facility.rooms.md
+--- a/docs/generated/db/facility/facility.rooms.md
++++ b/docs/generated/db/facility/facility.rooms.md
+@@ -15,6 +15,7 @@
+ | open_until | time without time zone |  | false |  |  | The time of day until which the room can be used, in time_zone. |
+ | time_zone | text |  | false |  |  | The IANA time zone in which open_from and open_until are read. |
+ | created_at | timestamp with time zone |  | false |  |  | When the room was registered. |
++| floor | integer |  | true |  |  | The floor of the building on which the room is, from -5 to 200, below the ground when negative. NULL when the room was registered without it. |
+ 
+ ## Constraints
+ 
+@@ -23,6 +24,7 @@
+ | rooms_capacity_check | CHECK | CHECK (((capacity >= 1) AND (capacity <= 1000))) |
+ | rooms_capacity_not_null | n | NOT NULL capacity |
+ | rooms_created_at_not_null | n | NOT NULL created_at |
++| rooms_floor_check | CHECK | CHECK (((floor >= '-5'::integer) AND (floor <= 200))) |
+ | rooms_id_not_null | n | NOT NULL id |
+ | rooms_name_not_null | n | NOT NULL name |
+ | rooms_open_from_not_null | n | NOT NULL open_from |
+@@ -53,6 +55,7 @@
+   time_without_time_zone open_until
+   text time_zone
+   timestamp_with_time_zone created_at
++  integer floor
+ }
+ ```
+ 

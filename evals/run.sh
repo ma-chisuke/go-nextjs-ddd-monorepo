@@ -45,8 +45,13 @@
 #   grade.sh         the criteria of the task: a function `grade_task` that
 #                    calls `criterion <name> <command>...` for each one. A
 #                    criterion passes when its command succeeds in the copy.
+#                    The helpers under "What a grader may use" below give it
+#                    a database, a port, or a test run of its own.
 #   solution.patch   a change that passes every criterion: it proves that the
 #                    task can be done and that the grader can tell
+#
+# A grader needs no Docker of its own and no network. Some use the local
+# PostgreSQL, which must run (`make db-server`), with a database of their own.
 #
 # Every task also gets the criteria that every change of this repository
 # must meet: `make check` passes, and the change weakens no check (it touches
@@ -217,6 +222,92 @@ rules_kept() {
   if [ -n "$added" ]; then
     echo "the change adds an ignore comment: $(printf '%s' "$added" | tr '\n' ' ')"
     return 1
+  fi
+}
+
+# What a grader may use, besides `criterion` and `changed_paths`: what the
+# copy does not hold by itself.
+
+# go_test <argument>...: `go test` in backend/, which prints only the tests
+# that failed and their first messages: a criterion keeps the end of what
+# its command printed, and the end of `go test` names only the packages.
+go_test() {
+  local out
+  if ! out=$(cd backend && go test "$@" 2>&1); then
+    printf '%s\n' "$out" | grep -v -E '^(ok|\?|PASS|FAIL$|=== )' | head -n 4
+    return 1
+  fi
+}
+
+# integration_tests <directory>: the tests of the files behind the build tag
+# `integration` under backend/<directory>, and none of the others, which need
+# no database. They need PGDATABASE (with_database). The tests of a file that
+# needs AWS Emulator (awstest) are left out: no grader starts it.
+integration_tests() {
+  local names
+  names=$(cd backend && grep -rl --include='*_test.go' '^//go:build integration' "$1" | xargs grep -L awstest \
+    | xargs sed -n 's/^func \(Test[A-Za-z0-9_]*\)(.*/\1/p' | paste -s -d '|' -)
+  if [ -z "$names" ]; then
+    echo "backend/$1 holds no integration test"
+    return 1
+  fi
+  go_test -count=1 -tags integration -run "^($names)\$" "./$1/..."
+}
+
+# with_database <command>...: runs the command with PGDATABASE naming a
+# database of the copy's own on the local PostgreSQL, made anew with every
+# schema.sql of the copy applied, and drops the database afterwards. The name
+# comes from the directory of the copy, so two copies never share one, and
+# none of them touches the databases of the local system or of the tests,
+# where another checkout may apply another schema. The server must run:
+# make test-evals waits for db-server.
+with_database() {
+  local database status=0
+  database="evals_$(printf '%s' "$PWD" | cksum | cut -d ' ' -f 1)"
+  drop_database "$database" || return 1
+  # shellcheck disable=SC2064 # the name is fixed now
+  trap "drop_database $database" EXIT
+  if PGDATABASE=$database tools/scripts/db.sh init > /dev/null; then
+    (
+      export PGDATABASE=$database
+      "$@"
+    ) || status=$?
+  else
+    status=1
+  fi
+  drop_database "$database"
+  trap - EXIT
+  return "$status"
+}
+
+drop_database() {
+  docker compose exec -T -e PGOPTIONS='-c client_min_messages=warning' postgres \
+    psql --username postgres --dbname postgres --quiet --set ON_ERROR_STOP=1 \
+    --command "DROP DATABASE IF EXISTS $1 WITH (FORCE)" > /dev/null
+}
+
+# free_port: a port of 127.0.0.1 on which nothing listens, from 20000 to
+# 32767, as tools/scripts/api-fuzz.sh chooses one.
+free_port() {
+  local port
+  while :; do
+    port=$((20000 + RANDOM % 12768))
+    if ! (exec 3<> "/dev/tcp/127.0.0.1/$port") 2> /dev/null; then
+      echo "$port"
+      return
+    fi
+  done
+}
+
+# own_dependencies: the packages of Node installed in the copy itself, for a
+# grader that builds the frontend: Next.js does not build from a node_modules
+# that links out of the copy, as link_dependencies makes it for `verify`.
+# pnpm installs them from its store, without the network. The copy of a run
+# has its own (make setup).
+own_dependencies() {
+  if [ -L node_modules ] || [ -L frontend/node_modules ]; then
+    rm -f node_modules frontend/node_modules
+    pnpm install --frozen-lockfile --offline > /dev/null
   fi
 }
 
