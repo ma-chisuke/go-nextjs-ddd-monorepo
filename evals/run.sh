@@ -211,8 +211,9 @@ criterion() {
 
 # checks_pass [<base>]: the checks of the repository, compared with the commit
 # <base> (default: graded), without their time budget: a grader measures the
-# change, not the machine. golangci-lint waits for another run on the
-# machine, but not for ever: a run that gave up is tried again.
+# change, not the machine. A copy from before golangci-lint was allowed to
+# run twice at once on one machine (EVAL_REF) can still meet another run,
+# and is tried again.
 checks_pass() {
   local base="${1:-graded}" out tries=0
   until out=$(CHECK_BUDGET=0 CHECK_BASE="$base" make check 2>&1); do
