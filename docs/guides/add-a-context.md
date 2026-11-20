@@ -29,6 +29,7 @@ Then decide the kind of subdomain, and whether the context answers requests or o
    Leave out the generated `*.gen.go` files, and run `make gen`. For a context with an API, `gen-backend.sh` finds its API document from the directory `adapter/http/` and the name of the context, and `gen-frontend.sh` writes the TypeScript types of the API for the frontend, `frontend/src/lib/api/<context>.gen.ts`. To give the context screens, follow [Add a screen](add-a-screen.md).
    To call the API of another context, add `internal/adapter/<other>/oapi-codegen.yaml` with `client: true` and `models: true`, as in Reservation's `adapter/facility/`. `make gen` reads `contracts/http/<other>.openapi.yaml` for it.
    A worker reads the data of each event in an anticorruption layer of its own, as `internal/app/events.go` of Notification does, and records the id of each event that it handled under a unique constraint, in the transaction of its effect, because delivery is at least once (TPL-0013).
+   For a core context, add its `internal/domain` and `internal/app` to `MUTATION_PACKAGES` in `make/go.mk`, so that `test-mutation` checks that their tests notice a change to the code ([Mutation tests](mutation-tests.md)).
 
    Check: `make check`. `lint-arch` derives every rule from the directories, so the new context needs no configuration.
 

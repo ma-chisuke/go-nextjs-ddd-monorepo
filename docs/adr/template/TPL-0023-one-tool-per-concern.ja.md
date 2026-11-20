@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-19
+date: 2026-11-20
 ---
 
 # TPL-0023: 1つの関心事に道具を1つだけ使い、どの道具も make から動かし、`make check` に時間の上限を設ける
@@ -45,6 +45,7 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 | Go のテスト | `go test -race -shuffle=on` | `test-go` |
 | 手元のシステムの端から端まで（Docker Compose のサービスをまたぐ1つのシナリオを HTTP で動かし、すべての応答をその API の文書と照らし合わせる） | `go test -tags smoke` と kin-openapi（`backend/test/smoke`） | `smoke`（check-all） |
 | テストのカバレッジ（外部のサービスを使わずに報告する） | `go test -coverprofile` と octocov | `coverage` と `coverage-report`（CI） |
+| 中核の文脈のドメインとユースケースのテストが、そのコードの変更に気づくこと | gomutants v0.7.3（`tools/go.mod`）と、`equivalent-mutants.allow` にあるレビュー済みの許可 | `test-mutation`（check-all） |
 | 実際に呼ばれている Go のコードにある既知の脆弱性 | govulncheck | `vuln-go`（check-all） |
 | フロントエンドの lint（機能どうしの境界を含む） | ESLint（eslint-config-next・typescript-eslint・eslint-plugin-boundaries を使う） | `lint-frontend` |
 | フロントエンドの型 | TypeScript のコンパイラー（`tsc --noEmit`） | `lint-frontend-types` |
@@ -79,6 +80,7 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 | テーブルと列のコメント、およびスキーマの文書 | tbls | `lint-db-docs`（check-all） |
 | OpenAPI と AsyncAPI の文書 | Redocly CLI（`@redocly/cli`） | `lint-contracts` |
 | OpenAPI の文書の互換性を壊す変更 | oasdiff | `lint-contracts-breaking` |
+| API の文書から生成したリクエストを、チェックアウトからビルドした API に送ること（TPL-0007 の層5） | Schemathesis（`pyproject.toml`・`tools/scripts/api-fuzz.sh`） | `test-api-fuzz`（check-all） |
 | イベントの JSON Schema（その形、例、それを参照する AsyncAPI 文書のメッセージ。TPL-0013） | このリポジトリの events コマンド（`tools/cmd/events`） | `lint-events` |
 | イベントの JSON Schema の互換性を壊す変更 | このリポジトリの events コマンド | `lint-events-breaking` |
 | Markdown の整形と構造 | markdownlint-cli2 | `lint-md` |
@@ -97,11 +99,19 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 | サービスのイメージの脆弱性 | Trivy | `scan-images`（check-all） |
 | サービスのイメージの SBOM | Trivy | `sbom`（まだどのワークフローも実行しない。TPL-0024） |
 | エージェントのフック（TPL-0020） | 各フックに見本のイベントを与えるテスト（`tools/tests/hooks_test.sh`） | `test-hooks` |
+| ハーネスの評価の採点を、エージェントなしで確かめること。どの作業も、いまのリポジトリでは不合格になり、その解答では合格する（TPL-0020） | `evals/run.sh verify` | `test-evals`（check-all） |
 | コミットメッセージを検査するスクリプト | 見本の件名を、いくつかのロケールで試すテスト（`tools/tests/commit_msg_test.sh`） | `test-commit-msg` |
 | チェックそのもの（既知の悪い入力で失敗し、既知の良い入力で通るか） | `tools/selftest/selftest.sh` | `selftest`（check-all） |
 | コミットメッセージとプルリクエストの題（Conventional Commits） | `tools/scripts/commit-msg.sh` | lefthook の `commit-msg` フックと、`lint-pr-title`（CI） |
 
-Schemathesis は、それを加えるマイルストーンで加わる（TPL-0007）。
+ミューテーションテストの決まりは次のとおりである。
+
+- 生き残ったミュータントは、1つでもチェックを失敗させる。どのテストも実行しない行も同じである。到達すべき割合は置かない。閾値を置くと、規則が誰にも気づかれずにすり抜ける。割合の数字だけでは、読み手は何をすればよいかわからない。指摘なら、行と変更を示す。
+- 対象は、中核の文脈のドメインとユースケースである（`make/go.mk` の `MUTATION_PACKAGES`）。業務の規則はここにある（TPL-0003）。補完の文脈はトランザクションスクリプトで、そのテストはデータベースを通して動く。そこでミューテーションテストを実行しても、遅いうえに、わかることが少ない。
+- 等価なミュータント（どのテストもコードと区別できないミュータント）が生き残ってよいのは、理由を書いた行が `equivalent-mutants.allow` にあるときだけである。その行を足すかどうかは、レビューで決めることである。生き残ったミュータントのどれにも一致しない行は、チェックを失敗させる。いま、このファイルに行はない。見つかった4つの等価なミュータントは、コードを単純にして取り除いた。
+- 中核の文脈での最初の実行では、ミュータントは349個で、そのうち47個が生き残り、30個はどのテストも実行しない行にあった。テストを足してコードを単純にしたあとは、ミュータントは338個になった。323個を殺し、15個はコンパイルできず、生き残るものはない。誤っていた業務の規則はなく、テストが規則のすべてを守っていなかっただけである。1回の実行は、プロセッサの半分を使って1分ほどかかる。
+- 道具は gomutants である。mutago・gremlins・gomu・avito-tech/go-mutesting・cervo-mutants・ooze ではなく、これを選んだ。gomutants・mutago・gremlins・gomu は、ドメインのパッケージに対して動かした。残りの3つは動かしていない。avito-tech/go-mutesting はソースファイルをその場で書き換え、リリースもない。cervo-mutants は、メンテナーが開発の休止を告知している。ooze は、2023年からリリースがない。意味のあるミュータントを最も多く見つけたのは gomutants で、28種類の変え方で167個だった。gremlins は5種類で27個にとどまり、テストが実行するコードを実行されないと報告した。mutago は、関数をまるごと見落とした。gomutants は各ミュータントに関数と種類で名前を付けるので、ファイルのほかの箇所を変えても名前は変わらない。また、どのテストも実行しない行を報告し、ソースのファイルには何も書き込まない。
+- フロントエンドには、ミューテーションテストがない。StrykerJS 10.1.1 は、純粋なロジックのテストを Node のテストランナーで動かし、857個のミュータントを73秒で試す。ただし、そのうち146個は、生き残るか、どのテストにも実行されない。初日から失敗するターゲットは誰の役にも立たないので、それらを殺すのはこれからの仕事である。
 
 重なりは、次のように解消した。
 
@@ -124,6 +134,7 @@ Schemathesis は、それを加えるマイルストーンで加わる（TPL-000
 - `smoke` と `e2e` は、どちらも手元のシステムを端から端まで動かし、どちらも予約のメールを待つ。ただし、それぞれが確かめるのは、もう一方には見えないものである。スモークテストは、HTTP ですべての応答を API の文書と照らし合わせる。エンドツーエンドテストは、画面・サーバー関数・ストリーミングされるページの部分を確かめる。この重なりは認めている。
 - Terraform のモジュールは `terraform test` でテストする。固定した Terraform が、各モジュールの隣の HCL のファイルを `mock_provider "aws"` に対して実行する。Terratest は使わない。使えば、テストのための Go のコードと専用のモジュールが増える。しかも、そのテストは本物のアカウントへ適用する。
 - `validate-live` と `rehearse-infra` は、どちらもすべてのユニットを組み立てる。検証は Docker もエミュレーターも要らず、`env.hcl` の値を読まない。リハーサルは stg の値を適用し、prd の値を plan する。この重なりは認めている。
+- `coverage-go` は、どのテストも実行しない行をすべてのパッケージについて報告するが、それで失敗することはない。`test-mutation` は、対象のパッケージにそうした行があると失敗する。この重なりは認めている。
 
 道具の動かし方の決まりは次のとおりである。
 
@@ -144,12 +155,14 @@ Schemathesis は、それを加えるマイルストーンで加わる（TPL-000
 - 悪い点：道具ごとに設定ファイルがあり、yamllint と Prettier の配置のルールのような、道具の間の取り決めは手で保つ必要がある。
 - 悪い点：時間の上限があるので、既知の脆弱性やリポジトリの外へのリンクのような役に立つチェックが `make check` から外れる。それらの指摘は、プッシュしたあとに CI で初めて出る。
 - 悪い点：時間はチェックを動かしたマシンで測るので、速いマシンでは上限に収まる実行が、遅いマシンでは上限を超えることがある。2026年11月の時点で、ほかの作業をしていないノート PC では、すべてのファイルに対する `make check` がフロントエンドを含めて20秒ほどで終わった。ほかの作業で忙しいマシンでは、すべてのチェックが通る実行でも60秒を超え、上限だけで失敗することがある。同じ実行を繰り返せば通る。
+- 悪い点：`test-mutation` の道具である gomutants は、v0.x の若いプロジェクトである。
 
 ### 確認の方法
 
 - 実行が `CHECK_BUDGET`（60秒）より長くかかると、`tools/scripts/check.sh` が `make check` を失敗させる。そのメッセージには、この記録が書かれている。
 - `make check` と `make check-all` のどのターゲットも `tools/scripts/task.sh` を通して動く。ファイルの一覧を受け取るターゲットは、その一覧を `tools/scripts/files.sh` から得る。`files.sh` は `.lintignore`・`CHECK_SCOPE`・`CHECK_FILES` を適用する。
 - `make check-all` は `selftest` を実行する。`selftest` は、`make check` のターゲットにケースがないとき、またはチェックが既知の悪い入力で失敗しなくなったときに失敗する。
+- `equivalent-mutants.allow` の行が生き残ったミュータントのどれにも一致しなければ、`test-mutation` は失敗する（`mutation/unused-allowance`）。理由を書いていない行でも失敗する（`mutation/allowance-format`）。新しい行が正しいかどうかは、レビューで決める。
 - 新しい道具は、レビューでこの記録の表と照らし合わせる。すでに道具のある関心事のための道具は、新しい記録を書いてその道具を置き換えるか、入れないかのどちらかである。
 
 ## 選択肢の長所と短所
@@ -182,5 +195,6 @@ Schemathesis は、それを加えるマイルストーンで加わる（TPL-000
 
 - `make help` が主なターゲットを一覧にし、`make/<area>.mk` が領域ごとのターゲットを持つ。
 - これらの道具の固定は TPL-0022 に、Trivy と GitHub の側のスキャナーを選んだ理由は TPL-0024 にある。
+- [ミューテーションテスト](../../guides/mutation-tests.ja.md)が、`test-mutation` の指摘の読み方と、`equivalent-mutants.allow` の行がふさわしい場合を説明している。
 
-<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:cc102fa47f571cb2b2ae714e8e2c5b9fe6033808423253b7e4054d19a8dbed10 -->
+<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:953fcbc4b22c8bd28e0694da63f5029bc45b1f5a145f354dba2a10da7ac8e480 -->

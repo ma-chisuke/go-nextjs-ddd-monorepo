@@ -34,9 +34,8 @@
 | `docs/contexts/` | 区切られた文脈ごとの README と用語集。 |
 | `docs/problems/` | API が返す problem の種類ごとのページ。 |
 | `docs/guides/` | エンドポイントを足す、スキーマを変える、といった繰り返す作業のやり方。`.claude/skills/` のスキルはこれに従う。 |
+| `evals/` | ハーネスの評価。作業、採点、実行の記録を置く（`evals/README.ja.md`）。 |
 | `.claude/` | Claude Code のフック・スキル・サブエージェント。 |
-
-アプリケーションのディレクトリは、README のマイルストーンが進むと増える。
 
 ## 一般的な既定と違う決まり
 
@@ -47,9 +46,10 @@
 - **生成物とロックファイル。** 手で書き換えない。元を直して `make gen` を実行するか、パッケージマネージャーを使う。`schema.sql` を変えたときは、`make gen-db-docs` も実行する（Docker が要る）。
 - **スキーマ。** 変えるのは文脈の `schema.sql` だけであり、マイグレーションのファイルはない。`schema-changes.allow` に自分の判断で行を足さない。危険な SQL 文を通すかどうかは、レビューで決めることである。（TPL-0010）
 - **スキャナーの例外。** `.trivyignore.yaml` に自分の判断で項目を足さない。Trivy の指摘を認めるかどうかは、レビューで決めることである。指摘がなくなるようにコードを変えるか、作業を止めて報告する。（TPL-0024）
+- **ミューテーションテスト。** `equivalent-mutants.allow` に自分の判断で行を足さない。ミュータントを生き残らせるかどうかは、レビューで決めることである。生き残ったミュータントは、テストで殺すか、コードを単純にして消す。（TPL-0023、[ガイド](docs/guides/mutation-tests.ja.md)）
 - **コミット。** Conventional Commits に従い、1つのコミットの目的は1つにする。フックを飛ばさない。
 - **GitHub Actions。** ワークフローのステップは、チェックアウト、mise の準備、AWS へのサインインのあとは `make` だけを呼ぶ。Action はコミット SHA で固定する。（TPL-0018、TPL-0024）
 - **環境。** `infra/live/stg/` と `infra/live/prd/` の違いは `env.hcl` だけである。ユニットは `infra/live/_units/` で、両方の環境について変える。（TPL-0015）
 - **禁止。** `.env` を読まない。force push をしない。`main` に push しない。prd にインフラを適用しない。
 
-<!-- i18n-source: AGENTS.md sha256:c6e0d0db09c59dda45d810055ffb598af3c32078688630e4e734fc81f3509e56 -->
+<!-- i18n-source: AGENTS.md sha256:9e6097c3679e44a09b5375ea78821434edd55ca6af121f7ace100614727816ad -->

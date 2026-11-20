@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-17
+date: 2026-11-20
 ---
 
 # TPL-0007: OpenAPI の文書と実装の一致を、層に分けたチェックで保つ
@@ -46,36 +46,45 @@ date: 2026-11-17
 | 2. 生成物の更新漏れ | 文書より古い生成コード | 生成し直し、差分がないことを求める |
 | 3. 文書にない入口の禁止 | 手で登録したルート | ルートを登録するのは生成コードだけにする。ルートを直接登録することは、lint のルールで禁じる |
 | 4. テストでの検証 | 型では表せない制約と、エラーの形 | テストで、すべてのリクエストと応答を kin-openapi で文書と照らし合わせる |
-| 5. 生成した入力 | 誰もテストを書いていない入力 | Schemathesis が、文書からリクエストを生成する。シードは固定する |
+| 5. 生成した入力 | 誰もテストを書いていない入力 | Schemathesis が、文書からリクエストを生成する。どの実行でも同じリクエストになる |
 | 6. 互換性 | 既存のクライアントにとって互換性を壊す変更 | oasdiff が、文書を main ブランチ上のバージョンと比べる |
 | 7. 文書そのもの | テンプレートの決まりに反する文書 | Redocly CLI で文書を lint する。4xx と 5xx の応答には `application/problem+json` だけを使う、というルールも含む（TPL-0008） |
 
 - 本番では、ミドルウェアが各リクエストを kin-openapi で文書と照らし合わせ、不正なリクエストには problem details で応答する（TPL-0008）。
 - 本番では応答を検証しない。応答は、リリースの前に層4がテストで確かめている。本番で各応答を検証すると、テストがすでに探している食い違いのために、すべてのリクエストの処理が増える。
-- 層5は、動いている API とデータベースを必要とし、時間もかかる。そのため `make check-all` で動かす。シードを固定しているので、同じコミットなら毎回同じ入力を送り、失敗を再現できる。
+- 層5は、動いている API とデータベースを必要とし、時間もかかる。そのため `make check-all` で動かす。同じコミットなら毎回同じ入力を送るので、失敗を再現できる。
+
+層5の仕組みは次のとおりである。
+
+- `test-api-fuzz` は、各文脈の API をチェックアウトからビルドし、それぞれ空いているポートで起動する。API が使うのは、手元の PostgreSQL にある専用のデータベース `api_fuzz_<checksum of the checkout path>` である。このデータベースは、実行の前に作り、実行のあとに消す。そのうえで、`contracts/http/` の各文書に対して Schemathesis 4.33.4 を実行する。`max-examples = 100` のとき、Schemathesis が送るリクエストは約1,900件（Facility に479件、Reservation に1,398件）で、ほかの作業をしていないマシンなら30秒ほどで終わる。
+- 最初の計画には「シードは固定する」と書いていた。実際に2回の実行を同じにしているのは、シードだけではない。Schemathesis の決定的なモード（各テストから固定のシードを取り、`--seed` を無視する）、例のデータベースを持たないこと、無効にしたキャッシュ、新しいデータベース、空の作業ディレクトリ、1つだけのワーカーの組み合わせである。2回の実行は同じリクエストを送り、違うのは API が作る id だけである。
+- Schemathesis のチェックは、どれも切っていない。そのうちの1つ `positive_data_acceptance` は、文書が許すリクエストを拒まないことを確かめる。このチェックは、規則を JSON Schema では表せない操作（registerRoom・listRooms・bookRoom・listReservations）では、422 も受け入れる。`If-Match` で結果が決まる rescheduleReservation と cancelReservation では、412・422・428 も受け入れる。それぞれの設定の理由は、`tools/schemathesis/schemathesis.toml` に書いてある。
 
 ### 結果
 
 - 良い点：背景と課題で挙げたどの種類の食い違いにも、それで失敗するチェックがある。
 - 良い点：層ごとに捕まえるものが違うので、1つの誤りに対する指摘は、たいてい7件でなく1件で済む。
 - 良い点：エラーの形は、ほかの応答と一緒にテストで確かめられる。別のレビューは要らない。
+- 良い点：層5は、最初の実行で、テストが見逃していた不具合を2つ見つけた。1つは、RFC 9110 の求める `Allow` ヘッダーが、405 の答えになかったことである。もう1つは、`4.0` のように小数部を付けて書いた整数を 400 で拒んでいたことである。OpenAPI 3.1 が使う JSON Schema 2020-12 は、この値を整数に数える。どちらの不具合も共通のリクエストの検証 `platform/httpserver/validate.go` にあり、どちらも直した。層4も、`Allow` のない 405 で失敗するようになった。
 - 悪い点：API の一致のために、テンプレートは生成器のほかに複数の道具（kin-openapi・Schemathesis・oasdiff・Redocly CLI）を固定し、更新し続ける。道具は、食い違いの種類ごとに1つずつである。
 - 悪い点：層4が確かめるのは、テストが送るリクエストだけである。層5がその隙間を狭めるが、すべての操作のすべての応答が文書に合うことを証明する層はない。
+- 悪い点：層5が確かめるのは Reservation の API の表面であり、その規則ではない。生成した予約は存在しない会議室を指すので、API は、ドメインの規則が見る前にそれを拒む。ステートフルな段階も、Schemathesis が推測するリンクを1つもたどらない。規則は層4が確かめる。
+- 悪い点：リクエストの検証も 422 で答える。そのため、上の操作で 422 を受け入れると、形式の解釈についての API の検証器と Schemathesis の食い違いを見逃しかねない。
 - 悪い点：意図して互換性を壊す変更も、同じ変更で文書のバージョンを上げない限り、層6で失敗する。
-- 悪い点：層5を動かすには API とデータベースが要る。そのため `make check-all` が遅くなり、手元のノートパソコンでは動かしにくくなる。
+- 悪い点：層5は API をビルドして起動し、手元の PostgreSQL を必要とするので、`make check-all` が遅くなる。ひどく忙しいマシンでは、Facility の答えが遅いと Reservation が 503 を返すことがあり、層5はそれをサーバーのエラーとして報告する。
 
 ### 確認の方法
 
-層1から4と、層6と7は、いま Go の側を検査している。
+7つの層は、いまどれも Go の側を検査している。
 層1は各操作を strict server のインターフェースに照らしてコンパイルし（`lint-go`、`test-go`）、層2は `gen-check-api` である。層2の隣では、sqlc の生成コードを `gen-check-sqlc` が調べる。
 層3は、`lint-arch` のルール `arch/route-registration` である。
 層4は API のテストのクライアント `backend/internal/platform/apitest` であり、すべての応答を kin-openapi で検証する。テストのリクエストはどれも `platform/httpserver` のリクエストの検証を通るので、それも層4に加わる。
+層5は `test-api-fuzz`（`tools/scripts/api-fuzz.sh`）であり、指摘を1件1行で、文書の中の操作の行に出す。
 層6は `lint-contracts-breaking`、層7は `lint-contracts` である。
 フロントエンドのマイルストーンから、層1と層2は TypeScript の側も検査する。Next.js のアプリは openapi-fetch を通して API を呼び、openapi-fetch は openapi-typescript が各文書から生成する型を受け取る（TPL-0006）。そのため、文書の許さない呼び出しがあれば、`lint-frontend-types` は失敗する。自己テストは、Facility の文書が宣言していないクエリパラメーターで、これを確かめる（`case_lint_frontend_types__api`）。これらの型の層2は `gen-check-api-ts` である。
-まだないのは、Schemathesis を加えるマイルストーンで加わる層5である。
 フロントエンドは、API の答えを型のとおりに読み、実行時には検証しない。本番が応答を検証しないのと同じである。応答は、各 API のテストで層4が検査する。そのうえで、エンドツーエンドテスト（`make check-all` の `make e2e`）が、画面を本物の API に対して動かす。
 
-次の表は、各層を動かすターゲットである。「予定」と書いたターゲットはまだなく、作るときに名前を変えることもある。
+次の表は、各層を動かすターゲットである。
 
 | 層 | Make のターゲット | 呼び出し元 |
 |---|---|---|
@@ -83,11 +92,11 @@ date: 2026-11-17
 | 2. 生成物の更新漏れ | `gen-check-api`。oapi-codegen をもう一度実行し、結果がコミットしたコードと違えば失敗する。`gen-check-api-ts` は、openapi-typescript について同じことをする | `make check` |
 | 3. 文書にない入口の禁止 | `lint-arch` のルール `arch/route-registration` | `make check` |
 | 4. テストでの検証 | `test-go`。`platform/apitest` のクライアントを通す | `make check` |
-| 5. 生成した入力 | `test-api`（予定） | `make check-all` |
+| 5. 生成した入力 | `test-api-fuzz`（予定では `test-api` という名前だった）。`contracts/http/` の各文書から Schemathesis がリクエストを生成し、チェックアウトからビルドした API に送る | `make check-all` |
 | 6. 互換性 | `lint-contracts-breaking`。oasdiff で、`origin/main` とのマージベース（`CHECK_BASE` を設定したときはそれとのマージベースで、CI はベースブランチを設定する）にある同じ文書と比べる | `make check` |
 | 7. 文書そのもの | `lint-contracts` | `make check` |
 
-層6は、同じ変更で文書の `info.version` を上げたとき、互換性を壊す変更を受け入れる。1.0 未満ではマイナーバージョンを、1.0 以降はメジャーバージョンを上げる。指摘を受けた人に向けて、[API を変更する](../../guides/api-changes.ja.md)がこの方法を説明している。
+層6は、同じ変更で文書の `info.version` を上げたとき、互換性を壊す変更を受け入れる。1.0 未満ではマイナーバージョンを、1.0 以降はメジャーバージョンを上げる。指摘を受けた人に向けて、[API を変更する](../../guides/api-changes.ja.md)がこの方法を説明している。層5の指摘の読み方と直し方も、同じガイドにある。
 
 これらの層が対象にするのは、OpenAPI の文書である。イベントの契約（JSON Schema と AsyncAPI の文書）には、同じ種類のチェックが別にあり、TPL-0013 が挙げている。文書には `lint-contracts`、スキーマには `lint-events`、互換性には `lint-events-breaking` を使い、テストがすべてのイベントをそのスキーマで検証する。
 
@@ -122,4 +131,4 @@ date: 2026-11-17
 - [oasdiff](https://github.com/oasdiff/oasdiff)
 - [Redocly CLI](https://redocly.com/docs/cli)
 
-<!-- i18n-source: TPL-0007-layered-checks-for-api-conformance.md sha256:b32defa75e3a8d65f7670552ed574400856e0f7e1fb962e2864551c808b02e80 -->
+<!-- i18n-source: TPL-0007-layered-checks-for-api-conformance.md sha256:34876676c64b3349dda070a79089f3611122d9f5634f46eac611c905a4dab310 -->

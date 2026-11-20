@@ -17,9 +17,9 @@ None yet.
 | [TPL-0003](template/TPL-0003-split-by-bounded-context.md) | Split the code by bounded context, and let the kind of subdomain set the weight of the implementation | accepted | 2026-11-17 |
 | [TPL-0004](template/TPL-0004-clean-architecture-with-io-free-domain.md) | Use a clean architecture, with a domain layer that does no I/O | accepted | 2026-11-17 |
 | [TPL-0005](template/TPL-0005-contexts-integrate-through-apis-and-events.md) | Bounded contexts do not depend on each other, and integrate through HTTP APIs and events | accepted | 2026-11-17 |
-| [TPL-0006](template/TPL-0006-openapi-with-oapi-codegen-strict-server.md) | Write each HTTP contract in OpenAPI 3.1, and generate the Go server with the oapi-codegen strict server | accepted | 2026-11-18 |
-| [TPL-0007](template/TPL-0007-layered-checks-for-api-conformance.md) | Keep the OpenAPI documents and the implementation in agreement with layered checks | accepted | 2026-11-17 |
-| [TPL-0008](template/TPL-0008-errors-as-rfc-9457-problem-details.md) | Return every error as RFC 9457 problem details | accepted | 2026-11-18 |
+| [TPL-0006](template/TPL-0006-openapi-with-oapi-codegen-strict-server.md) | Write each HTTP contract in OpenAPI 3.1, and generate the Go server with the oapi-codegen strict server | accepted | 2026-11-20 |
+| [TPL-0007](template/TPL-0007-layered-checks-for-api-conformance.md) | Keep the OpenAPI documents and the implementation in agreement with layered checks | accepted | 2026-11-20 |
+| [TPL-0008](template/TPL-0008-errors-as-rfc-9457-problem-details.md) | Return every error as RFC 9457 problem details | accepted | 2026-11-20 |
 | [TPL-0009](template/TPL-0009-one-postgresql-database-with-schema-per-context.md) | Use one PostgreSQL 18 database, with a schema and roles for each context | accepted | 2026-11-19 |
 | [TPL-0010](template/TPL-0010-declarative-schema-with-pgschema.md) | Manage the schema declaratively with pgschema | accepted | 2026-11-19 |
 | [TPL-0011](template/TPL-0011-database-access-with-sqlc.md) | Access the database with sqlc | accepted | 2026-11-17 |
@@ -31,9 +31,9 @@ None yet.
 | [TPL-0017](template/TPL-0017-aws-emulator-for-local-development.md) | Emulate AWS in the local environment with AWS Emulator | accepted | 2026-11-19 |
 | [TPL-0018](template/TPL-0018-github-actions-with-oidc.md) | Run CI/CD on GitHub Actions, and reach AWS through OIDC | accepted | 2026-11-19 |
 | [TPL-0019](template/TPL-0019-mit-0-license.md) | License the template under MIT-0 | accepted | 2026-11-17 |
-| [TPL-0020](template/TPL-0020-agent-harness-prefers-deterministic-checks.md) | Prefer deterministic checks in the harness for coding agents, and start with minimal instructions | accepted | 2026-11-17 |
+| [TPL-0020](template/TPL-0020-agent-harness-prefers-deterministic-checks.md) | Prefer deterministic checks in the harness for coding agents, and start with minimal instructions | accepted | 2026-11-20 |
 | [TPL-0021](template/TPL-0021-english-source-japanese-translation.md) | Write documents in English, with a Japanese translation next to each | accepted | 2026-11-17 |
 | [TPL-0022](template/TPL-0022-pin-tool-versions-with-mise.md) | Pin tool versions in one place per ecosystem, with mise at the root | accepted | 2026-11-19 |
-| [TPL-0023](template/TPL-0023-one-tool-per-concern.md) | Use one tool per concern, run every tool through make, and give `make check` a time budget | accepted | 2026-11-19 |
+| [TPL-0023](template/TPL-0023-one-tool-per-concern.md) | Use one tool per concern, run every tool through make, and give `make check` a time budget | accepted | 2026-11-20 |
 | [TPL-0024](template/TPL-0024-supply-chain-defenses.md) | Defend the supply chain in layers | accepted | 2026-11-19 |
 | [TPL-0025](template/TPL-0025-dependency-updates-with-renovate.md) | Update dependencies and tools with Renovate | accepted | 2026-11-19 |

@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-18
+date: 2026-11-20
 ---
 
 # TPL-0008: エラーはすべて RFC 9457 の problem details で返す
@@ -66,6 +66,7 @@ HTTP のアダプターは、こうしたエラーをそれぞれステータス
 - `redocly.yaml` のルール `rule/problem-details-only` は、OpenAPI の文書にある 4xx と 5xx の応答のメディアタイプを調べる。`application/problem+json` 以外があれば失敗する（TPL-0007 の層7）。このルールは `lint-contracts` が実行する。
 - `lint-go` のリンター exhaustive は、表に case のない業務エラーの種類があると失敗する。各文脈の HTTP のアダプターにあるテスト `problems_test.go` は、専用の problem に対応しない種類があると失敗する。`docs/problems/` のページか、その対訳の欠けた problem があっても失敗する。
 - API のテストは、`backend/internal/platform/apitest` のクライアントを通して、すべての応答を文書と照らし合わせて検証する（TPL-0007 の層4）。そのため、problem details でないエラーの本文や、操作が宣言していないステータスは、それを返したテストで失敗する。
+- `make check-all` の `test-api-fuzz` は、Schemathesis が各文書から生成したリクエストについて、同じことを確かめる（TPL-0007 の層5）。操作が宣言していないステータスの答えや、そのステータスについて文書が示すものと違うメディアタイプの答えは、指摘になる。
 
 フロントエンドはすべての API のクライアントであり、この記録のとおりに problem を読む。
 
@@ -103,4 +104,4 @@ HTTP のアダプターは、こうしたエラーをそれぞれステータス
 - [RFC 9457: Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457.html)
 - [RFC 6901: JavaScript Object Notation (JSON) Pointer](https://www.rfc-editor.org/rfc/rfc6901.html)
 
-<!-- i18n-source: TPL-0008-errors-as-rfc-9457-problem-details.md sha256:38767779dc8f0135f25a1b2f1f34d453a98c42daa20270384d5a6dc8e1f609a8 -->
+<!-- i18n-source: TPL-0008-errors-as-rfc-9457-problem-details.md sha256:7af3099fea9bd5423efa7b7e8b00727f33642c5d0a8c799e696c7bb235d16a61 -->
