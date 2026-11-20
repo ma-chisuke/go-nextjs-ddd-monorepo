@@ -37,8 +37,6 @@
 | `evals/` | ハーネスの評価。作業、採点、実行の記録を置く（[README](evals/README.ja.md)）。 |
 | `.claude/` | Claude Code のフック・スキル・サブエージェント。 |
 
-アプリケーションのディレクトリは、README のマイルストーンが進むと増える。
-
 ## 一般的な既定と違う決まり
 
 - **道具。** 道具をグローバルに入れない。`npx`・`go install`・`pip` で実行しない。`mise.toml`（そのあと `make tools-lock`）・`package.json`・`pyproject.toml`・`tools/go.mod` のどれかでバージョンを固定し、`make` から実行する。（TPL-0022）
@@ -54,4 +52,4 @@
 - **環境。** `infra/live/stg/` と `infra/live/prd/` の違いは `env.hcl` だけである。ユニットは `infra/live/_units/` で、両方の環境について変える。（TPL-0015）
 - **禁止。** `.env` を読まない。force push をしない。`main` に push しない。prd にインフラを適用しない。
 
-<!-- i18n-source: AGENTS.md sha256:9d6b9584f029124c8acd04640c60f47ce75334e23a9e6a67d4f02824325a83db -->
+<!-- i18n-source: AGENTS.md sha256:d4eadeb845cacf136c34c65bc5c2b3f128d99a6b0febcbf944abc1e39dff7ade -->

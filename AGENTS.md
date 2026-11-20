@@ -37,8 +37,6 @@ The reason for a rule is in the decision record that the rule cites ([docs/adr/]
 | `evals/` | The evaluation of the harness: tasks, graders, and the records of the runs ([README](evals/README.md)). |
 | `.claude/` | Hooks, skills, and subagents for Claude Code. |
 
-The app directories appear as the milestones in the README add them.
-
 ## Rules that differ from common defaults
 
 - **Tools.** Never install a tool globally, and never run one with `npx`, `go install`, or `pip`. Pin it in `mise.toml` (then `make tools-lock`), `package.json`, `pyproject.toml`, or `tools/go.mod`, and run it through `make`. (TPL-0022)
