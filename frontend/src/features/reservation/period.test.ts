@@ -8,6 +8,7 @@ test("a period entered in Asia/Tokyo is nine hours ahead of UTC", () => {
     ok: true,
     startsAt: new Date("2026-11-20T01:00:00Z"),
     endsAt: new Date("2026-11-20T02:30:00Z"),
+    fieldErrors: {},
   });
 });
 
@@ -16,6 +17,7 @@ test("a period entered in UTC is the same reading", () => {
     ok: true,
     startsAt: new Date("2026-11-20T10:00:00Z"),
     endsAt: new Date("2026-11-20T11:30:00Z"),
+    fieldErrors: {},
   });
 });
 
@@ -40,6 +42,7 @@ test("a time that happens twice starts at its first instant", () => {
     ok: true,
     startsAt: new Date("2026-11-01T05:00:00Z"),
     endsAt: new Date("2026-11-01T05:30:00Z"),
+    fieldErrors: {},
   });
 });
 
@@ -49,13 +52,30 @@ test("an end that happens twice is the first one after the start", () => {
     ok: true,
     startsAt: new Date("2026-11-01T05:45:00Z"),
     endsAt: new Date("2026-11-01T06:15:00Z"),
+    fieldErrors: {},
+  });
+});
+
+test("an end at the same time as a start that happens twice is the second one", () => {
+  // 01:30 EDT to 01:30 EST: an hour, not nothing.
+  assert.deepEqual(readPeriod("2026-11-01", "01:30", "01:30", "America/New_York"), {
+    ok: true,
+    startsAt: new Date("2026-11-01T05:30:00Z"),
+    endsAt: new Date("2026-11-01T06:30:00Z"),
+    fieldErrors: {},
   });
 });
 
 test("times that are not times of day are refused at their fields", () => {
-  const read = readPeriod("2026-11-20", "", "10", "UTC");
-  assert.equal(read.ok, false);
-  assert.deepEqual(Object.keys(read.fieldErrors), ["start", "end"]);
+  const message = "Enter a time of day on a 24-hour clock, such as 10:00.";
+  assert.deepEqual(readPeriod("2026-11-20", "", "10", "UTC"), {
+    ok: false,
+    fieldErrors: { start: message, end: message },
+  });
+  assert.deepEqual(readPeriod("2026-11-20", "", "11:00", "UTC"), {
+    ok: false,
+    fieldErrors: { start: message },
+  });
 });
 
 test("a period reads in the time zone of the room", () => {

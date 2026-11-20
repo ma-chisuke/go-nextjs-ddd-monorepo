@@ -14,7 +14,9 @@
 const minuteMs = 60_000;
 const dayMs = 24 * 60 * minuteMs;
 
-const datePattern = /^(\d{4})-(\d{2})-(\d{2})$/;
+// The numbers of a date. A date must also read back as the whole value
+// (dateParts), so the pattern needs no anchors.
+const datePattern = /(\d{4})-(\d{2})-(\d{2})/;
 const timePattern = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 /** Whether a value is a date of the calendar, such as "2026-11-20". */
@@ -28,11 +30,11 @@ export function isTimeOfDay(value: string): boolean {
   return timePattern.test(value);
 }
 
-/** Whether JavaScript knows a value as a time zone, such as "Asia/Tokyo". */
+/**
+ * Whether JavaScript knows a value as a time zone, such as "Asia/Tokyo". Intl
+ * refuses any other value, "" included.
+ */
 export function isTimeZone(value: string): boolean {
-  if (value === "") {
-    return false;
-  }
   try {
     formatter(value);
     return true;
@@ -42,11 +44,12 @@ export function isTimeZone(value: string): boolean {
 }
 
 /**
- * The names of the time zones that JavaScript knows, UTC first. The list of
- * Intl leaves out UTC, which is a zone of the IANA database too.
+ * The names of the time zones that JavaScript knows, UTC first, and each
+ * once. The list of Intl leaves out UTC in Node, although it is a zone of the
+ * IANA database too.
  */
 export function timeZoneNames(): string[] {
-  return ["UTC", ...Intl.supportedValuesOf("timeZone").filter((name) => name !== "UTC")];
+  return [...new Set(["UTC", ...Intl.supportedValuesOf("timeZone")])];
 }
 
 /** The date that comes a number of days after a date, or before it when the number is negative. */
@@ -86,20 +89,21 @@ export type LocalTime =
 export function instantsAt(date: string, time: string, timeZone: string): LocalTime {
   const local = localMs(date, time);
   // The offset of the zone a day before and a day after. A transition of the
-  // clocks between the two is what makes a time repeat or vanish.
+  // clocks between the two is what makes a time repeat or vanish. When the
+  // clocks move back, the offset before is the larger one, so the instant with
+  // it comes first.
   const before = offsetAt(local - dayMs, timeZone);
   const after = offsetAt(local + dayMs, timeZone);
-  const candidates = [...new Set([local - before, local - after])]
-    .filter((instant) => instant + offsetAt(instant, timeZone) === local)
-    .sort((a, b) => a - b);
-  const [first, second] = candidates;
-  if (first !== undefined && second !== undefined) {
-    return { kind: "repeated", earlier: new Date(first), later: new Date(second) };
+  const [first, second] = [...new Set([local - before, local - after])].filter(
+    (instant) => instant + offsetAt(instant, timeZone) === local,
+  );
+  if (first === undefined) {
+    return { kind: "skipped", next: new Date(transition(local - after, local - before, timeZone)) };
   }
-  if (first !== undefined) {
+  if (second === undefined) {
     return { kind: "unique", instant: new Date(first) };
   }
-  return { kind: "skipped", next: new Date(transition(local - after, local - before, timeZone)) };
+  return { kind: "repeated", earlier: new Date(first), later: new Date(second) };
 }
 
 /**
@@ -146,7 +150,8 @@ const months = [
 export function formatDate(date: string): string {
   const parts = requireDate(date);
   const weekday = new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).getUTCDay();
-  return `${weekdays[weekday] ?? ""} ${String(parts.day)} ${months[parts.month - 1] ?? ""} ${String(parts.year)}`;
+  // The tables name every weekday, 0 to 6, and every month of a date, 1 to 12.
+  return `${String(weekdays[weekday])} ${String(parts.day)} ${String(months[parts.month - 1])} ${String(parts.year)}`;
 }
 
 // The search for the instant at which the clocks jumped forward: the offset
@@ -175,13 +180,12 @@ function offsetAt(instantMs: number, timeZone: string): number {
 }
 
 // What the clock of a zone shows at an instant, as the milliseconds of the
-// same reading in UTC.
+// same reading in UTC. The parts that are not numbers, such as the "/"
+// between them, are kept as NaN under "literal", and never read.
 function wallMs(instantMs: number, timeZone: string): number {
   const fields: Record<string, number> = {};
   for (const part of formatter(timeZone).formatToParts(new Date(instantMs))) {
-    if (part.type !== "literal") {
-      fields[part.type] = Number(part.value);
-    }
+    fields[part.type] = Number(part.value);
   }
   return Date.UTC(
     fields.year ?? 0,
@@ -193,26 +197,21 @@ function wallMs(instantMs: number, timeZone: string): number {
   );
 }
 
-const formatters = new Map<string, Intl.DateTimeFormat>();
-
-// One formatter per zone, made once: making one is slow. It throws a
-// RangeError for a zone that JavaScript does not know, before it is kept.
+// The formatter of the calendar and the clock of a zone. It throws a
+// RangeError for a zone that JavaScript does not know. A new one for each
+// reading takes about 40 microseconds, and a page reads the clocks a few
+// dozen times, so none is kept.
 function formatter(timeZone: string): Intl.DateTimeFormat {
-  let found = formatters.get(timeZone);
-  if (found === undefined) {
-    found = new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      hourCycle: "h23",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-    formatters.set(timeZone, found);
-  }
-  return found;
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 }
 
 // A date and a time of day as the milliseconds of the same reading in UTC.
@@ -237,12 +236,11 @@ function dateParts(value: string): DateParts | undefined {
     return undefined;
   }
   const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  // A date that the calendar does not have, such as 2026-02-30, reads back as
+  // another date. So does a year before 100, which Date.UTC reads as one of
+  // 1900 to 1999.
   const date = new Date(Date.UTC(year, month - 1, day));
-  if (
-    date.getUTCFullYear() !== year ||
-    date.getUTCMonth() !== month - 1 ||
-    date.getUTCDate() !== day
-  ) {
+  if (formatDateParts(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate()) !== value) {
     return undefined;
   }
   return { year, month, day };

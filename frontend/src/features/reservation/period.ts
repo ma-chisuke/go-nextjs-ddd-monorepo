@@ -7,8 +7,9 @@ import { formatDate, instantsAt, isTimeOfDay, wallTime } from "../../lib/zoned-t
 
 /**
  * The instants of a period that a person entered as a date and two times of
- * day in the time zone of the room, or the messages for the times that stand
- * for no instant. `date` is a date and `timeZone` a zone that JavaScript knows.
+ * day in the time zone of the room, and the messages for the times that stand
+ * for no instant: none when the period is `ok`. `date` is a date and
+ * `timeZone` a zone that JavaScript knows.
  *
  * Where the clocks move forward, the times that they skip do not exist, and
  * the person is told so. Where they move back, the times in between happen
@@ -22,7 +23,7 @@ export function readPeriod(
   end: string,
   timeZone: string,
 ):
-  | { ok: true; startsAt: Date; endsAt: Date }
+  | { ok: true; startsAt: Date; endsAt: Date; fieldErrors: FieldErrors<"start" | "end"> }
   | { ok: false; fieldErrors: FieldErrors<"start" | "end"> } {
   const at = (time: string, after?: Date): Date | string => {
     if (!isTimeOfDay(time)) {
@@ -43,7 +44,7 @@ export function readPeriod(
   const startsAt = at(start);
   const endsAt = at(end, startsAt instanceof Date ? startsAt : undefined);
   if (startsAt instanceof Date && endsAt instanceof Date) {
-    return { ok: true, startsAt, endsAt };
+    return { ok: true, startsAt, endsAt, fieldErrors: {} };
   }
   const fieldErrors: FieldErrors<"start" | "end"> = {};
   if (typeof startsAt === "string") {

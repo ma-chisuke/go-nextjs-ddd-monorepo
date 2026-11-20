@@ -3,6 +3,7 @@ import { describe, test } from "node:test";
 
 import type { Problem } from "../../lib/problem.ts";
 import {
+  blankBooking,
   bookingFailed,
   bookingFingerprint,
   chooseKey,
@@ -49,6 +50,10 @@ const request: NewReservation = {
 };
 
 describe("readBooking", () => {
+  test("a form that nobody has submitted shows no message, and has its first key", () => {
+    assert.deepEqual(blankBooking("key-1"), { idempotencyKey: "key-1", fieldErrors: {} });
+  });
+
   test("a filled-in form asks for the instants of its times in the zone of the room", () => {
     const read = readBooking(form(filledIn), keys());
     assert.equal(read.ok, true);
@@ -63,14 +68,26 @@ describe("readBooking", () => {
       keys(),
     );
     assert.equal(read.ok, false);
-    assert.deepEqual(Object.keys(read.state.fieldErrors).sort(), [
-      "attendees",
-      "end",
-      "organizerEmail",
-      "start",
-    ]);
+    assert.deepEqual(read.state.fieldErrors, {
+      start: "Enter a time of day on a 24-hour clock, such as 10:00.",
+      end: "Enter a time of day on a 24-hour clock, such as 10:00.",
+      attendees: "Enter a whole number from 1 to 1000.",
+      organizerEmail: "Enter an email address, such as organizer@example.com.",
+    });
     assert.equal(read.state.idempotencyKey, "key-1");
     assert.equal(read.state.values?.end, "25:00");
+  });
+
+  test("a field that does not fit on its own gets the one message", () => {
+    for (const [field, value] of [
+      ["end", "25:00"],
+      ["attendees", "1001"],
+      ["organizerEmail", "nobody"],
+    ] as const) {
+      const read = readBooking(form({ ...filledIn, [field]: value }), keys());
+      assert.equal(read.ok, false, field);
+      assert.deepEqual(Object.keys(read.state.fieldErrors), [field]);
+    }
   });
 
   test("a time that the clocks skip is refused before the API sees it", () => {
@@ -91,6 +108,7 @@ describe("readBooking", () => {
       const read = readBooking(form({ ...filledIn, ...broken }), keys());
       assert.equal(read.ok, false);
       assert.equal(read.state.notice?.title, "This form cannot be read.");
+      assert.match(read.state.notice.detail ?? "", /^[A-Z].*\.$/);
     }
   });
 
@@ -155,10 +173,19 @@ describe("the Idempotency-Key", () => {
       bookingFingerprint({ ...request, startsAt: "2026-11-20T10:00:00+09:00" }),
       fingerprint,
     );
+    assert.equal(bookingFingerprint({ ...request, roomId: roomId.toUpperCase() }), fingerprint);
     assert.notEqual(
       bookingFingerprint({ ...request, organizerEmail: "other@example.com" }),
       fingerprint,
     );
+  });
+
+  test("the fingerprint of a booking is the same in every release", () => {
+    // A page rendered before a release can send its form after it, and the
+    // same booking must keep its key. The values are FNV-1a of the JSON of
+    // the booking, from an implementation of its own.
+    assert.equal(fingerprint, "fcc1bf0f");
+    assert.equal(bookingFingerprint({ ...request, attendees: 32 }), "013ae610");
   });
 
   test("a key that booked something else needs a new key", () => {
@@ -204,4 +231,18 @@ test("a refused booking shows the words of its kind and keeps the key", () => {
   assert.deepEqual(state.noticeFields, ["start", "end"]);
   assert.equal(state.idempotencyKey, "key-1");
   assert.equal(state.values?.organizerEmail, "organizer@example.com");
+});
+
+test("a booking that got no answer from Facility says that nothing was booked", () => {
+  const read = readBooking(form(filledIn), keys());
+  assert.equal(read.ok, true);
+  const state = bookingFailed(
+    {
+      type: "https://example.com/docs/problems/facility-unavailable.md",
+      title: "Facility does not answer",
+      status: 503,
+    },
+    read.booking,
+  );
+  assert.match(state.notice?.detail ?? "", /^Nothing was booked\./);
 });

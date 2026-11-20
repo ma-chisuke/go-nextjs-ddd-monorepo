@@ -48,21 +48,17 @@ export function readRegistration(
   form: FormData,
 ): { ok: true; room: NewRoom; values: RoomValues } | { ok: false; state: RegistrationState } {
   const values: RoomValues = {
-    name: formText(form, "name") ?? "",
-    capacity: formText(form, "capacity") ?? "",
-    openFrom: formText(form, "openFrom") ?? "",
-    openUntil: formText(form, "openUntil") ?? "",
-    timeZone: formText(form, "timeZone") ?? "",
+    name: formText(form, "name"),
+    capacity: formText(form, "capacity"),
+    openFrom: formText(form, "openFrom"),
+    openUntil: formText(form, "openUntil"),
+    timeZone: formText(form, "timeZone"),
   };
   const errors: FieldErrors<RoomField> = {};
   if (values.name === "") {
     errors.name = "Enter the name of the room.";
   } else if (values.name.length > longestName) {
     errors.name = `Use at most ${String(longestName)} characters.`;
-  }
-  const capacity = wholeNumber(values.capacity, 1, largestCapacity);
-  if (capacity === undefined) {
-    errors.capacity = `Enter a whole number from 1 to ${String(largestCapacity)}.`;
   }
   for (const field of ["openFrom", "openUntil"] as const) {
     if (!isTimeOfDay(values[field])) {
@@ -72,7 +68,12 @@ export function readRegistration(
   if (values.timeZone === "" || values.timeZone.length > longestTimeZone) {
     errors.timeZone = "Choose a time zone.";
   }
+  // The capacity comes last, because the room needs it as a number.
+  const capacity = wholeNumber(values.capacity, 1, largestCapacity);
   if (capacity === undefined || Object.keys(errors).length > 0) {
+    if (capacity === undefined) {
+      errors.capacity = `Enter a whole number from 1 to ${String(largestCapacity)}.`;
+    }
     return { ok: false, state: { values, fieldErrors: errors } };
   }
   return {

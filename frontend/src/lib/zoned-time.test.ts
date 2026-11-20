@@ -70,11 +70,13 @@ describe("Asia/Tokyo, which has no daylight saving time", () => {
 });
 
 describe("America/New_York, which has daylight saving time", () => {
-  test("on the day the clocks move forward, 02:30 does not exist", () => {
-    const localTime = instantsAt("2026-03-08", "02:30", "America/New_York");
-    assert.equal(localTime.kind, "skipped");
-    // At 02:00 EST the clocks jump to 03:00 EDT.
-    assert.equal(localTime.next.toISOString(), "2026-03-08T07:00:00.000Z");
+  test("on the day the clocks move forward, the times from 02:00 to 02:59 do not exist", () => {
+    for (const time of ["02:00", "02:30", "02:59"]) {
+      const localTime = instantsAt("2026-03-08", time, "America/New_York");
+      assert.equal(localTime.kind, "skipped", time);
+      // At 02:00 EST the clocks jump to 03:00 EDT.
+      assert.equal(localTime.next.toISOString(), "2026-03-08T07:00:00.000Z", time);
+    }
   });
 
   test("on the day the clocks move forward, the times around the gap exist once", () => {
@@ -126,6 +128,35 @@ describe("America/New_York, which has daylight saving time", () => {
   });
 });
 
+describe("Europe/Berlin, east of Greenwich, which has daylight saving time", () => {
+  test("on the day the clocks move forward, 02:30 does not exist", () => {
+    const localTime = instantsAt("2026-03-29", "02:30", "Europe/Berlin");
+    assert.equal(localTime.kind, "skipped");
+    // At 02:00 CET the clocks jump to 03:00 CEST.
+    assert.equal(localTime.next.toISOString(), "2026-03-29T01:00:00.000Z");
+    assert.equal(
+      unique(instantsAt("2026-03-29", "01:59", "Europe/Berlin")),
+      "2026-03-29T00:59:00.000Z",
+    );
+  });
+
+  test("on the day the clocks move back, 02:30 happens twice", () => {
+    const localTime = instantsAt("2026-10-25", "02:30", "Europe/Berlin");
+    assert.equal(localTime.kind, "repeated");
+    assert.equal(localTime.earlier.toISOString(), "2026-10-25T00:30:00.000Z");
+    assert.equal(localTime.later.toISOString(), "2026-10-25T01:30:00.000Z");
+  });
+});
+
+describe("America/Havana, where the clocks move back to midnight", () => {
+  test("a day whose midnight happens twice starts at the first one", () => {
+    // At 01:00 CDT the clocks go back to 00:00 CST.
+    const { from, to } = dayWindow("2026-11-01", "America/Havana");
+    assert.equal(from.toISOString(), "2026-11-01T04:00:00.000Z");
+    assert.equal(to.getTime() - from.getTime(), 25 * hourMs);
+  });
+});
+
 describe("America/Santiago, where the clocks jump over midnight", () => {
   test("a day whose midnight does not exist starts when the clocks land", () => {
     // At 00:00 -04 the clocks jump to 01:00 -03.
@@ -157,6 +188,10 @@ test("isDate accepts dates of the calendar only", () => {
   assert.equal(isDate("2026-13-01"), false);
   assert.equal(isDate("2026-1-1"), false);
   assert.equal(isDate("20 November 2026"), false);
+  assert.equal(isDate("x2026-11-20"), false);
+  assert.equal(isDate("2026-11-20T10:00"), false);
+  // JavaScript reads a year before 100 as one of 1900 to 1999.
+  assert.equal(isDate("0099-12-31"), false);
   assert.equal(isDate(""), false);
 });
 
@@ -165,6 +200,7 @@ test("isTimeOfDay accepts hours and minutes on a 24-hour clock", () => {
   assert.equal(isTimeOfDay("23:59"), true);
   assert.equal(isTimeOfDay("24:00"), false);
   assert.equal(isTimeOfDay("9:30"), false);
+  assert.equal(isTimeOfDay("T09:30"), false);
   assert.equal(isTimeOfDay("09:30:00"), false);
 });
 
@@ -196,8 +232,34 @@ test("formatDate writes the weekday, the day, the month, and the year", () => {
   assert.equal(formatDate("2027-01-03"), "Sunday 3 January 2027");
 });
 
+test("formatDate names every month and every weekday", () => {
+  // The first days of the months of 2026 fall on each of the seven weekdays.
+  for (const [date, text] of [
+    ["2026-01-01", "Thursday 1 January 2026"],
+    ["2026-02-01", "Sunday 1 February 2026"],
+    ["2026-03-01", "Sunday 1 March 2026"],
+    ["2026-04-01", "Wednesday 1 April 2026"],
+    ["2026-05-01", "Friday 1 May 2026"],
+    ["2026-06-01", "Monday 1 June 2026"],
+    ["2026-07-01", "Wednesday 1 July 2026"],
+    ["2026-08-01", "Saturday 1 August 2026"],
+    ["2026-09-01", "Tuesday 1 September 2026"],
+    ["2026-10-01", "Thursday 1 October 2026"],
+    ["2026-11-01", "Sunday 1 November 2026"],
+    ["2026-12-01", "Tuesday 1 December 2026"],
+  ] as const) {
+    assert.equal(formatDate(date), text);
+  }
+});
+
 test("a value that is not a date or a time of day is refused", () => {
-  assert.throws(() => instantsAt("2026-02-30", "10:00", "UTC"), RangeError);
-  assert.throws(() => instantsAt("2026-11-20", "25:00", "UTC"), RangeError);
+  assert.throws(() => instantsAt("2026-02-30", "10:00", "UTC"), {
+    name: "RangeError",
+    message: "2026-02-30 is not a date such as 2026-11-20",
+  });
+  assert.throws(() => instantsAt("2026-11-20", "25:00", "UTC"), {
+    name: "RangeError",
+    message: "25:00 is not a time of day such as 09:30",
+  });
   assert.throws(() => instantsAt("2026-11-20", "10:00", "Mars/Olympus_Mons"), RangeError);
 });

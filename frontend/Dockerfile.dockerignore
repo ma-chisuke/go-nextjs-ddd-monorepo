@@ -12,6 +12,7 @@ frontend/.next/
 frontend/next-env.d.ts
 frontend/e2e/
 frontend/playwright.config.ts
+frontend/stryker.config.mjs
 frontend/test-results/
 frontend/playwright-report/
 frontend/**/*.test.ts

@@ -23,6 +23,11 @@ test("problemKind is the name of the page of the problem", () => {
     "room-already-booked",
   );
   assert.equal(problemKind({ type: "about:blank", title: "", status: 503 }), "about:blank");
+  // Only the extension .md comes off the name of the page.
+  assert.equal(
+    problemKind({ type: "/docs/problems/notes.mdx", title: "", status: 500 }),
+    "notes.mdx",
+  );
 });
 
 test("fieldErrors gives the first message of each field", () => {
@@ -38,17 +43,27 @@ test("fieldErrors of a problem without invalid parts is empty", () => {
 });
 
 test("unavailable makes a problem of a failure that brought none", () => {
-  const problem = unavailable("Facility", new Error("fetch failed"));
-  assert.equal(problem.status, 503);
-  assert.equal(problem.title, "Facility does not answer");
-  assert.equal(problem.detail, "fetch failed");
+  assert.deepEqual(unavailable("Facility", new Error("fetch failed")), {
+    type: "about:blank",
+    title: "Facility does not answer",
+    status: 503,
+    detail: "fetch failed",
+  });
   assert.equal(unavailable("Facility", "timeout").detail, "The service could not be reached.");
 });
 
 test("isProblem tells a problem from another answer", () => {
-  assert.equal(isProblem(invalid), true);
-  assert.equal(isProblem({ type: "about:blank", title: "x" }), false);
-  assert.equal(isProblem("Bad Gateway"), false);
-  assert.equal(isProblem(null), false);
-  assert.equal(isProblem(undefined), false);
+  for (const [value, expected] of [
+    [invalid, true],
+    [{ type: "about:blank", title: "x", status: 502 }, true],
+    [{ title: "x", status: 502 }, false],
+    [{ type: "about:blank", status: 502 }, false],
+    [{ type: "about:blank", title: "x" }, false],
+    [{ type: "about:blank", title: "x", status: "502" }, false],
+    ["Bad Gateway", false],
+    [null, false],
+    [undefined, false],
+  ] as const) {
+    assert.equal(isProblem(value), expected, JSON.stringify(value));
+  }
 });
