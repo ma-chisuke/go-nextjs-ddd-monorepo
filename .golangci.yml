@@ -8,6 +8,11 @@ version: "2"
 
 run:
   timeout: 3m
+  # golangci-lint takes one lock for each machine. A second run waits for the
+  # first one instead of failing: `make check-all` lints in more than one
+  # check at once (the self-test, the graders of the evaluation), and so do
+  # an agent and a hook.
+  allow-serial-runners: true
   modules-download-mode: readonly
   # Also lint the tests that need a database or the running services
   # (`make check-all` runs them).
