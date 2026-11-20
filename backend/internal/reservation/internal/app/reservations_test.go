@@ -69,7 +69,7 @@ func (f fixture) book(t *testing.T, key string, period domain.Period) app.Versio
 
 // confirmedEvent returns the event ReservationConfirmed of a reservation of
 // room A by the organizer of booking, at now.
-func confirmedEvent(id domain.ReservationID, period domain.Period, attendees int) domain.Event {
+func confirmedEvent(id domain.ReservationID, period domain.Period, attendees int32) domain.Event {
 	return domain.ReservationConfirmed{
 		Reservation: id, Room: roomA.ID, Period: period, Attendees: attendees,
 		Organizer: "organizer@example.com", OccurredAt: now,
@@ -300,7 +300,7 @@ func TestRescheduleReservation(t *testing.T) {
 	booked := f.book(t, "k1", on(10, 11))
 	other := f.book(t, "k2", on(14, 15))
 	id := booked.Reservation.ID()
-	start, end, attendees := at(20, 12, 0), at(20, 14, 0), 6
+	start, end, attendees := at(20, 12, 0), at(20, 14, 0), int32(6)
 
 	// A longer period that overlaps the old one: a reservation never stands
 	// in its own way.
@@ -327,7 +327,7 @@ func TestRescheduleReservation(t *testing.T) {
 	// The version that the client read is the current one. A change that
 	// names an older one is refused before the rules apply: the client reads
 	// the reservation again first.
-	tooMany := 9
+	tooMany := int32(9)
 	_, err = f.uc.RescheduleReservation(t.Context(), app.RescheduleReservationInput{Reservation: id, Read: 2, Attendees: &attendees})
 	wantAppKind(t, err, app.KindVersionMismatch)
 	_, err = f.uc.RescheduleReservation(t.Context(), app.RescheduleReservationInput{Reservation: id, Read: 2, Attendees: &tooMany})
@@ -376,7 +376,7 @@ func TestChangeInARace(t *testing.T) {
 	racing := app.New(conflictingStore{store}, apptest.NewRooms(roomA), apptest.NewClock(now), ids)
 	_, err = racing.CancelReservation(t.Context(), booked.Reservation.ID(), 1)
 	wantAppKind(t, err, app.KindVersionMismatch)
-	attendees := 2
+	attendees := int32(2)
 	_, err = racing.RescheduleReservation(t.Context(), app.RescheduleReservationInput{Reservation: booked.Reservation.ID(), Read: 1, Attendees: &attendees})
 	wantAppKind(t, err, app.KindVersionMismatch)
 
@@ -417,7 +417,7 @@ func TestCancelReservation(t *testing.T) {
 
 	_, err = f.uc.CancelReservation(t.Context(), id, 2)
 	wantDomainKind(t, err, domain.KindReservationCancelled)
-	attendees := 2
+	attendees := int32(2)
 	_, err = f.uc.RescheduleReservation(t.Context(), app.RescheduleReservationInput{Reservation: id, Read: 2, Attendees: &attendees})
 	wantDomainKind(t, err, domain.KindReservationCancelled)
 	_, err = f.uc.CancelReservation(t.Context(), apptest.ID(42), 1)
@@ -608,7 +608,7 @@ func (s brokenStore) FindKey(ctx context.Context, key string) (app.IdempotencyKe
 // failure of each method that it calls.
 func TestFailuresOfTheStore(t *testing.T) {
 	t.Parallel()
-	attendees := 2
+	attendees := int32(2)
 	tests := []struct {
 		name   string
 		broken string

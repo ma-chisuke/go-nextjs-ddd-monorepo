@@ -105,10 +105,6 @@ func (s *Store) Get(ctx context.Context, id domain.ReservationID) (app.Versioned
 // Update replaces the reservation if it is still at version read, and stores
 // its events, in one transaction.
 func (s *Store) Update(ctx context.Context, r domain.Reservation, events []domain.Event, read app.Version, at time.Time) (app.Version, error) {
-	attendees, err := int32Of(r.Attendees())
-	if err != nil {
-		return 0, err
-	}
 	readVersion, err := int32Of(int(read))
 	if err != nil {
 		return 0, err
@@ -128,7 +124,7 @@ func (s *Store) Update(ctx context.Context, r domain.Reservation, events []domai
 		version, err = q.UpdateReservation(ctx, UpdateReservationParams{
 			StartsAt:    r.Period().Start,
 			EndsAt:      r.Period().End,
-			Attendees:   attendees,
+			Attendees:   r.Attendees(),
 			Status:      status,
 			At:          at,
 			ID:          uuid.UUID(r.ID()),
@@ -229,10 +225,6 @@ func portError(err error) error {
 }
 
 func insertParams(r domain.Reservation, at time.Time) (InsertReservationParams, error) {
-	attendees, err := int32Of(r.Attendees())
-	if err != nil {
-		return InsertReservationParams{}, err
-	}
 	status, err := statusText(r.Status())
 	if err != nil {
 		return InsertReservationParams{}, err
@@ -242,7 +234,7 @@ func insertParams(r domain.Reservation, at time.Time) (InsertReservationParams, 
 		RoomID:         uuid.UUID(r.Room()),
 		StartsAt:       r.Period().Start,
 		EndsAt:         r.Period().End,
-		Attendees:      attendees,
+		Attendees:      r.Attendees(),
 		OrganizerEmail: r.Organizer(),
 		Status:         status,
 		At:             at,
@@ -259,7 +251,7 @@ func versioned(row GetReservationRow) (app.Versioned, error) {
 		domain.ReservationID(row.ID),
 		domain.RoomID(row.RoomID),
 		domain.Period{Start: row.StartsAt, End: row.EndsAt},
-		int(row.Attendees),
+		row.Attendees,
 		row.OrganizerEmail,
 		status,
 	)

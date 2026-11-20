@@ -16,7 +16,7 @@ type ReservationConfirmed struct {
 	Reservation ReservationID
 	Room        RoomID
 	Period      Period
-	Attendees   int
+	Attendees   int32
 	Organizer   string
 	// OccurredAt is when the reservation was confirmed.
 	OccurredAt time.Time

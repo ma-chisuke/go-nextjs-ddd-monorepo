@@ -15,7 +15,7 @@ type RescheduleReservationInput struct {
 	Read      Version
 	Start     *time.Time
 	End       *time.Time
-	Attendees *int
+	Attendees *int32
 }
 
 // RescheduleReservation changes the period or the number of attendees of a

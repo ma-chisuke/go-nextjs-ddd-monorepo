@@ -39,7 +39,7 @@ type Reservation struct {
 	id        ReservationID
 	room      RoomID
 	period    Period
-	attendees int
+	attendees int32
 	organizer string
 	status    Status
 }
@@ -54,7 +54,7 @@ func (r Reservation) Room() RoomID { return r.room }
 func (r Reservation) Period() Period { return r.period }
 
 // Attendees returns how many people attend, the organizer included.
-func (r Reservation) Attendees() int { return r.attendees }
+func (r Reservation) Attendees() int32 { return r.attendees }
 
 // Organizer returns the email address of the person who booked the room.
 func (r Reservation) Organizer() string { return r.organizer }
@@ -69,7 +69,7 @@ func (r Reservation) Status() Status { return r.status }
 // and does not start before now. The attendees fit the capacity of the room,
 // and the room is open for the whole period. Book does not know the other
 // reservations of the room; the use case checks that none overlaps.
-func Book(id ReservationID, room Room, period Period, attendees int, organizer string, now time.Time) (Reservation, []Event, error) {
+func Book(id ReservationID, room Room, period Period, attendees int32, organizer string, now time.Time) (Reservation, []Event, error) {
 	if err := checkTerms(room, period, attendees, now); err != nil {
 		return Reservation{}, nil, err
 	}
@@ -87,7 +87,7 @@ func Book(id ReservationID, room Room, period Period, attendees int, organizer s
 // Reschedule moves the reservation to period and changes the number of its
 // attendees, under the same rules as Book. room is the room of the
 // reservation. A cancelled reservation cannot be rescheduled.
-func (r Reservation) Reschedule(room Room, period Period, attendees int, now time.Time) (Reservation, []Event, error) {
+func (r Reservation) Reschedule(room Room, period Period, attendees int32, now time.Time) (Reservation, []Event, error) {
 	if r.status == StatusCancelled {
 		return Reservation{}, nil, newError(KindReservationCancelled, "The reservation is cancelled, so it cannot be rescheduled.")
 	}
@@ -129,7 +129,7 @@ func (r Reservation) Cancel(now time.Time) (Reservation, []Event, error) {
 // Restore rebuilds a reservation that was booked before, from what the store
 // holds. It checks no rule: the rules held when the reservation was booked or
 // last changed, and a rule that changed since does not undo a booking.
-func Restore(id ReservationID, room RoomID, period Period, attendees int, organizer string, status Status) Reservation {
+func Restore(id ReservationID, room RoomID, period Period, attendees int32, organizer string, status Status) Reservation {
 	return Reservation{
 		id:        id,
 		room:      room,
@@ -153,7 +153,7 @@ func (r Reservation) confirmed(now time.Time) ReservationConfirmed {
 
 // checkTerms applies the rules that a booking and a rescheduling share, and
 // returns the first rule that the terms break.
-func checkTerms(room Room, period Period, attendees int, now time.Time) error {
+func checkTerms(room Room, period Period, attendees int32, now time.Time) error {
 	switch {
 	case !period.Start.Before(period.End):
 		return newError(KindPeriodOutOfOrder, "The period must end after it starts.")

@@ -115,7 +115,7 @@ func translate(id domain.RoomID, room Room) (domain.Room, error) {
 	}
 	return domain.Room{
 		ID:       id,
-		Capacity: int(room.Capacity),
+		Capacity: room.Capacity,
 		Hours:    domain.OpeningHours{Opens: opens, Closes: closes},
 		TimeZone: location,
 	}, nil
