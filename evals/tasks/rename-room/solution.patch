@@ -1,0 +1,1218 @@
+diff --git a/backend/internal/facility/internal/adapter/http/api.gen.go b/backend/internal/facility/internal/adapter/http/api.gen.go
+--- a/backend/internal/facility/internal/adapter/http/api.gen.go
++++ b/backend/internal/facility/internal/adapter/http/api.gen.go
+@@ -119,6 +119,14 @@
+ 	NextCursor *string `json:"nextCursor"`
+ }
+ 
++// RoomRename The new name of a room.
++type RoomRename struct {
++	// Name The name that people use for the room, under the same rules as at registration.
++	//
++	// Examples: Aoba
++	Name string `json:"name"`
++}
++
+ // TimeOfDay A time of day in hours and minutes, on a 24-hour clock.
+ //
+ // Examples: 09:00
+@@ -145,6 +153,9 @@
+ // RegisterRoomJSONRequestBody defines body for RegisterRoom for application/json ContentType.
+ type RegisterRoomJSONRequestBody = NewRoom
+ 
++// RenameRoomJSONRequestBody defines body for RenameRoom for application/json ContentType.
++type RenameRoomJSONRequestBody = RoomRename
++
+ // ServerInterface represents all server handlers.
+ type ServerInterface interface {
+ 	// ListRooms List rooms
+@@ -156,6 +167,9 @@
+ 	// GetRoom Get a room
+ 	// (GET /rooms/{roomId})
+ 	GetRoom(w http.ResponseWriter, r *http.Request, roomId RoomId)
++	// RenameRoom Rename a room
++	// (PATCH /rooms/{roomId})
++	RenameRoom(w http.ResponseWriter, r *http.Request, roomId RoomId)
+ }
+ 
+ // ServerInterfaceWrapper converts contexts to parameters.
+@@ -253,6 +267,32 @@
+ 	handler.ServeHTTP(w, r)
+ }
+ 
++// RenameRoom operation middleware
++func (siw *ServerInterfaceWrapper) RenameRoom(w http.ResponseWriter, r *http.Request) {
++
++	var err error
++	_ = err
++
++	// ------------- Path parameter "roomId" -------------
++	var roomId RoomId
++
++	err = runtime.BindStyledParameterWithOptions("simple", "roomId", r.PathValue("roomId"), &roomId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
++	if err != nil {
++		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "roomId", Err: err})
++		return
++	}
++
++	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		siw.Handler.RenameRoom(w, r, roomId)
++	}))
++
++	for _, middleware := range siw.HandlerMiddlewares {
++		handler = middleware(handler)
++	}
++
++	handler.ServeHTTP(w, r)
++}
++
+ type UnescapedCookieParamError struct {
+ 	ParamName string
+ 	Err       error
+@@ -376,6 +416,7 @@
+ 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/rooms", wrapper.ListRooms)
+ 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/rooms", wrapper.RegisterRoom)
+ 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/rooms/{roomId}", wrapper.GetRoom)
++	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/rooms/{roomId}", wrapper.RenameRoom)
+ 
+ 	return m
+ }
+@@ -630,6 +671,115 @@
+ 	return err
+ }
+ 
++type RenameRoomRequestObject struct {
++	RoomId RoomId `json:"roomId"`
++	Body   *RenameRoomJSONRequestBody
++}
++
++type RenameRoomResponseObject interface {
++	VisitRenameRoomResponse(w http.ResponseWriter) error
++}
++
++type RenameRoom200JSONResponse Room
++
++func (response RenameRoom200JSONResponse) VisitRenameRoomResponse(w http.ResponseWriter) error {
++
++	var buf bytes.Buffer
++	if err := json.NewEncoder(&buf).Encode(response); err != nil {
++		return err
++	}
++	w.Header().Set("Content-Type", "application/json")
++	w.WriteHeader(200)
++	_, err := buf.WriteTo(w)
++	return err
++}
++
++type RenameRoom400ApplicationProblemPlusJSONResponse struct {
++	ProblemApplicationProblemPlusJSONResponse
++}
++
++func (response RenameRoom400ApplicationProblemPlusJSONResponse) VisitRenameRoomResponse(w http.ResponseWriter) error {
++
++	var buf bytes.Buffer
++	if err := json.NewEncoder(&buf).Encode(response); err != nil {
++		return err
++	}
++	w.Header().Set("Content-Type", "application/problem+json")
++	w.WriteHeader(400)
++	_, err := buf.WriteTo(w)
++	return err
++}
++
++type RenameRoom404ApplicationProblemPlusJSONResponse Problem
++
++func (response RenameRoom404ApplicationProblemPlusJSONResponse) VisitRenameRoomResponse(w http.ResponseWriter) error {
++
++	var buf bytes.Buffer
++	if err := json.NewEncoder(&buf).Encode(response); err != nil {
++		return err
++	}
++	w.Header().Set("Content-Type", "application/problem+json")
++	w.WriteHeader(404)
++	_, err := buf.WriteTo(w)
++	return err
++}
++
++type RenameRoom409ApplicationProblemPlusJSONResponse Problem
++
++func (response RenameRoom409ApplicationProblemPlusJSONResponse) VisitRenameRoomResponse(w http.ResponseWriter) error {
++
++	var buf bytes.Buffer
++	if err := json.NewEncoder(&buf).Encode(response); err != nil {
++		return err
++	}
++	w.Header().Set("Content-Type", "application/problem+json")
++	w.WriteHeader(409)
++	_, err := buf.WriteTo(w)
++	return err
++}
++
++type RenameRoom415ApplicationProblemPlusJSONResponse Problem
++
++func (response RenameRoom415ApplicationProblemPlusJSONResponse) VisitRenameRoomResponse(w http.ResponseWriter) error {
++
++	var buf bytes.Buffer
++	if err := json.NewEncoder(&buf).Encode(response); err != nil {
++		return err
++	}
++	w.Header().Set("Content-Type", "application/problem+json")
++	w.WriteHeader(415)
++	_, err := buf.WriteTo(w)
++	return err
++}
++
++type RenameRoom422ApplicationProblemPlusJSONResponse Problem
++
++func (response RenameRoom422ApplicationProblemPlusJSONResponse) VisitRenameRoomResponse(w http.ResponseWriter) error {
++
++	var buf bytes.Buffer
++	if err := json.NewEncoder(&buf).Encode(response); err != nil {
++		return err
++	}
++	w.Header().Set("Content-Type", "application/problem+json")
++	w.WriteHeader(422)
++	_, err := buf.WriteTo(w)
++	return err
++}
++
++type RenameRoom500ApplicationProblemPlusJSONResponse Problem
++
++func (response RenameRoom500ApplicationProblemPlusJSONResponse) VisitRenameRoomResponse(w http.ResponseWriter) error {
++
++	var buf bytes.Buffer
++	if err := json.NewEncoder(&buf).Encode(response); err != nil {
++		return err
++	}
++	w.Header().Set("Content-Type", "application/problem+json")
++	w.WriteHeader(500)
++	_, err := buf.WriteTo(w)
++	return err
++}
++
+ // StrictServerInterface represents all server handlers.
+ type StrictServerInterface interface {
+ 	// ListRooms List rooms
+@@ -641,6 +791,9 @@
+ 	// GetRoom Get a room
+ 	// (GET /rooms/{roomId})
+ 	GetRoom(ctx context.Context, request GetRoomRequestObject) (GetRoomResponseObject, error)
++	// RenameRoom Rename a room
++	// (PATCH /rooms/{roomId})
++	RenameRoom(ctx context.Context, request RenameRoomRequestObject) (RenameRoomResponseObject, error)
+ }
+ 
+ type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
+@@ -765,40 +918,76 @@
+ 	}
+ }
+ 
++// RenameRoom operation middleware
++func (sh *strictHandler) RenameRoom(w http.ResponseWriter, r *http.Request, roomId RoomId) {
++	var request RenameRoomRequestObject
++
++	request.RoomId = roomId
++
++	var body RenameRoomJSONRequestBody
++	if err := runtime.BindJSONBody(r, &body); err != nil {
++		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
++		return
++	}
++	request.Body = &body
++
++	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
++		return sh.ssi.RenameRoom(ctx, request.(RenameRoomRequestObject))
++	}
++	for _, middleware := range sh.middlewares {
++		handler = middleware(handler, "RenameRoom")
++	}
++
++	response, err := handler(r.Context(), w, r, request)
++
++	if err != nil {
++		sh.options.ResponseErrorHandlerFunc(w, r, err)
++	} else if validResponse, ok := response.(RenameRoomResponseObject); ok {
++		if err := validResponse.VisitRenameRoomResponse(w); err != nil {
++			sh.options.ResponseErrorHandlerFunc(w, r, err)
++		}
++	} else if response != nil {
++		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
++	}
++}
++
+ // Base64 encoded, compressed with deflate, json marshaled OpenAPI spec.
+ // Stored as a slice of fixed-width chunks rather than one concatenated
+ // const string: with thousands of chunks the chained `+` fold is several
+ // times slower for the Go compiler than parsing a slice literal.
+ var swaggerSpec = []string{
+-	"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",
+-	"9pu1482s+d8A",
++	"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",
+ }
+ 
+ // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,
+diff --git a/backend/internal/facility/internal/adapter/http/handler.go b/backend/internal/facility/internal/adapter/http/handler.go
+--- a/backend/internal/facility/internal/adapter/http/handler.go
++++ b/backend/internal/facility/internal/adapter/http/handler.go
+@@ -88,6 +88,15 @@
+ 	return GetRoom200JSONResponse(roomResponse(room)), nil
+ }
+ 
++// RenameRoom implements the operation renameRoom.
++func (h *operations) RenameRoom(ctx context.Context, request RenameRoomRequestObject) (RenameRoomResponseObject, error) {
++	room, err := h.rooms.RenameRoom(ctx, request.RoomId, request.Body.Name)
++	if err != nil {
++		return nil, toProblem(err)
++	}
++	return RenameRoom200JSONResponse(roomResponse(room)), nil
++}
++
+ // ListRooms implements the operation listRooms.
+ func (h *operations) ListRooms(ctx context.Context, request ListRoomsRequestObject) (ListRoomsResponseObject, error) {
+ 	limit := defaultLimit
+diff --git a/backend/internal/facility/internal/adapter/http/handler_test.go b/backend/internal/facility/internal/adapter/http/handler_test.go
+--- a/backend/internal/facility/internal/adapter/http/handler_test.go
++++ b/backend/internal/facility/internal/adapter/http/handler_test.go
+@@ -174,6 +174,111 @@
+ 	wantProblem(t, client.Do(http.MethodGet, "/rooms/not-a-uuid", nil), "validation-error", http.StatusUnprocessableEntity)
+ }
+ 
++func TestRenameRoom(t *testing.T) {
++	t.Parallel()
++	client := newClient(t)
++	var registered facilityhttp.Room
++	client.Do(http.MethodPost, "/rooms", newRoom("Aoab")).JSON(t, &registered)
++
++	res := client.Do(http.MethodPatch, "/rooms/"+registered.Id.String(), map[string]any{"name": "Aoba"})
++	if res.Status != http.StatusOK {
++		t.Fatalf("got status %d, want 200\n%s", res.Status, res.Body)
++	}
++	var renamed facilityhttp.Room
++	res.JSON(t, &renamed)
++	want := registered
++	want.Name = "Aoba"
++	if renamed != want {
++		t.Errorf("got %+v, want the registered room with the new name %+v", renamed, want)
++	}
++
++	var got facilityhttp.Room
++	client.Do(http.MethodGet, "/rooms/"+registered.Id.String(), nil).JSON(t, &got)
++	if got != want {
++		t.Errorf("got %+v after the rename, want %+v", got, want)
++	}
++
++	// The old name is free for another room.
++	if res := client.Do(http.MethodPost, "/rooms", newRoom("Aoab")); res.Status != http.StatusCreated {
++		t.Errorf("registering a room under the old name: got status %d, want 201\n%s", res.Status, res.Body)
++	}
++}
++
++// A room may be renamed to the name that it has.
++func TestRenameRoomToItsOwnName(t *testing.T) {
++	t.Parallel()
++	client := newClient(t)
++	var registered facilityhttp.Room
++	client.Do(http.MethodPost, "/rooms", newRoom("Aoba")).JSON(t, &registered)
++
++	res := client.Do(http.MethodPatch, "/rooms/"+registered.Id.String(), map[string]any{"name": "Aoba"})
++	if res.Status != http.StatusOK {
++		t.Fatalf("got status %d, want 200\n%s", res.Status, res.Body)
++	}
++	var got facilityhttp.Room
++	res.JSON(t, &got)
++	if got != registered {
++		t.Errorf("got %+v, want the room as it was %+v", got, registered)
++	}
++}
++
++func TestRenameRoomRejections(t *testing.T) {
++	t.Parallel()
++	client := newClient(t)
++	var birch facilityhttp.Room
++	client.Do(http.MethodPost, "/rooms", newRoom("Aoba"))
++	client.Do(http.MethodPost, "/rooms", newRoom("Birch")).JSON(t, &birch)
++	target := "/rooms/" + birch.Id.String()
++
++	tests := []struct {
++		name    string
++		target  string
++		body    any
++		slug    string
++		status  int
++		pointer string
++	}{
++		{"another room has the name", target, map[string]any{"name": "Aoba"}, "room-name-taken", http.StatusConflict, ""},
++		{"the room does not exist", "/rooms/0193a6f0-7b5c-7e2a-9c3d-1f2e3d4c5b6a", map[string]any{"name": "Cedar"}, "room-not-found", http.StatusNotFound, ""},
++		{"the id is not a UUID", "/rooms/not-a-uuid", map[string]any{"name": "Cedar"}, "validation-error", http.StatusUnprocessableEntity, ""},
++		{"the JSON is broken", target, []byte(`{"name":`), "malformed-request", http.StatusBadRequest, ""},
++		{"name is empty", target, map[string]any{"name": ""}, "validation-error", http.StatusUnprocessableEntity, "/name"},
++		{"name is too long", target, map[string]any{"name": strings.Repeat("n", 101)}, "validation-error", http.StatusUnprocessableEntity, "/name"},
++		{"name is missing", target, map[string]any{}, "validation-error", http.StatusUnprocessableEntity, ""},
++		{"a property is unknown", target, map[string]any{"name": "Cedar", "capacity": 4}, "validation-error", http.StatusUnprocessableEntity, ""},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			p := wantProblem(t, client.Do(http.MethodPatch, tt.target, tt.body), tt.slug, tt.status)
++			if tt.pointer == "" {
++				return
++			}
++			for _, invalid := range p.Errors {
++				if invalid.Pointer == tt.pointer {
++					return
++				}
++			}
++			t.Errorf("no error points at %q: %+v", tt.pointer, p.Errors)
++		})
++	}
++
++	// A refused rename changes nothing.
++	var got facilityhttp.Room
++	client.Do(http.MethodGet, target, nil).JSON(t, &got)
++	if got != birch {
++		t.Errorf("got %+v after the refused renames, want the room as it was %+v", got, birch)
++	}
++}
++
++func TestRenameRoomWithAnotherMediaType(t *testing.T) {
++	t.Parallel()
++	client := newClient(t)
++	var registered facilityhttp.Room
++	client.Do(http.MethodPost, "/rooms", newRoom("Aoba")).JSON(t, &registered)
++	res := client.Do(http.MethodPatch, "/rooms/"+registered.Id.String(), []byte("name=Birch"), apitest.Header("Content-Type", "text/plain"))
++	wantProblem(t, res, "unsupported-media-type", http.StatusUnsupportedMediaType)
++}
++
+ func TestListRoomsInPages(t *testing.T) {
+ 	t.Parallel()
+ 	client := newClient(t)
+diff --git a/backend/internal/facility/internal/adapter/postgres/postgrestest/fake.go b/backend/internal/facility/internal/adapter/postgres/postgrestest/fake.go
+--- a/backend/internal/facility/internal/adapter/postgres/postgrestest/fake.go
++++ b/backend/internal/facility/internal/adapter/postgres/postgrestest/fake.go
+@@ -52,6 +52,25 @@
+ 	return postgres.Room{}, pgx.ErrNoRows
+ }
+ 
++// UpdateRoomName renames the room with the id, or returns pgx.ErrNoRows. It
++// fails like the database when another room has the name.
++func (f *Fake) UpdateRoomName(_ context.Context, arg postgres.UpdateRoomNameParams) (postgres.Room, error) {
++	f.mu.Lock()
++	defer f.mu.Unlock()
++	for _, room := range f.rooms {
++		if room.Name == arg.Name && room.ID != arg.ID {
++			return postgres.Room{}, &pgconn.PgError{Code: "23505", ConstraintName: "rooms_name_key"}
++		}
++	}
++	for i := range f.rooms {
++		if f.rooms[i].ID == arg.ID {
++			f.rooms[i].Name = arg.Name
++			return f.rooms[i], nil
++		}
++	}
++	return postgres.Room{}, pgx.ErrNoRows
++}
++
+ // ListRooms returns the rooms after (AfterName, AfterID) in the order of
+ // (name, id), at most PageSize of them.
+ func (f *Fake) ListRooms(_ context.Context, arg postgres.ListRoomsParams) ([]postgres.Room, error) {
+diff --git a/backend/internal/facility/internal/adapter/postgres/querier.gen.go b/backend/internal/facility/internal/adapter/postgres/querier.gen.go
+--- a/backend/internal/facility/internal/adapter/postgres/querier.gen.go
++++ b/backend/internal/facility/internal/adapter/postgres/querier.gen.go
+@@ -15,6 +15,9 @@
+ 	InsertRoom(ctx context.Context, arg InsertRoomParams) (Room, error)
+ 	// One page of rooms in the order of (name, id), after the given pair.
+ 	ListRooms(ctx context.Context, arg ListRoomsParams) ([]Room, error)
++	// Gives the room a new name. The unique constraint on the name refuses a
++	// name that another room has; the room may keep the name that it has.
++	UpdateRoomName(ctx context.Context, arg UpdateRoomNameParams) (Room, error)
+ }
+ 
+ var _ Querier = (*Queries)(nil)
+diff --git a/backend/internal/facility/internal/adapter/postgres/queries/rooms.sql b/backend/internal/facility/internal/adapter/postgres/queries/rooms.sql
+--- a/backend/internal/facility/internal/adapter/postgres/queries/rooms.sql
++++ b/backend/internal/facility/internal/adapter/postgres/queries/rooms.sql
+@@ -18,3 +18,11 @@
+ WHERE (name, id) > (sqlc.arg(after_name)::text, sqlc.arg(after_id)::uuid)
+ ORDER BY name, id
+ LIMIT sqlc.arg(page_size);
++
++-- name: UpdateRoomName :one
++-- Gives the room a new name. The unique constraint on the name refuses a
++-- name that another room has; the room may keep the name that it has.
++UPDATE rooms
++SET name = sqlc.arg(name)
++WHERE id = sqlc.arg(id)
++RETURNING id, name, capacity, open_from, open_until, time_zone, created_at;
+diff --git a/backend/internal/facility/internal/adapter/postgres/rooms.sql.gen.go b/backend/internal/facility/internal/adapter/postgres/rooms.sql.gen.go
+--- a/backend/internal/facility/internal/adapter/postgres/rooms.sql.gen.go
++++ b/backend/internal/facility/internal/adapter/postgres/rooms.sql.gen.go
+@@ -118,3 +118,32 @@
+ 	}
+ 	return items, nil
+ }
++
++const updateRoomName = `-- name: UpdateRoomName :one
++UPDATE rooms
++SET name = $1
++WHERE id = $2
++RETURNING id, name, capacity, open_from, open_until, time_zone, created_at
++`
++
++type UpdateRoomNameParams struct {
++	Name string
++	ID   uuid.UUID
++}
++
++// Gives the room a new name. The unique constraint on the name refuses a
++// name that another room has; the room may keep the name that it has.
++func (q *Queries) UpdateRoomName(ctx context.Context, arg UpdateRoomNameParams) (Room, error) {
++	row := q.db.QueryRow(ctx, updateRoomName, arg.Name, arg.ID)
++	var i Room
++	err := row.Scan(
++		&i.ID,
++		&i.Name,
++		&i.Capacity,
++		&i.OpenFrom,
++		&i.OpenUntil,
++		&i.TimeZone,
++		&i.CreatedAt,
++	)
++	return i, err
++}
+diff --git a/backend/internal/facility/internal/app/rooms.go b/backend/internal/facility/internal/app/rooms.go
+--- a/backend/internal/facility/internal/app/rooms.go
++++ b/backend/internal/facility/internal/app/rooms.go
+@@ -98,6 +98,24 @@
+ 	return roomFrom(row), nil
+ }
+ 
++// RenameRoom gives the room with the given id a new name, and changes nothing
++// else about it. No other room may have the name; the room may keep the name
++// that it has. It takes no version: of two renames at the same time, the
++// last one wins.
++func (r *Rooms) RenameRoom(ctx context.Context, id uuid.UUID, name string) (Room, error) {
++	row, err := r.queries.UpdateRoomName(ctx, postgres.UpdateRoomNameParams{ID: id, Name: name})
++	if errors.Is(err, pgx.ErrNoRows) {
++		return Room{}, newError(KindRoomNotFound, fmt.Sprintf("no room has the id %s", id))
++	}
++	if postgres.IsUniqueViolation(err, "rooms_name_key") {
++		return Room{}, newError(KindRoomNameTaken, fmt.Sprintf("a room named %q exists", name))
++	}
++	if err != nil {
++		return Room{}, fmt.Errorf("rename room: %w", err)
++	}
++	return roomFrom(row), nil
++}
++
+ // cursor is the position after the last room of a page: rooms are listed in
+ // the order of (name, id).
+ type cursor struct {
+diff --git a/backend/internal/facility/internal/app/rooms_integration_test.go b/backend/internal/facility/internal/app/rooms_integration_test.go
+--- a/backend/internal/facility/internal/app/rooms_integration_test.go
++++ b/backend/internal/facility/internal/app/rooms_integration_test.go
+@@ -9,6 +9,7 @@
+ 	"testing"
+ 	"time"
+ 
++	"github.com/google/uuid"
+ 	"github.com/jackc/pgx/v5/pgxpool"
+ 
+ 	"github.com/ma-chisuke/go-nextjs-ddd-monorepo/backend/internal/facility/internal/adapter/postgres"
+@@ -69,6 +70,44 @@
+ 	wantKind(t, err, app.KindRoomNameTaken)
+ }
+ 
++func TestRenameRoomInTheDatabase(t *testing.T) {
++	t.Parallel()
++	rooms, prefix, _ := newRooms(t)
++	ctx := t.Context()
++
++	created, err := rooms.RegisterRoom(ctx, input(prefix+"Aoab"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	renamed, err := rooms.RenameRoom(ctx, created.ID, prefix+"Aoba")
++	if err != nil {
++		t.Fatal(err)
++	}
++	want := created
++	want.Name = prefix + "Aoba"
++	if renamed != want {
++		t.Errorf("got %+v, want the registered room with the new name %+v", renamed, want)
++	}
++	if got, err := rooms.GetRoom(ctx, created.ID); err != nil || got != want {
++		t.Errorf("got %+v and %v after the rename, want %+v", got, err, want)
++	}
++
++	// The room may keep its name, and the unique constraint refuses the name
++	// of another room, which frees the old name.
++	if _, err := rooms.RenameRoom(ctx, created.ID, prefix+"Aoba"); err != nil {
++		t.Errorf("renaming the room to its own name: %v", err)
++	}
++	other, err := rooms.RegisterRoom(ctx, input(prefix+"Aoab"))
++	if err != nil {
++		t.Fatalf("registering a room under the old name: %v", err)
++	}
++	_, err = rooms.RenameRoom(ctx, other.ID, prefix+"Aoba")
++	wantKind(t, err, app.KindRoomNameTaken)
++
++	_, err = rooms.RenameRoom(ctx, uuid.Must(uuid.NewV7()), prefix+"Cedar")
++	wantKind(t, err, app.KindRoomNotFound)
++}
++
+ func TestListRoomsInTheDatabase(t *testing.T) {
+ 	t.Parallel()
+ 	rooms, prefix, _ := newRooms(t)
+diff --git a/backend/internal/reservation/internal/adapter/facility/client.gen.go b/backend/internal/reservation/internal/adapter/facility/client.gen.go
+--- a/backend/internal/reservation/internal/adapter/facility/client.gen.go
++++ b/backend/internal/reservation/internal/adapter/facility/client.gen.go
+@@ -113,6 +113,14 @@
+ 	NextCursor *string `json:"nextCursor"`
+ }
+ 
++// RoomRename The new name of a room.
++type RoomRename struct {
++	// Name The name that people use for the room, under the same rules as at registration.
++	//
++	// Examples: Aoba
++	Name string `json:"name"`
++}
++
+ // TimeOfDay A time of day in hours and minutes, on a 24-hour clock.
+ //
+ // Examples: 09:00
+@@ -139,6 +147,9 @@
+ // RegisterRoomJSONRequestBody defines body for RegisterRoom for application/json ContentType.
+ type RegisterRoomJSONRequestBody = NewRoom
+ 
++// RenameRoomJSONRequestBody defines body for RenameRoom for application/json ContentType.
++type RenameRoomJSONRequestBody = RoomRename
++
+ // RequestEditorFn is the function signature for the RequestEditor callback function
+ type RequestEditorFn func(ctx context.Context, req *http.Request) error
+ 
+@@ -244,6 +255,30 @@
+ 	//
+ 	// Corresponds with GET /rooms/{roomId} (the `GetRoom` operationId).
+ 	GetRoom(ctx context.Context, roomId RoomId, reqEditors ...RequestEditorFn) (*http.Response, error)
++
++	// RenameRoomWithBody Rename a room
++	//
++	// Gives a room a new name, which no other room may have, and changes
++	// nothing else about it. A room may be renamed to the name that it has.
++	// The operation takes no precondition: when two requests rename a room
++	// at the same time, the last one wins.
++	//
++	// Takes any type of body and a specified content type.
++	//
++	// Corresponds with PATCH /rooms/{roomId} (the `RenameRoom` operationId).
++	RenameRoomWithBody(ctx context.Context, roomId RoomId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
++
++	// RenameRoom Rename a room
++	//
++	// Gives a room a new name, which no other room may have, and changes
++	// nothing else about it. A room may be renamed to the name that it has.
++	// The operation takes no precondition: when two requests rename a room
++	// at the same time, the last one wins.
++	//
++	// Takes a body of the `application/json` content type.
++	//
++	// Corresponds with PATCH /rooms/{roomId} (the `RenameRoom` operationId).
++	RenameRoom(ctx context.Context, roomId RoomId, body RenameRoomJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+ }
+ 
+ // ListRooms List rooms
+@@ -318,6 +353,50 @@
+ 	return c.Client.Do(req)
+ }
+ 
++// RenameRoomWithBody Rename a room
++//
++// Gives a room a new name, which no other room may have, and changes
++// nothing else about it. A room may be renamed to the name that it has.
++// The operation takes no precondition: when two requests rename a room
++// at the same time, the last one wins.
++//
++// Takes any type of body and a specified content type.
++//
++// Corresponds with PATCH /rooms/{roomId} (the `RenameRoom` operationId).
++func (c *Client) RenameRoomWithBody(ctx context.Context, roomId RoomId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
++	req, err := NewRenameRoomRequestWithBody(c.Server, roomId, contentType, body)
++	if err != nil {
++		return nil, err
++	}
++	req = req.WithContext(ctx)
++	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
++		return nil, err
++	}
++	return c.Client.Do(req)
++}
++
++// RenameRoom Rename a room
++//
++// Gives a room a new name, which no other room may have, and changes
++// nothing else about it. A room may be renamed to the name that it has.
++// The operation takes no precondition: when two requests rename a room
++// at the same time, the last one wins.
++//
++// Takes a body of the `application/json` content type.
++//
++// Corresponds with PATCH /rooms/{roomId} (the `RenameRoom` operationId).
++func (c *Client) RenameRoom(ctx context.Context, roomId RoomId, body RenameRoomJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
++	req, err := NewRenameRoomRequest(c.Server, roomId, body)
++	if err != nil {
++		return nil, err
++	}
++	req = req.WithContext(ctx)
++	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
++		return nil, err
++	}
++	return c.Client.Do(req)
++}
++
+ // NewListRoomsRequest constructs an http.Request for the ListRooms method
+ func NewListRoomsRequest(server string, params *ListRoomsParams) (*http.Request, error) {
+ 	var err error
+@@ -458,6 +537,53 @@
+ 	return req, nil
+ }
+ 
++// NewRenameRoomRequest calls the generic RenameRoom builder with application/json body
++func NewRenameRoomRequest(server string, roomId RoomId, body RenameRoomJSONRequestBody) (*http.Request, error) {
++	var bodyReader io.Reader
++	buf, err := json.Marshal(body)
++	if err != nil {
++		return nil, err
++	}
++	bodyReader = bytes.NewReader(buf)
++	return NewRenameRoomRequestWithBody(server, roomId, "application/json", bodyReader)
++}
++
++// NewRenameRoomRequestWithBody constructs an http.Request for the RenameRoom method, with any body, and a specified content type
++func NewRenameRoomRequestWithBody(server string, roomId RoomId, contentType string, body io.Reader) (*http.Request, error) {
++	var err error
++
++	var pathParam0 string
++
++	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "roomId", roomId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
++	if err != nil {
++		return nil, err
++	}
++
++	serverURL, err := url.Parse(server)
++	if err != nil {
++		return nil, err
++	}
++
++	operationPath := fmt.Sprintf("/rooms/%s", pathParam0)
++	if operationPath[0] == '/' {
++		operationPath = "." + operationPath
++	}
++
++	queryURL, err := serverURL.Parse(operationPath)
++	if err != nil {
++		return nil, err
++	}
++
++	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
++	if err != nil {
++		return nil, err
++	}
++
++	req.Header.Add("Content-Type", contentType)
++
++	return req, nil
++}
++
+ func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
+ 	for _, r := range c.RequestEditors {
+ 		if err := r(ctx, req); err != nil {
+@@ -537,6 +663,30 @@
+ 	//
+ 	// Corresponds with GET /rooms/{roomId} (the `GetRoom` operationId).
+ 	GetRoomWithResponse(ctx context.Context, roomId RoomId, reqEditors ...RequestEditorFn) (*GetRoomResponse, error)
++
++	// RenameRoomWithBodyWithResponse Rename a room
++	//
++	// Gives a room a new name, which no other room may have, and changes
++	// nothing else about it. A room may be renamed to the name that it has.
++	// The operation takes no precondition: when two requests rename a room
++	// at the same time, the last one wins.
++	//
++	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
++	//
++	// Corresponds with PATCH /rooms/{roomId} (the `RenameRoom` operationId).
++	RenameRoomWithBodyWithResponse(ctx context.Context, roomId RoomId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RenameRoomResponse, error)
++
++	// RenameRoomWithResponse Rename a room
++	//
++	// Gives a room a new name, which no other room may have, and changes
++	// nothing else about it. A room may be renamed to the name that it has.
++	// The operation takes no precondition: when two requests rename a room
++	// at the same time, the last one wins.
++	//
++	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
++	//
++	// Corresponds with PATCH /rooms/{roomId} (the `RenameRoom` operationId).
++	RenameRoomWithResponse(ctx context.Context, roomId RoomId, body RenameRoomJSONRequestBody, reqEditors ...RequestEditorFn) (*RenameRoomResponse, error)
+ }
+ 
+ type ListRoomsResponse struct {
+@@ -753,6 +903,89 @@
+ 	return ""
+ }
+ 
++type RenameRoomResponse struct {
++	Body         []byte
++	HTTPResponse *http.Response
++	// JSON200 the response for an HTTP 200 `application/json` response
++	JSON200 *Room
++	// ApplicationproblemJSON400 the response for an HTTP 400 `application/problem+json` response
++	ApplicationproblemJSON400 *Problem
++	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
++	ApplicationproblemJSON404 *Problem
++	// ApplicationproblemJSON409 the response for an HTTP 409 `application/problem+json` response
++	ApplicationproblemJSON409 *Problem
++	// ApplicationproblemJSON415 the response for an HTTP 415 `application/problem+json` response
++	ApplicationproblemJSON415 *Problem
++	// ApplicationproblemJSON422 the response for an HTTP 422 `application/problem+json` response
++	ApplicationproblemJSON422 *Problem
++	// ApplicationproblemJSON500 the response for an HTTP 500 `application/problem+json` response
++	ApplicationproblemJSON500 *Problem
++}
++
++// GetJSON200 returns the response for an HTTP 200 `application/json` response
++func (r RenameRoomResponse) GetJSON200() *Room {
++	return r.JSON200
++}
++
++// GetApplicationproblemJSON400 returns the response for an HTTP 400 `application/problem+json` response
++func (r RenameRoomResponse) GetApplicationproblemJSON400() *Problem {
++	return r.ApplicationproblemJSON400
++}
++
++// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
++func (r RenameRoomResponse) GetApplicationproblemJSON404() *Problem {
++	return r.ApplicationproblemJSON404
++}
++
++// GetApplicationproblemJSON409 returns the response for an HTTP 409 `application/problem+json` response
++func (r RenameRoomResponse) GetApplicationproblemJSON409() *Problem {
++	return r.ApplicationproblemJSON409
++}
++
++// GetApplicationproblemJSON415 returns the response for an HTTP 415 `application/problem+json` response
++func (r RenameRoomResponse) GetApplicationproblemJSON415() *Problem {
++	return r.ApplicationproblemJSON415
++}
++
++// GetApplicationproblemJSON422 returns the response for an HTTP 422 `application/problem+json` response
++func (r RenameRoomResponse) GetApplicationproblemJSON422() *Problem {
++	return r.ApplicationproblemJSON422
++}
++
++// GetApplicationproblemJSON500 returns the response for an HTTP 500 `application/problem+json` response
++func (r RenameRoomResponse) GetApplicationproblemJSON500() *Problem {
++	return r.ApplicationproblemJSON500
++}
++
++// GetBody returns the raw response body bytes
++func (r RenameRoomResponse) GetBody() []byte {
++	return r.Body
++}
++
++// Status returns HTTPResponse.Status
++func (r RenameRoomResponse) Status() string {
++	if r.HTTPResponse != nil {
++		return r.HTTPResponse.Status
++	}
++	return http.StatusText(0)
++}
++
++// StatusCode returns HTTPResponse.StatusCode
++func (r RenameRoomResponse) StatusCode() int {
++	if r.HTTPResponse != nil {
++		return r.HTTPResponse.StatusCode
++	}
++	return 0
++}
++
++// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
++func (r RenameRoomResponse) ContentType() string {
++	if r.HTTPResponse != nil {
++		return r.HTTPResponse.Header.Get("Content-Type")
++	}
++	return ""
++}
++
+ // ListRoomsWithResponse List rooms
+ //
+ // Lists rooms in the order of their names, one page at a time.
+@@ -813,6 +1046,42 @@
+ 	return ParseGetRoomResponse(rsp)
+ }
+ 
++// RenameRoomWithBodyWithResponse Rename a room
++//
++// Gives a room a new name, which no other room may have, and changes
++// nothing else about it. A room may be renamed to the name that it has.
++// The operation takes no precondition: when two requests rename a room
++// at the same time, the last one wins.
++//
++// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
++//
++// Corresponds with PATCH /rooms/{roomId} (the `RenameRoom` operationId).
++func (c *ClientWithResponses) RenameRoomWithBodyWithResponse(ctx context.Context, roomId RoomId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RenameRoomResponse, error) {
++	rsp, err := c.RenameRoomWithBody(ctx, roomId, contentType, body, reqEditors...)
++	if err != nil {
++		return nil, err
++	}
++	return ParseRenameRoomResponse(rsp)
++}
++
++// RenameRoomWithResponse Rename a room
++//
++// Gives a room a new name, which no other room may have, and changes
++// nothing else about it. A room may be renamed to the name that it has.
++// The operation takes no precondition: when two requests rename a room
++// at the same time, the last one wins.
++//
++// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
++//
++// Corresponds with PATCH /rooms/{roomId} (the `RenameRoom` operationId).
++func (c *ClientWithResponses) RenameRoomWithResponse(ctx context.Context, roomId RoomId, body RenameRoomJSONRequestBody, reqEditors ...RequestEditorFn) (*RenameRoomResponse, error) {
++	rsp, err := c.RenameRoom(ctx, roomId, body, reqEditors...)
++	if err != nil {
++		return nil, err
++	}
++	return ParseRenameRoomResponse(rsp)
++}
++
+ // ParseListRoomsResponse parses an HTTP response from a ListRoomsWithResponse call
+ func ParseListRoomsResponse(rsp *http.Response) (*ListRoomsResponse, error) {
+ 	bodyBytes, err := io.ReadAll(rsp.Body)
+@@ -987,3 +1256,71 @@
+ 
+ 	return response, nil
+ }
++
++// ParseRenameRoomResponse parses an HTTP response from a RenameRoomWithResponse call
++func ParseRenameRoomResponse(rsp *http.Response) (*RenameRoomResponse, error) {
++	bodyBytes, err := io.ReadAll(rsp.Body)
++	defer func() { _ = rsp.Body.Close() }()
++	if err != nil {
++		return nil, err
++	}
++
++	response := &RenameRoomResponse{
++		Body:         bodyBytes,
++		HTTPResponse: rsp,
++	}
++
++	switch {
++	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
++		var dest Room
++		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
++			return nil, err
++		}
++		response.JSON200 = &dest
++
++	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
++		var dest Problem
++		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
++			return nil, err
++		}
++		response.ApplicationproblemJSON400 = &dest
++
++	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
++		var dest Problem
++		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
++			return nil, err
++		}
++		response.ApplicationproblemJSON404 = &dest
++
++	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
++		var dest Problem
++		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
++			return nil, err
++		}
++		response.ApplicationproblemJSON409 = &dest
++
++	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 415:
++		var dest Problem
++		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
++			return nil, err
++		}
++		response.ApplicationproblemJSON415 = &dest
++
++	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
++		var dest Problem
++		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
++			return nil, err
++		}
++		response.ApplicationproblemJSON422 = &dest
++
++	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
++		var dest Problem
++		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
++			return nil, err
++		}
++		response.ApplicationproblemJSON500 = &dest
++
++	}
++
++	return response, nil
++}
+diff --git a/contracts/http/facility.openapi.yaml b/contracts/http/facility.openapi.yaml
+--- a/contracts/http/facility.openapi.yaml
++++ b/contracts/http/facility.openapi.yaml
+@@ -101,6 +101,42 @@
+           $ref: "#/components/responses/Problem"
+         "500":
+           $ref: "#/components/responses/Problem"
++    patch:
++      operationId: renameRoom
++      summary: Rename a room
++      description: |
++        Gives a room a new name, which no other room may have, and changes
++        nothing else about it. A room may be renamed to the name that it has.
++        The operation takes no precondition: when two requests rename a room
++        at the same time, the last one wins.
++      tags: [rooms]
++      parameters:
++        - $ref: "#/components/parameters/RoomId"
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema:
++              $ref: "#/components/schemas/RoomRename"
++      responses:
++        "200":
++          description: The room was renamed.
++          content:
++            application/json:
++              schema:
++                $ref: "#/components/schemas/Room"
++        "400":
++          $ref: "#/components/responses/Problem"
++        "404":
++          $ref: "#/components/responses/Problem"
++        "409":
++          $ref: "#/components/responses/Problem"
++        "415":
++          $ref: "#/components/responses/Problem"
++        "422":
++          $ref: "#/components/responses/Problem"
++        "500":
++          $ref: "#/components/responses/Problem"
+ components:
+   parameters:
+     RoomId:
+@@ -166,6 +202,18 @@
+           minLength: 1
+           maxLength: 64
+           examples: [Asia/Tokyo]
++    RoomRename:
++      type: object
++      description: The new name of a room.
++      required: [name]
++      additionalProperties: false
++      properties:
++        name:
++          type: string
++          description: The name that people use for the room, under the same rules as at registration.
++          minLength: 1
++          maxLength: 100
++          examples: [Aoba]
+     Room:
+       type: object
+       description: A meeting room.
+diff --git a/docs/contexts/facility/README.ja.md b/docs/contexts/facility/README.ja.md
+--- a/docs/contexts/facility/README.ja.md
++++ b/docs/contexts/facility/README.ja.md
+@@ -19,6 +19,7 @@
+ | `POST /rooms`（`registerRoom`） | 会議室を登録し、201 と、`Location` に入れたその URL で答える | [room-name-taken](../../problems/room-name-taken.ja.md)、[invalid-opening-hours](../../problems/invalid-opening-hours.ja.md)、[unknown-time-zone](../../problems/unknown-time-zone.ja.md) |
+ | `GET /rooms`（`listRooms`） | 会議室を名前の順に、1ページずつ一覧する | [invalid-cursor](../../problems/invalid-cursor.ja.md) |
+ | `GET /rooms/{roomId}`（`getRoom`） | 1つの会議室を返す | [room-not-found](../../problems/room-not-found.ja.md) |
++| `PATCH /rooms/{roomId}`（`renameRoom`） | 会議室に新しい名前を付け、その会議室で答える。2つの要求が同時に名前を変えると、後の要求の名前が残る | [room-not-found](../../problems/room-not-found.ja.md)、[room-name-taken](../../problems/room-name-taken.ja.md) |
+ 
+ どの操作も、すべての API に共通する problem で答えることもある。[malformed-request](../../problems/malformed-request.ja.md)・[validation-error](../../problems/validation-error.ja.md)・[unsupported-media-type](../../problems/unsupported-media-type.ja.md)・[not-found](../../problems/not-found.ja.md)・[method-not-allowed](../../problems/method-not-allowed.ja.md)・[internal-error](../../problems/internal-error.ja.md) である。
+ この API は独自の認証を持たない。この API に届くのはプライベートなネットワークからだけだからである（TPL-0014）。
+@@ -53,4 +54,4 @@
+ - フォームは、room-name-taken を名前についてのメッセージとして表示する。invalid-opening-hours は閉まる時刻の項目に、unknown-time-zone はタイムゾーンの項目に表示する（`registration.ts`）。ほかの problem は、title と detail をそのまま表示する。
+ - 存在しない会議室では、`frontend/src/app/rooms/[roomId]/not-found.tsx` のページを表示する。
+ 
+-<!-- i18n-source: README.md sha256:4b60719d4c6d5c6758eec208a43dd8c978e1cb585adedbd661900d7d90c58d19 -->
++<!-- i18n-source: README.md sha256:f9f28557e2fccde1f92a3a72cfc5499501fff9bab7e943853da8e799ed25b344 -->
+diff --git a/docs/contexts/facility/README.md b/docs/contexts/facility/README.md
+--- a/docs/contexts/facility/README.md
++++ b/docs/contexts/facility/README.md
+@@ -19,6 +19,7 @@
+ | `POST /rooms` (`registerRoom`) | Registers a room, and answers 201 with its URL in `Location` | [room-name-taken](../../problems/room-name-taken.md), [invalid-opening-hours](../../problems/invalid-opening-hours.md), [unknown-time-zone](../../problems/unknown-time-zone.md) |
+ | `GET /rooms` (`listRooms`) | Lists the rooms in the order of their names, a page at a time | [invalid-cursor](../../problems/invalid-cursor.md) |
+ | `GET /rooms/{roomId}` (`getRoom`) | Returns one room | [room-not-found](../../problems/room-not-found.md) |
++| `PATCH /rooms/{roomId}` (`renameRoom`) | Gives a room a new name, and answers with the room. The last of two renames at the same time wins | [room-not-found](../../problems/room-not-found.md), [room-name-taken](../../problems/room-name-taken.md) |
+ 
+ Every operation can also answer with the problems that every API shares: [malformed-request](../../problems/malformed-request.md), [validation-error](../../problems/validation-error.md), [unsupported-media-type](../../problems/unsupported-media-type.md), [not-found](../../problems/not-found.md), [method-not-allowed](../../problems/method-not-allowed.md), and [internal-error](../../problems/internal-error.md).
+ The API has no authentication of its own, because only the private network reaches it (TPL-0014).
+diff --git a/docs/contexts/facility/glossary.ja.md b/docs/contexts/facility/glossary.ja.md
+--- a/docs/contexts/facility/glossary.ja.md
++++ b/docs/contexts/facility/glossary.ja.md
+@@ -13,10 +13,11 @@
+ | `Room.OpenUntil` | 閉まる時刻 | 会議室を使える終わりの時刻。開く時刻より遅いので、日付をまたいで開いている会議室はない。 |
+ | `Room.TimeZone` | タイムゾーン | 会議室の開く時刻と閉まる時刻を読むときの、IANA のタイムゾーン（`Asia/Tokyo` など）。 |
+ | `TimeOfDay` | 時刻 | 24 時間制の時と分で表す、日付を持たない時刻。 |
+-| `Rooms` | 会議室のユースケース | 会議室についてのユースケースをまとめたもの。会議室を登録する、1つの会議室を取得する、会議室の一覧を返す、の3つがある。 |
++| `Rooms` | 会議室のユースケース | 会議室についてのユースケースをまとめたもの。会議室を登録する、1つの会議室を取得する、会議室の一覧を返す、会議室の名前を変える、の4つがある。 |
+ | `Rooms.RegisterRoom` | 会議室を登録する | 名前、定員、開く時刻と閉まる時刻、タイムゾーンを決めて、会議室を加える。 |
+ | `RegisterRoomInput` | 会議室の登録内容 | 会議室を登録するのに要るもの。 |
++| `Rooms.RenameRoom` | 会議室の名前を変える | ほかのどの会議室も持たない新しい名前を会議室に付け、ほかは何も変えない。2つの変更が同時に来たら、後の変更が残る。 |
+ | `Error` | 業務エラー | Facility が理解したが、Facility の規則が拒んだリクエストのエラー。 |
+ | `Kind` | 業務エラーの種類 | リクエストを拒んだ規則。API は種類ごとに別の problem を返す。 |
+ 
+-<!-- i18n-source: glossary.md sha256:6a9c78f5869884b060a0c6f0292ea66c40fb93a58c409f328220d626a5f57ee4 -->
++<!-- i18n-source: glossary.md sha256:8716debffc473d2ba04e5d66a6a285dbd1f769e1a63703e92b86ee836aaccdc2 -->
+diff --git a/docs/contexts/facility/glossary.md b/docs/contexts/facility/glossary.md
+--- a/docs/contexts/facility/glossary.md
++++ b/docs/contexts/facility/glossary.md
+@@ -13,8 +13,9 @@
+ | `Room.OpenUntil` | closing time | The time of day until which a room can be used. It is later than the opening time, so no room is open across midnight. |
+ | `Room.TimeZone` | time zone | The IANA time zone, such as `Asia/Tokyo`, in which the opening time and the closing time of a room are read. |
+ | `TimeOfDay` | time of day | A time on a 24-hour clock, in hours and minutes, without a date. |
+-| `Rooms` | room use cases | The use cases about rooms: register a room, get one room, and list the rooms. |
++| `Rooms` | room use cases | The use cases about rooms: register a room, get one room, list the rooms, and rename a room. |
+ | `Rooms.RegisterRoom` | register a room | Add a room, with its name, its capacity, its opening and closing times, and its time zone. |
+ | `RegisterRoomInput` | room registration | What the registration of a room needs. |
++| `Rooms.RenameRoom` | rename a room | Give a room a new name, which no other room has, and change nothing else about it. Of two renames at the same time, the last one wins. |
+ | `Error` | business error | The error of a request that Facility understood, but that a rule of Facility rejects. |
+ | `Kind` | kind of business error | The rule that rejected a request. The API answers each kind with a problem of its own. |
+diff --git a/frontend/src/lib/api/facility.gen.ts b/frontend/src/lib/api/facility.gen.ts
+--- a/frontend/src/lib/api/facility.gen.ts
++++ b/frontend/src/lib/api/facility.gen.ts
+@@ -45,7 +45,14 @@
+         delete?: never;
+         options?: never;
+         head?: never;
+-        patch?: never;
++        /**
++         * Rename a room
++         * @description Gives a room a new name, which no other room may have, and changes
++         *     nothing else about it. A room may be renamed to the name that it has.
++         *     The operation takes no precondition: when two requests rename a room
++         *     at the same time, the last one wins.
++         */
++        patch: operations["renameRoom"];
+         trace?: never;
+     };
+ }
+@@ -73,6 +80,14 @@
+              */
+             timeZone: string;
+         };
++        /** @description The new name of a room. */
++        RoomRename: {
++            /**
++             * @description The name that people use for the room, under the same rules as at registration.
++             * @example Aoba
++             */
++            name: string;
++        };
+         /** @description A meeting room. */
+         Room: {
+             /**
+@@ -252,4 +267,37 @@
+             500: components["responses"]["Problem"];
+         };
+     };
++    renameRoom: {
++        parameters: {
++            query?: never;
++            header?: never;
++            path: {
++                /** @description The id of a room. */
++                roomId: components["parameters"]["RoomId"];
++            };
++            cookie?: never;
++        };
++        requestBody: {
++            content: {
++                "application/json": components["schemas"]["RoomRename"];
++            };
++        };
++        responses: {
++            /** @description The room was renamed. */
++            200: {
++                headers: {
++                    [name: string]: unknown;
++                };
++                content: {
++                    "application/json": components["schemas"]["Room"];
++                };
++            };
++            400: components["responses"]["Problem"];
++            404: components["responses"]["Problem"];
++            409: components["responses"]["Problem"];
++            415: components["responses"]["Problem"];
++            422: components["responses"]["Problem"];
++            500: components["responses"]["Problem"];
++        };
++    };
+ }

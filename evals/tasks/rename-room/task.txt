@@ -1,0 +1,12 @@
+People mistype the name of a room when they register it, and nothing can change the name afterwards: the only way out is to register the room again under the right name, and its reservations stay with the old one. The Facility API should let them rename a room.
+
+Add the operation `PATCH /rooms/{roomId}`, with a body `{"name": "<the new name>"}`. It changes the name of the room, and nothing else about it, and answers 200 with the room as `GET /rooms/{roomId}` gives it. From then on, the room has the new name wherever the API shows it, and the old name is free for another room.
+
+- A room that does not exist: 404, with the problem `room-not-found`.
+- A name that another room has: 409, with the problem `room-name-taken`, as at registration.
+- A name that breaks the rules of a name, such as an empty one: 422, with the same problem as at registration.
+- The name that the room has already: accepted, and nothing changes.
+
+The operation takes no precondition, no `If-Match` and no version: when two people rename a room at the same time, the last rename wins.
+
+Finish the change so that it is ready to be merged.
