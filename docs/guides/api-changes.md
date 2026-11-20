@@ -29,11 +29,23 @@ For each operation, Schemathesis sends:
 - the examples of the document;
 - requests that test each constraint of the document from both sides: a value at a limit and one past it, a missing required property or header, a value of another type, a method that the path does not have, and a body in a media type that the operation does not take;
 - 100 requests that it generates from the schemas, valid and invalid;
-- sequences that follow the `Location` header of a new resource, such as registering a room and reading it.
+- sequences of up to 10 requests that follow the links between operations: the links that the document declares, such as from a booking to its rescheduling with the `ETag` of the booking in `If-Match`, and links that Schemathesis infers, such as from a new room to reading it.
+
+A request that Schemathesis makes up cannot know what the APIs hold: a booking with a made-up room is refused as an unknown room before any rule of a reservation sees it.
+So before Schemathesis starts, the check registers rooms through the Facility API, and writes their ids, and instants of tomorrow and yesterday in UTC, into files in `.cache/api-fuzz/data/`.
+Generated bookings and reschedulings take their room and their period from these files most of the time, as `tools/schemathesis/schemathesis.toml` sets.
+The rooms and the instants are chosen so that a booking is either accepted or refused by one rule: a period off the quarter hour, too long, out of order, or in the past, attendees over the capacity, a period outside the opening hours of the room, or a room that another reservation holds already.
+The sequences then read, reschedule, and cancel the accepted reservations.
+`tools/scripts/api-fuzz.sh` lists the rooms and the instants, and why each is there.
 
 An answer must have a status that the operation declares, or 405 with the header `Allow` for a method that the path does not have, and the content type, the headers, and the body that the document gives for that status.
 A request that the document does not allow must get a 4xx, a request that it allows must not be refused as unreadable or invalid, and no request may get a 5xx.
 The settings of the check are in `tools/schemathesis/schemathesis.toml`.
+
+Some answers stay out of reach of the check, and only the API tests (layer 4) send the requests that cause them:
+
+- a cancellation less than 30 minutes before the start, which needs a reservation that starts within half an hour of the run: the instants would then depend on the time of day, and two runs would differ;
+- 503 from Reservation, which needs a Facility that does not answer.
 
 Run the check alone:
 
@@ -41,8 +53,9 @@ Run the check alone:
 make test-api-fuzz
 ```
 
-It takes about a minute, and up to two when the machine is busy with other work.
-With the same code and the same documents, every run sends the same requests, so a finding comes back until its cause is fixed.
+It takes about half a minute on a quiet machine, and two minutes or more when the machine is busy with other work.
+With the same code and the same documents, every run on the same day (in UTC) sends the same requests, so a finding comes back until its cause is fixed.
+On another day, the periods of the requests move by the same number of days; the ids that the APIs make differ in every run.
 
 ### Read a finding
 
@@ -57,12 +70,14 @@ contracts/http/facility.openapi.yaml:82: [schemathesis/status_code_conformance] 
 
 To send the request again, start the local system with `make up`, and run the curl command of the finding with the base URL of the API: `http://127.0.0.1:18081` for Facility, `http://127.0.0.1:18082` for Reservation.
 An id that the API made, such as the id of a new room, differs from run to run.
+A booking names a room that the check registered, which the local system does not know: register a room with the same settings there, as `tools/scripts/api-fuzz.sh` does, and put its id in the request.
 
 ### Fix a finding
 
 Decide which side is wrong, and fix that side:
 
 - The document is wrong when the API gives an answer on purpose, such as a status or a header, and the document does not list it. Add the answer to the document; when the change breaks a client, follow [Make a breaking change on purpose](#make-a-breaking-change-on-purpose).
+- The document is wrong, too, when it allows a value that the API can never take, such as the character U+0000 in a text that PostgreSQL stores, which fails with a 500. Narrow the schema to what the API takes; a narrower request schema breaks the contract, so follow [Make a breaking change on purpose](#make-a-breaking-change-on-purpose).
 - The code is wrong when the API refuses a request that the document allows, gives an answer that the document does not list, or fails with a 500. Fix the code, and add an API test that sends the request (layer 4), so that `make check` catches it too.
 - A rule that a JSON Schema cannot express, such as a period that ends after it starts, can refuse a request that the document allows, with a 4xx that the operation declares. Then neither side is wrong: add the status to `positive_data_acceptance` of the operation in `tools/schemathesis/schemathesis.toml`, with the rule as the reason.
 
