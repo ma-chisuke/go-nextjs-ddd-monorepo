@@ -26,6 +26,18 @@ lint-contracts:
 lint-contracts-breaking:
 	@$(TASK) $@ '$(FILES) "contracts/http/*.openapi.yaml" | tools/scripts/contracts-breaking.sh'
 
+# Requests that Schemathesis generates from each OpenAPI document, sent to the
+# API of its context, built from this checkout and run on a database of its
+# own on the local PostgreSQL (TPL-0007, layer 5). It needs PostgreSQL and
+# takes minutes, so it runs in check-all, when a file in scope can change what
+# the APIs answer: a document, Go code, SQL, or the check itself. See
+# tools/scripts/api-fuzz.sh and tools/schemathesis/.
+CHECK_ALL_TARGETS += test-api-fuzz
+
+test-api-fuzz: | db-server
+test-api-fuzz:
+	@$(TASK) $@ 'if [ -n "$$($(FILES) "contracts/http/*" $(GO_GLOBS) "*.sql" "tools/schemathesis/*" "tools/scripts/api-fuzz.sh")" ]; then tools/scripts/api-fuzz.sh; fi'
+
 # The JSON Schema of each event, contracts/events/<context>/<Name>.v<N>.json
 # (TPL-0013), with the Go tool in tools/cmd/events. The rules are in
 # docs/guides/event-changes.md.

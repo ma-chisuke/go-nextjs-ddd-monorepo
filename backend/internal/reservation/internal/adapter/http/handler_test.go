@@ -435,7 +435,18 @@ func TestRequestsOutsideTheDocument(t *testing.T) {
 	t.Parallel()
 	e := newEnv(t)
 	wantProblem(t, e.client.Do(http.MethodGet, "/bookings", nil), "not-found", http.StatusNotFound)
-	wantProblem(t, e.client.Do(http.MethodDelete, "/reservations", nil), "method-not-allowed", http.StatusMethodNotAllowed)
+	tests := []struct{ method, path, allow string }{
+		{http.MethodDelete, "/reservations", "GET, POST"},
+		{http.MethodPut, "/reservations/0193a6f0-7b5c-7e2a-9c3d-1f2e3d4c5b6a", "GET, PATCH"},
+		{http.MethodGet, "/reservations/0193a6f0-7b5c-7e2a-9c3d-1f2e3d4c5b6a/cancellation", "POST"},
+	}
+	for _, tt := range tests {
+		res := e.client.Do(tt.method, tt.path, nil)
+		wantProblem(t, res, "method-not-allowed", http.StatusMethodNotAllowed)
+		if got := res.Header.Get("Allow"); got != tt.allow {
+			t.Errorf("%s %s: got Allow %q, want %q", tt.method, tt.path, got, tt.allow)
+		}
+	}
 }
 
 func TestHealthCheck(t *testing.T) {
