@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import type { Problem } from "../../lib/problem.ts";
-import { readRegistration, registrationProblem, type RoomValues } from "./registration.ts";
+import {
+  blankRegistration,
+  readRegistration,
+  registrationProblem,
+  type RoomValues,
+} from "./registration.ts";
 
 function form(fields: Record<string, string>): FormData {
   const data = new FormData();
@@ -45,19 +50,36 @@ test("a filled-in form asks for the room", () => {
   });
 });
 
+test("a form that nobody has submitted shows no message", () => {
+  assert.deepEqual(blankRegistration, { fieldErrors: {} });
+});
+
 test("each field that does not fit gets a message, and the form keeps what was entered", () => {
   const read = readRegistration(
     form({ name: "  ", capacity: "0", openFrom: "9", openUntil: "25:00", timeZone: "" }),
   );
   assert.equal(read.ok, false);
-  assert.deepEqual(Object.keys(read.state.fieldErrors).sort(), [
-    "capacity",
-    "name",
-    "openFrom",
-    "openUntil",
-    "timeZone",
-  ]);
+  assert.deepEqual(read.state.fieldErrors, {
+    name: "Enter the name of the room.",
+    capacity: "Enter a whole number from 1 to 1000.",
+    openFrom: "Enter a time of day on a 24-hour clock, such as 09:00.",
+    openUntil: "Enter a time of day on a 24-hour clock, such as 09:00.",
+    timeZone: "Choose a time zone.",
+  });
   assert.equal(read.state.values?.openFrom, "9");
+});
+
+test("a field that does not fit on its own gets the one message", () => {
+  for (const [field, value] of [
+    ["name", ""],
+    ["capacity", "1001"],
+    ["openUntil", "24:00"],
+    ["timeZone", ""],
+  ] as const) {
+    const read = readRegistration(form({ ...filledIn, [field]: value }));
+    assert.equal(read.ok, false, field);
+    assert.deepEqual(Object.keys(read.state.fieldErrors), [field]);
+  }
 });
 
 test("a form without its fields is not read as a room", () => {
@@ -66,10 +88,15 @@ test("a form without its fields is not read as a room", () => {
   assert.equal(Object.keys(read.state.fieldErrors).length, 5);
 });
 
-test("a name that is too long is refused before the API sees it", () => {
+test("the name and the time zone may be as long as the API document allows", () => {
+  const longest = { ...filledIn, name: "x".repeat(100), timeZone: "x".repeat(64) };
+  assert.equal(readRegistration(form(longest)).ok, true);
   const read = readRegistration(form({ ...filledIn, name: "x".repeat(101) }));
   assert.equal(read.ok, false);
   assert.equal(read.state.fieldErrors.name, "Use at most 100 characters.");
+  const zone = readRegistration(form({ ...filledIn, timeZone: "x".repeat(65) }));
+  assert.equal(zone.ok, false);
+  assert.equal(zone.state.fieldErrors.timeZone, "Choose a time zone.");
 });
 
 test("a taken name shows as a notice about the name", () => {
@@ -94,11 +121,23 @@ test("an unknown time zone shows at the time zone", () => {
 test("the parts of a validation error show at their fields", () => {
   const state = registrationProblem(
     problem("validation-error", 422, {
-      errors: [{ pointer: "/capacity", detail: "must be at most 1000" }],
+      errors: [
+        { pointer: "/name", detail: "must be at most 100 characters" },
+        { pointer: "/capacity", detail: "must be at most 1000" },
+        { pointer: "/openFrom", detail: "must match the pattern" },
+        { pointer: "/openUntil", detail: "must match the pattern too" },
+        { pointer: "/timeZone", detail: "must be at most 64 characters" },
+      ],
     }),
     values,
   );
-  assert.deepEqual(state.fieldErrors, { capacity: "must be at most 1000" });
+  assert.deepEqual(state.fieldErrors, {
+    name: "must be at most 100 characters",
+    capacity: "must be at most 1000",
+    openFrom: "must match the pattern",
+    openUntil: "must match the pattern too",
+    timeZone: "must be at most 64 characters",
+  });
 });
 
 test("any other problem shows as it is", () => {
