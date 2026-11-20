@@ -63,6 +63,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Reservation"
+          links:
+            getReservation:
+              $ref: "#/components/links/GetReservation"
+            rescheduleReservation:
+              $ref: "#/components/links/RescheduleReservation"
+            cancelReservation:
+              $ref: "#/components/links/CancelReservation"
         "400":
           $ref: "#/components/responses/Problem"
         "409":
@@ -136,6 +143,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Reservation"
+          links:
+            rescheduleReservation:
+              $ref: "#/components/links/RescheduleReservation"
+            cancelReservation:
+              $ref: "#/components/links/CancelReservation"
         "400":
           $ref: "#/components/responses/Problem"
         "404":
@@ -172,6 +184,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Reservation"
+          links:
+            getReservation:
+              $ref: "#/components/links/GetReservation"
+            rescheduleReservation:
+              $ref: "#/components/links/RescheduleReservation"
+            cancelReservation:
+              $ref: "#/components/links/CancelReservation"
         "400":
           $ref: "#/components/responses/Problem"
         "404":
@@ -212,6 +231,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Reservation"
+          links:
+            getReservation:
+              $ref: "#/components/links/GetReservation"
         "400":
           $ref: "#/components/responses/Problem"
         "404":
@@ -259,6 +281,7 @@ components:
         type: string
         minLength: 1
         maxLength: 64
+        examples: ['"1"']
     Limit:
       name: limit
       in: query
@@ -277,6 +300,24 @@ components:
         type: string
         minLength: 1
         maxLength: 512
+  links:
+    GetReservation:
+      operationId: getReservation
+      description: Reads the reservation of this answer again.
+      parameters:
+        reservationId: $response.body#/id
+    RescheduleReservation:
+      operationId: rescheduleReservation
+      description: Reschedules the reservation of this answer, at the version that the answer gives in `ETag`.
+      parameters:
+        reservationId: $response.body#/id
+        header.If-Match: $response.header.ETag
+    CancelReservation:
+      operationId: cancelReservation
+      description: Cancels the reservation of this answer, at the version that the answer gives in `ETag`.
+      parameters:
+        reservationId: $response.body#/id
+        header.If-Match: $response.header.ETag
   headers:
     Location:
       description: The URL of the reservation.
@@ -292,6 +333,7 @@ components:
       schema:
         type: string
         pattern: ^"[0-9]+"$
+        examples: ['"1"']
   responses:
     Problem:
       description: The request failed. The body says why, as RFC 9457 describes.
