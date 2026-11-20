@@ -1,0 +1,10 @@
+# Equivalent mutants: changes that test-mutation makes to the code, which no
+# test can tell apart from the code, so no test can kill them. Each line lets
+# one such mutant live:
+#
+#   <mutant> | <original> -> <replacement> | <reason>
+#
+# with the mutant and the change as the finding names them, and a reason that
+# proves the change equivalent. Adding a line is a decision of review; prefer
+# a simpler code without the mutant. A line that matches no living mutant fails
+# the check. See docs/guides/mutation-tests.md.
