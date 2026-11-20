@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 import type { Problem } from "../../lib/problem.ts";
-import { changeFailed, isVersion, readCancellation, readReschedule } from "./changes.ts";
+import { changeFailed, isVersion, readCancellation, readReschedule, unchanged } from "./changes.ts";
 
 const reservationId = "01a1eeef-dde4-79b2-b195-89894d81fb15";
 
@@ -37,6 +37,10 @@ function problem(kind: string, status: number): Problem {
 }
 
 describe("readReschedule", () => {
+  test("a form that nobody has submitted shows no message", () => {
+    assert.deepEqual(unchanged, { fieldErrors: {} });
+  });
+
   test("only the parts that the person changed go to the API", () => {
     const read = readReschedule(form({ ...shown, end: "11:30" }));
     assert.equal(read.ok, true);
@@ -57,14 +61,32 @@ describe("readReschedule", () => {
   test("a form that changes nothing sends nothing", () => {
     const read = readReschedule(form(shown));
     assert.equal(read.ok, false);
-    assert.equal(read.state.notice?.title, "Nothing to change.");
+    assert.deepEqual(read.state.notice, {
+      title: "Nothing to change.",
+      detail: "The period and the attendees are as the reservation has them.",
+    });
   });
 
   test("each field that does not fit gets a message", () => {
     const read = readReschedule(form({ ...shown, date: "2026-11-31", attendees: "0" }));
     assert.equal(read.ok, false);
-    assert.deepEqual(Object.keys(read.state.fieldErrors).sort(), ["attendees", "date"]);
+    assert.deepEqual(read.state.fieldErrors, {
+      date: "Enter a date, such as 2026-11-20.",
+      attendees: "Enter a whole number from 1 to 1000.",
+    });
     assert.equal(read.state.values?.date, "2026-11-31");
+  });
+
+  test("a field that does not fit on its own gets the one message", () => {
+    for (const [field, value] of [
+      ["date", "2026-11-31"],
+      ["end", "25:00"],
+      ["attendees", "1001"],
+    ] as const) {
+      const read = readReschedule(form({ ...shown, [field]: value }));
+      assert.equal(read.ok, false, field);
+      assert.deepEqual(Object.keys(read.state.fieldErrors), [field]);
+    }
   });
 
   test("a form without the version that the page showed never goes out", () => {
@@ -72,6 +94,7 @@ describe("readReschedule", () => {
       const read = readReschedule(form({ ...shown, version, end: "11:30" }));
       assert.equal(read.ok, false);
       assert.equal(read.state.notice?.title, "This page is out of date.");
+      assert.match(read.state.notice.detail ?? "", /^[A-Z].*\.$/);
     }
     const missing = form({ ...shown, end: "11:30" });
     missing.delete("version");
@@ -86,7 +109,10 @@ describe("readCancellation", () => {
   });
 
   test("a cancellation without a version never goes out", () => {
-    assert.equal(readCancellation(form({ reservationId })).ok, false);
+    const read = readCancellation(form({ reservationId }));
+    assert.equal(read.ok, false);
+    assert.equal(read.state.notice?.title, "This page is out of date.");
+    assert.deepEqual(read.state.fieldErrors, {});
     assert.equal(readCancellation(form({ reservationId: "x", version: '"7"' })).ok, false);
   });
 });
@@ -133,5 +159,7 @@ test("isVersion accepts a strong entity tag of digits", () => {
   assert.equal(isVersion('"12"'), true);
   assert.equal(isVersion("1"), false);
   assert.equal(isVersion('W/"1"'), false);
+  // One version, not a list of them as If-None-Match takes.
+  assert.equal(isVersion('"1", "2"'), false);
   assert.equal(isVersion(""), false);
 });
