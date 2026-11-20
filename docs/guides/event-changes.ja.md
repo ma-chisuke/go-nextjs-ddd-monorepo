@@ -85,7 +85,7 @@
 
    手本は `backend/internal/reservation/internal/adapter/postgres/events_test.go` である。このテストは、ドメインイベントの種類ごとに見本を持ち、それぞれを詰め替えと `AssertMatchesContract` に通す。見本のない種類のイベントがドメインに加わると、このテストは失敗する。詰め替えのないドメインイベントを含む変更は、ストアが拒む。
 
-   確認：`test-go`。
+   確認：`test-go` と `make test-integration`。後者は Docker が必要で、1分ほどかかる。リレーのテストの1つが、発行したイベントのデータ全体を、期待する値と比べる。
 
 4. そのイベントを処理する各受け取る側で、受け取る側のモデル変換装置でデータを読む。そして、スキーマのすべての例を、受け取る側がそれぞれについて行うことに変えるテストを書く。手本は `backend/internal/notification/internal/app/events_test.go` である。このテストはスキーマをファイルとして読むので、新しい例もそのまま試される。そのうえで、[イベントを購読する](#イベントを購読する)のとおりに、受け取る側の購読にそのイベントを足す。
 
@@ -102,4 +102,4 @@
 
 確認：`make up` がワーカーを起動し、`make check-all` がその結合テストを実行する。`make smoke` が購読まで確かめるのは、Notification のメールを待つように、ワーカーの結果を待つときだけである。
 
-<!-- i18n-source: event-changes.md sha256:44953cbfd923e158bd901576e787d8c60a49d8ab010bf5847f372bc33a55c699 -->
+<!-- i18n-source: event-changes.md sha256:e32847045d38e47803cc0665ad373db0ee8beaa64fb70e73594dd1c621cfc88c -->
