@@ -1,0 +1,44 @@
+# The tools that an agent may use in a run of evals/run.sh without asking,
+# one permission rule of Claude Code per line. Both arms get the same list;
+# a command outside it is refused, and the record counts the refusals.
+# Editing files is allowed by the permission mode of the run.
+#
+# What a developer does in a checkout: read, build, test, and commit. Nothing
+# that leaves the checkout: no push, no network tool, no Docker.
+Bash(make *)
+# The scope of a check, as AGENTS.md and the Stop hook write it.
+Bash(CHECK_SCOPE=changed make *)
+Bash(CHECK_FILES=* make *)
+Bash(git status *)
+Bash(git diff *)
+Bash(git log *)
+Bash(git show *)
+Bash(git ls-files *)
+Bash(git grep *)
+Bash(git add *)
+Bash(git commit *)
+Bash(git mv *)
+Bash(git rm *)
+Bash(git restore *)
+Bash(go *)
+Bash(gofmt *)
+Bash(pnpm *)
+Bash(node *)
+Bash(mise exec *)
+Bash(ls *)
+Bash(cat *)
+Bash(head *)
+Bash(tail *)
+Bash(wc *)
+Bash(grep *)
+Bash(rg *)
+Bash(find *)
+Bash(sort *)
+Bash(diff *)
+Bash(mkdir *)
+Bash(cp *)
+Bash(mv *)
+Bash(touch *)
+Bash(pwd)
+Bash(cd *)
+Bash(shasum *)

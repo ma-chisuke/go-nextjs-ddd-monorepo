@@ -1,0 +1,310 @@
+diff --git a/backend/internal/reservation/internal/adapter/http/api.gen.go b/backend/internal/reservation/internal/adapter/http/api.gen.go
+--- a/backend/internal/reservation/internal/adapter/http/api.gen.go
++++ b/backend/internal/reservation/internal/adapter/http/api.gen.go
+@@ -1468,17 +1468,18 @@ var swaggerSpec = []string{
+ 	"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",
++	"Ks7dr2IN2zxs/jMA",
+ }
+ 
+ // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,
+diff --git a/backend/internal/reservation/internal/adapter/http/handler_test.go b/backend/internal/reservation/internal/adapter/http/handler_test.go
+--- a/backend/internal/reservation/internal/adapter/http/handler_test.go
++++ b/backend/internal/reservation/internal/adapter/http/handler_test.go
+@@ -212,6 +212,11 @@ func TestBookRoomRejections(t *testing.T) {
+ 			with(with(newReservation("", ""), "startsAt", "2026-11-18T09:45:00+09:00"), "endsAt", "2026-11-18T10:45:00+09:00"),
+ 			"period-in-past", http.StatusUnprocessableEntity, "",
+ 		},
++		{
++			"the period starts more than 90 days ahead",
++			with(with(newReservation("", ""), "startsAt", "2027-02-16T10:15:00+09:00"), "endsAt", "2027-02-16T11:15:00+09:00"),
++			"period-too-far-ahead", http.StatusUnprocessableEntity, "",
++		},
+ 	}
+ 	for _, tt := range tests {
+ 		t.Run(tt.name, func(t *testing.T) {
+diff --git a/backend/internal/reservation/internal/adapter/http/problems.go b/backend/internal/reservation/internal/adapter/http/problems.go
+--- a/backend/internal/reservation/internal/adapter/http/problems.go
++++ b/backend/internal/reservation/internal/adapter/http/problems.go
+@@ -23,6 +23,7 @@ var (
+ 	outsideOpeningHours  = problem.Type{Slug: "outside-opening-hours", Title: "The room is not open for the whole period", Status: http.StatusUnprocessableEntity}
+ 	cancellationTooLate  = problem.Type{Slug: "cancellation-too-late", Title: "It is too late to cancel the reservation", Status: http.StatusUnprocessableEntity}
+ 	reservationCancelled = problem.Type{Slug: "reservation-cancelled", Title: "The reservation is cancelled", Status: http.StatusConflict}
++	periodTooFarAhead    = problem.Type{Slug: "period-too-far-ahead", Title: "The period starts too far ahead", Status: http.StatusUnprocessableEntity}
+ 
+ 	// The errors of the use cases.
+ 	reservationNotFound  = problem.Type{Slug: "reservation-not-found", Title: "The reservation does not exist", Status: http.StatusNotFound}
+@@ -57,6 +58,8 @@ func domainProblem(kind domain.Kind) problem.Type {
+ 		return cancellationTooLate
+ 	case domain.KindReservationCancelled:
+ 		return reservationCancelled
++	case domain.KindPeriodTooFarAhead:
++		return periodTooFarAhead
+ 	}
+ 	return problem.InternalError
+ }
+diff --git a/backend/internal/reservation/internal/domain/errors.go b/backend/internal/reservation/internal/domain/errors.go
+--- a/backend/internal/reservation/internal/domain/errors.go
++++ b/backend/internal/reservation/internal/domain/errors.go
+@@ -28,6 +28,9 @@ const (
+ 	// KindReservationCancelled: the reservation was cancelled, and a
+ 	// cancelled reservation is neither changed nor cancelled again.
+ 	KindReservationCancelled
++	// KindPeriodTooFarAhead: the period starts later than BookingHorizon
++	// from now.
++	KindPeriodTooFarAhead
+ )
+ 
+ // Kinds lists every Kind, for the tests that must cover all of them.
+@@ -35,7 +38,7 @@ func Kinds() []Kind {
+ 	return []Kind{
+ 		KindPeriodOutOfOrder, KindPeriodMisaligned, KindPeriodTooLong, KindPeriodInPast,
+ 		KindNoAttendees, KindOverCapacity, KindOutsideOpeningHours,
+-		KindCancellationTooLate, KindReservationCancelled,
++		KindCancellationTooLate, KindReservationCancelled, KindPeriodTooFarAhead,
+ 	}
+ }
+ 
+diff --git a/backend/internal/reservation/internal/domain/period.go b/backend/internal/reservation/internal/domain/period.go
+--- a/backend/internal/reservation/internal/domain/period.go
++++ b/backend/internal/reservation/internal/domain/period.go
+@@ -12,6 +12,9 @@ const (
+ 	PeriodStep = 15 * time.Minute
+ 	// LongestPeriod is the longest time that one reservation holds a room.
+ 	LongestPeriod = 4 * time.Hour
++	// BookingHorizon is how far ahead a reservation may start, at the most,
++	// counted from now: 90 days.
++	BookingHorizon = 90 * 24 * time.Hour
+ 	// CancellationNotice is how long before its start a reservation can
+ 	// still be cancelled, at the latest.
+ 	CancellationNotice = 30 * time.Minute
+diff --git a/backend/internal/reservation/internal/domain/reservation.go b/backend/internal/reservation/internal/domain/reservation.go
+--- a/backend/internal/reservation/internal/domain/reservation.go
++++ b/backend/internal/reservation/internal/domain/reservation.go
+@@ -165,6 +165,9 @@ func checkTerms(room Room, period Period, attendees int, now time.Time) error {
+ 			"The period lasts %s, and a reservation lasts at most %s.", describe(period.Length()), describe(LongestPeriod)))
+ 	case period.Start.Before(now):
+ 		return newError(KindPeriodInPast, "The period starts in the past.")
++	case period.Start.After(now.Add(BookingHorizon)):
++		return newError(KindPeriodTooFarAhead, fmt.Sprintf(
++			"A reservation starts at most %d days ahead.", BookingHorizon/(24*time.Hour)))
+ 	case attendees < 1:
+ 		return newError(KindNoAttendees, "A reservation has at least 1 attendee.")
+ 	case attendees > room.Capacity:
+diff --git a/backend/internal/reservation/internal/domain/reservation_test.go b/backend/internal/reservation/internal/domain/reservation_test.go
+--- a/backend/internal/reservation/internal/domain/reservation_test.go
++++ b/backend/internal/reservation/internal/domain/reservation_test.go
+@@ -29,6 +29,13 @@ func at(day, hour, minute int) time.Time {
+ 	return time.Date(2026, time.November, day, hour, minute, 0, 0, tokyo)
+ }
+ 
++// ahead returns the period of one hour that starts d after 10:00 on
++// 18 November 2026, the time that the tests take for now.
++func ahead(d time.Duration) domain.Period {
++	start := at(18, 10, 0).Add(d)
++	return domain.Period{Start: start, End: start.Add(time.Hour)}
++}
++
+ // on returns the period from h1:m1 to h2:m2 in Tokyo on the given day.
+ func on(day, h1, m1, h2, m2 int) domain.Period {
+ 	return domain.Period{Start: at(day, h1, m1), End: at(day, h2, m2)}
+@@ -78,6 +85,8 @@ func TestBook(t *testing.T) {
+ 		{"starts now", room, on(18, 10, 0, 11, 0), 4, 0},
+ 		{"started one step ago", room, on(18, 9, 45, 11, 0), 4, domain.KindPeriodInPast},
+ 		{"started yesterday", room, on(17, 10, 0, 11, 0), 4, domain.KindPeriodInPast},
++		{"starts exactly at the horizon", room, ahead(domain.BookingHorizon), 4, 0},
++		{"starts one step past the horizon", room, ahead(domain.BookingHorizon + domain.PeriodStep), 4, domain.KindPeriodTooFarAhead},
+ 		{"nobody attends", room, on(20, 10, 0, 11, 0), 0, domain.KindNoAttendees},
+ 		{"the organizer alone attends", room, on(20, 10, 0, 11, 0), 1, 0},
+ 		{"the attendees fill the room", room, on(20, 10, 0, 11, 0), 8, 0},
+@@ -243,6 +252,7 @@ func TestErrorDetails(t *testing.T) {
+ 		{"off the grid", refused(room, on(20, 10, 5, 11, 0), 4), "The period must start and end on a multiple of 15 minutes, such as 10:00, 10:15, or 10:30."},
+ 		{"too long", refused(room, on(20, 10, 0, 14, 15), 4), "The period lasts 255 minutes, and a reservation lasts at most 4 hours."},
+ 		{"in the past", refused(room, on(18, 9, 45, 11, 0), 4), "The period starts in the past."},
++		{"too far ahead", refused(room, ahead(domain.BookingHorizon+domain.PeriodStep), 4), "A reservation starts at most 90 days ahead."},
+ 		{"nobody attends", refused(room, on(20, 10, 0, 11, 0), 0), "A reservation has at least 1 attendee."},
+ 		{"over capacity", refused(room, on(20, 10, 0, 11, 0), 9), "The room holds 8 people, and 9 attend."},
+ 		{
+@@ -342,7 +352,7 @@ func TestKinds(t *testing.T) {
+ 	}
+ 	// The list ends with the last kind. A new kind goes after it, and takes
+ 	// its place here.
+-	if last := domain.KindReservationCancelled; len(kinds) != int(last) {
++	if last := domain.KindPeriodTooFarAhead; len(kinds) != int(last) {
+ 		t.Errorf("Kinds() lists %d kinds, want every kind up to %d", len(kinds), last)
+ 	}
+ }
+diff --git a/contracts/http/reservation.openapi.yaml b/contracts/http/reservation.openapi.yaml
+--- a/contracts/http/reservation.openapi.yaml
++++ b/contracts/http/reservation.openapi.yaml
+@@ -34,10 +34,11 @@ paths:
+       summary: Book a room
+       description: |
+         Books a room for a period. The period starts and ends on a quarter
+-        hour, lasts at most 4 hours, does not start in the past, and lies
+-        inside the opening hours of the room on one day, read in the time zone
+-        of the room. The attendees fit the capacity of the room, and no other
+-        confirmed reservation of the room overlaps the period.
++        hour, lasts at most 4 hours, starts neither in the past nor more than
++        90 days ahead, and lies inside the opening hours of the room on one
++        day, read in the time zone of the room. The attendees fit the capacity
++        of the room, and no other confirmed reservation of the room overlaps
++        the period.
+ 
+         A request that is sent again with the same `Idempotency-Key` and the
+         same body answers with the reservation that the first one made, and
+diff --git a/docs/contexts/reservation/README.ja.md b/docs/contexts/reservation/README.ja.md
+--- a/docs/contexts/reservation/README.ja.md
++++ b/docs/contexts/reservation/README.ja.md
+@@ -22,7 +22,7 @@ Reservation は、会議室の予約を受け持つ。ある時間帯に会議
+ | `PATCH /reservations/{reservationId}`（`rescheduleReservation`） | 確定した予約の時間帯か参加人数を変える。クライアントが読んだバージョンを `If-Match` に入れる必要がある | 予約の決まり、[reservation-cancelled](../../problems/reservation-cancelled.ja.md)、[reservation-not-found](../../problems/reservation-not-found.ja.md)、[unknown-room](../../problems/unknown-room.ja.md)、[room-already-booked](../../problems/room-already-booked.ja.md)、[facility-unavailable](../../problems/facility-unavailable.ja.md)、[precondition-required](../../problems/precondition-required.ja.md)、[precondition-failed](../../problems/precondition-failed.ja.md) |
+ | `POST /reservations/{reservationId}/cancellation`（`cancelReservation`） | 確定した予約を取り消す。`If-Match` が要る | [cancellation-too-late](../../problems/cancellation-too-late.ja.md)、[reservation-cancelled](../../problems/reservation-cancelled.ja.md)、[reservation-not-found](../../problems/reservation-not-found.ja.md)、[precondition-required](../../problems/precondition-required.ja.md)、[precondition-failed](../../problems/precondition-failed.ja.md) |
+ 
+-予約の決まりのうち時間帯の決まりに反すると、[period-out-of-order](../../problems/period-out-of-order.ja.md)・[period-misaligned](../../problems/period-misaligned.ja.md)・[period-too-long](../../problems/period-too-long.ja.md)・[period-in-past](../../problems/period-in-past.ja.md) のどれかで答える。参加人数と会議室の決まりに反すると、[no-attendees](../../problems/no-attendees.ja.md)・[over-capacity](../../problems/over-capacity.ja.md)・[outside-opening-hours](../../problems/outside-opening-hours.ja.md) のどれかで答える。
++時間帯の決まりに反すると、[period-out-of-order](../../problems/period-out-of-order.ja.md)・[period-misaligned](../../problems/period-misaligned.ja.md)・[period-too-long](../../problems/period-too-long.ja.md)・[period-in-past](../../problems/period-in-past.ja.md)・[period-too-far-ahead](../../problems/period-too-far-ahead.ja.md) のどれかで答える。参加人数と会議室の決まりに反すると、[no-attendees](../../problems/no-attendees.ja.md)・[over-capacity](../../problems/over-capacity.ja.md)・[outside-opening-hours](../../problems/outside-opening-hours.ja.md) のどれかで答える。
+ どの操作も、すべての API に共通する problem で答えることもある。[malformed-request](../../problems/malformed-request.ja.md)・[validation-error](../../problems/validation-error.ja.md)・[unsupported-media-type](../../problems/unsupported-media-type.ja.md)・[not-found](../../problems/not-found.ja.md)・[method-not-allowed](../../problems/method-not-allowed.ja.md)・[internal-error](../../problems/internal-error.ja.md) である。
+ この API は独自の認証を持たない。この API に届くのはプライベートなネットワークからだけだからである（TPL-0014）。
+ 
+@@ -48,7 +48,7 @@ Reservation はどのイベントも購読しない。
+ ## 決まり
+ 
+ - 予約は主催者に代わり、ある参加人数のために、1つの会議室をある時間帯だけ押さえる。予約は確定しているか、取り消されているかのどちらかである。
+-- 時間帯は始まりより後に終わり、15分刻みの時刻に始まって終わり、長くても4時間で、過去には始まらない。始まりを含み終わりを含まないので、ある予約が終わる時刻に次の予約を始められる。
++- 時間帯は始まりより後に終わり、15分刻みの時刻に始まって終わり、長くても4時間である。過去には始まらず、90日より先にも始まらない。始まりを含み終わりを含まないので、ある予約が終わる時刻に次の予約を始められる。
+ - 参加人数は1人以上で、会議室の定員に収まる。
+ - 時間帯は、会議室のタイムゾーンで読んだ、ある1日の利用時間の中に収まる。
+ - 1つの会議室の確定した予約どうしは重ならない。まずユースケースが確かめ、同じ瞬間に保存しようとした2つのリクエストの間では、排他制約 `reservations_no_overlap` が決める。
+@@ -83,4 +83,4 @@ Reservation は、予約と変更のたびに、会議室の定員・利用時
+ - 変更するフォームと取り消すフォームは、ページが表示したバージョンを `If-Match` で送る。precondition-failed か reservation-cancelled のときは、ページがメッセージと予約の今の状態を表示する（`changes.ts`）。
+ - 人が対処できる problem の種類には、それぞれ専用の文言がある。関係する項目があれば、文言はその項目に出る（`problems.ts`）。ほかの problem は、title と detail をそのまま表示する。
+ 
+-<!-- i18n-source: README.md sha256:7ccc9a86e690bed20d83a3a66063496eb512ae03f745a5c4fcec1d586f79f875 -->
++<!-- i18n-source: README.md sha256:14f064d76e600e13a3ddf1ef234c87c305bab7419249d1b30a399e39f873dddc -->
+diff --git a/docs/contexts/reservation/README.md b/docs/contexts/reservation/README.md
+--- a/docs/contexts/reservation/README.md
++++ b/docs/contexts/reservation/README.md
+@@ -22,7 +22,7 @@ The aggregate `Reservation` in `internal/domain/` applies the rules without I/O,
+ | `PATCH /reservations/{reservationId}` (`rescheduleReservation`) | Changes the period or the attendees of a confirmed reservation. It needs the version that the client read in `If-Match` | The rules of a booking, [reservation-cancelled](../../problems/reservation-cancelled.md), [reservation-not-found](../../problems/reservation-not-found.md), [unknown-room](../../problems/unknown-room.md), [room-already-booked](../../problems/room-already-booked.md), [facility-unavailable](../../problems/facility-unavailable.md), [precondition-required](../../problems/precondition-required.md), [precondition-failed](../../problems/precondition-failed.md) |
+ | `POST /reservations/{reservationId}/cancellation` (`cancelReservation`) | Cancels a confirmed reservation. It needs `If-Match` | [cancellation-too-late](../../problems/cancellation-too-late.md), [reservation-cancelled](../../problems/reservation-cancelled.md), [reservation-not-found](../../problems/reservation-not-found.md), [precondition-required](../../problems/precondition-required.md), [precondition-failed](../../problems/precondition-failed.md) |
+ 
+-The rules of a booking on the period answer with [period-out-of-order](../../problems/period-out-of-order.md), [period-misaligned](../../problems/period-misaligned.md), [period-too-long](../../problems/period-too-long.md), or [period-in-past](../../problems/period-in-past.md). Those on the attendees and the room answer with [no-attendees](../../problems/no-attendees.md), [over-capacity](../../problems/over-capacity.md), or [outside-opening-hours](../../problems/outside-opening-hours.md).
++The rules of a booking on the period answer with [period-out-of-order](../../problems/period-out-of-order.md), [period-misaligned](../../problems/period-misaligned.md), [period-too-long](../../problems/period-too-long.md), [period-in-past](../../problems/period-in-past.md), or [period-too-far-ahead](../../problems/period-too-far-ahead.md). Those on the attendees and the room answer with [no-attendees](../../problems/no-attendees.md), [over-capacity](../../problems/over-capacity.md), or [outside-opening-hours](../../problems/outside-opening-hours.md).
+ Every operation can also answer with the problems that every API shares: [malformed-request](../../problems/malformed-request.md), [validation-error](../../problems/validation-error.md), [unsupported-media-type](../../problems/unsupported-media-type.md), [not-found](../../problems/not-found.md), [method-not-allowed](../../problems/method-not-allowed.md), and [internal-error](../../problems/internal-error.md).
+ The API has no authentication of its own, because only the private network reaches it (TPL-0014).
+ 
+@@ -48,7 +48,7 @@ Reservation subscribes to no event.
+ ## Rules
+ 
+ - A reservation books one room for a period, for a number of attendees, on behalf of an organizer. It is confirmed or cancelled.
+-- A period ends after it starts, starts and ends on a quarter hour, lasts at most 4 hours, and does not start in the past. It includes its start and excludes its end, so one reservation may end when the next one starts.
++- A period ends after it starts, starts and ends on a quarter hour, lasts at most 4 hours, does not start in the past, and starts at most 90 days ahead. It includes its start and excludes its end, so one reservation may end when the next one starts.
+ - At least 1 person attends, and the attendees fit the capacity of the room.
+ - The period lies inside the opening hours of the room on one day, read in the time zone of the room.
+ - Two confirmed reservations of one room never overlap. The use case checks first, and the exclusion constraint `reservations_no_overlap` decides between two requests that store at the same moment.
+diff --git a/docs/problems/period-too-far-ahead.ja.md b/docs/problems/period-too-far-ahead.ja.md
+new file mode 100644
+--- /dev/null
++++ b/docs/problems/period-too-far-ahead.ja.md
+@@ -0,0 +1,13 @@
++# 時間帯の始まりが先すぎる
++
++API は、RFC 9457 の形式のこの problem を、HTTP のステータスコード 422 とともに返す。
++
++## 意味
++
++予約は、リクエストが届いた時刻から90日以内に始まらなければならない。この決まりは予約の変更にも当てはまるので、それより後に始まる時間帯には予約を移せない。
++
++## 対処
++
++今から90日以内に始まる時間帯を選ぶか、日を改めて予約する。
++
++<!-- i18n-source: period-too-far-ahead.md sha256:84cc9d38b8b28cad5cfb5c05d8d773b33d73d88fc7d2bd2f166cbc6ea47d37d5 -->
+diff --git a/docs/problems/period-too-far-ahead.md b/docs/problems/period-too-far-ahead.md
+new file mode 100644
+--- /dev/null
++++ b/docs/problems/period-too-far-ahead.md
+@@ -0,0 +1,11 @@
++# The period starts too far ahead
++
++An API answers with this problem, in the form of RFC 9457, together with the HTTP status code 422.
++
++## What it means
++
++A reservation starts at most 90 days after the moment the request arrives. The rule also applies to a change of a reservation: a reservation cannot be moved to a period that starts later than that.
++
++## What to do
++
++Choose a period that starts within 90 days from now, or book the room later.
+diff --git a/frontend/src/features/reservation/problems.test.ts b/frontend/src/features/reservation/problems.test.ts
+--- a/frontend/src/features/reservation/problems.test.ts
++++ b/frontend/src/features/reservation/problems.test.ts
+@@ -106,3 +106,9 @@ test("any other problem shows its title and detail as they are", () => {
+   );
+   assert.equal(unknown.notice?.title, "Title of validation-error");
+ });
++
++test("a period too far ahead shows at the start", () => {
++  const words = reservationProblem(problem("period-too-far-ahead", 422), "book");
++  assert.equal(words.notice?.title, "The period starts too far ahead.");
++  assert.deepEqual(words.noticeFields, ["start"]);
++});
+diff --git a/frontend/src/features/reservation/problems.ts b/frontend/src/features/reservation/problems.ts
+--- a/frontend/src/features/reservation/problems.ts
++++ b/frontend/src/features/reservation/problems.ts
+@@ -104,6 +104,14 @@ export function reservationProblem(problem: Problem, operation: Operation): Prob
+             },
+             ["start"],
+           );
++    case "period-too-far-ahead":
++      return words(
++        {
++          title: "The period starts too far ahead.",
++          detail: "A reservation starts at most 90 days ahead. Choose an earlier period.",
++        },
++        ["start"],
++      );
+     case "over-capacity":
+       return atField("attendees", "More people attend than the room holds.");
+     case "no-attendees":
+diff --git a/frontend/src/lib/api/reservation.gen.ts b/frontend/src/lib/api/reservation.gen.ts
+--- a/frontend/src/lib/api/reservation.gen.ts
++++ b/frontend/src/lib/api/reservation.gen.ts
+@@ -23,10 +23,11 @@ export interface paths {
+         /**
+          * Book a room
+          * @description Books a room for a period. The period starts and ends on a quarter
+-         *     hour, lasts at most 4 hours, does not start in the past, and lies
+-         *     inside the opening hours of the room on one day, read in the time zone
+-         *     of the room. The attendees fit the capacity of the room, and no other
+-         *     confirmed reservation of the room overlaps the period.
++         *     hour, lasts at most 4 hours, starts neither in the past nor more than
++         *     90 days ahead, and lies inside the opening hours of the room on one
++         *     day, read in the time zone of the room. The attendees fit the capacity
++         *     of the room, and no other confirmed reservation of the room overlaps
++         *     the period.
+          *
+          *     A request that is sent again with the same `Idempotency-Key` and the
+          *     same body answers with the reservation that the first one made, and

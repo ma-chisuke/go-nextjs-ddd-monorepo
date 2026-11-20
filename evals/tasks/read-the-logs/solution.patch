@@ -1,0 +1,54 @@
+diff --git a/docs/guides/run-locally.ja.md b/docs/guides/run-locally.ja.md
+--- a/docs/guides/run-locally.ja.md
++++ b/docs/guides/run-locally.ja.md
+@@ -122,6 +122,20 @@ docker compose logs reservation-relay notification
+ 
+ Mailpit はメールを一時的なファイルシステムに置くので、コンテナが止まるとメールは消える。
+ 
++## ログを読む
++
++`docker compose logs --follow <service>` は、1つのサービスのログを、書き込まれるそばから表示する。サービスの名前は、`docker compose ps` が一覧に出すものである。
++
++```sh
++docker compose logs --follow reservation
++```
++
++サービスは、1行に1つの JSON オブジェクトを書く。Compose が各行の前に付ける接頭辞を外せば、`jq` でログが読みやすくなる。
++
++```sh
++docker compose logs --no-log-prefix reservation | jq .
++```
++
+ ## キューを見る
+ 
+ `mise.toml` は、デプロイのために AWS のコマンドラインツール `aws` を固定している。mise が有効なシェルで（または各コマンドの前に `mise exec --` を付けて）、`tools/scripts/aws.sh` が出力する環境変数を読み込めば、`aws` をエミュレーターに向けられる。
+@@ -239,4 +253,4 @@ AWS Emulator のバージョンを更新する Renovate のルールはまだな
+ 2. `EMULATOR_VERSION` と、2つのチェックサム `EMULATOR_SHA256_ARM64` と `EMULATOR_SHA256_AMD64` を変える。各パッケージ（`aarch64` 用と `x86_64` 用）のチェックサムは、`curl --location <パッケージの URL> | shasum -a 256` で得る。パッケージの URL は、Dockerfile の `RUN` 命令にある。
+ 3. `make up` でイメージをビルドしてエミュレーターのコンテナを作り直し、`CHECK_SCOPE=changed make check-all` を実行する。新しいバージョンがテンプレートの頼る動きを続けているかは、次のものでわかる。`platform/awsevents` と `notification/internal/adapter/ses` の結合テスト、`make smoke`、`make rehearse-infra` である。パッケージがチェックサムや AWS の署名に合わなければ、ビルドが失敗する。
+ 
+-<!-- i18n-source: run-locally.md sha256:7e9bb8d208550f13ed15740003656ba4fa46f74268b32ebf86cbf1ffea2438a2 -->
++<!-- i18n-source: run-locally.md sha256:560b6129c03bee493f1f0745879f51fd3534e01f3cfe4f6fe708488626e8c547 -->
+diff --git a/docs/guides/run-locally.md b/docs/guides/run-locally.md
+--- a/docs/guides/run-locally.md
++++ b/docs/guides/run-locally.md
+@@ -122,6 +122,20 @@ docker compose logs reservation-relay notification
+ 
+ Mailpit keeps the mail on a temporary file system, so the mail is gone when its container stops.
+ 
++## Read the logs
++
++`docker compose logs --follow <service>` shows the log of one service as it is written. The names of the services are the ones that `docker compose ps` lists:
++
++```sh
++docker compose logs --follow reservation
++```
++
++The services write one JSON object per line. Without the prefix that Compose puts before each line, `jq` makes a log readable:
++
++```sh
++docker compose logs --no-log-prefix reservation | jq .
++```
++
+ ## Look at the queues
+ 
+ `mise.toml` pins the command-line tool of AWS, `aws`, for the deployment. Point it at the emulator with the environment that `tools/scripts/aws.sh` prints, in a shell in which mise is active (or put `mise exec --` before each command):

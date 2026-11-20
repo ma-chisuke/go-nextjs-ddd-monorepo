@@ -1,0 +1,7 @@
+Meeting rooms are being booked too far ahead: people reserve rooms for dates on which nobody knows yet who will be in the office. The business decided on a new rule for the Reservation context.
+
+A reservation starts at most 90 days ahead. Counted from the moment the request arrives, 90 days are 2160 hours. A booking whose period starts later than that is refused, and so is a change that moves a reservation to such a period. A period that starts exactly 2160 hours ahead is still accepted.
+
+The API answers a refused request with the status 422 and a problem of a new type, `period-too-far-ahead`, with the title "The period starts too far ahead".
+
+Implement the rule. Finish the change so that it is ready to be merged: everything that this repository expects of a new business rule and of a new type of problem should be there.
