@@ -6,7 +6,7 @@ A template for a product with a Go API and a Next.js front end in one repository
 
 ## Status
 
-The template is built in milestones. The quality foundation comes first, so that every line of app code is checked from its first commit.
+The template was built in milestones. The quality foundation came first, so that every line of app code was checked from its first commit. Every milestone is done; the table says what M4 and M5 leave open.
 
 | Milestone | Content | State |
 |---|---|---|
@@ -15,7 +15,7 @@ The template is built in milestones. The quality foundation comes first, so that
 | M2 | Events: outbox, EventBridge, SQS, and the local AWS emulator, with the Notification context | Done |
 | M3 | Next.js front end and end-to-end tests | Done |
 | M4 | Terraform and Terragrunt for stg and prd, and deployment | Done, and not yet applied to AWS: the modules are tested against a mock of the AWS provider, every unit is validated, and stg is rehearsed on AWS Emulator |
-| M5 | Evaluation of the agent harness, property-based API tests, mutation tests | Planned |
+| M5 | Evaluation of the agent harness, property-based API tests, mutation tests | Done, with two things open: the frontend has no mutation test, and the evaluation has four runs, a first look rather than a measurement |
 
 The sample business is meeting-room booking, with three bounded contexts: Facility, Reservation, and Notification.
 
@@ -28,7 +28,7 @@ Each decision has a record with its reasons and the options that lost. The full 
 - **Data.** One PostgreSQL 18 database with a schema and two roles per context, a declarative schema, and typed queries.
 - **AWS.** ECS per context, with private APIs and one public load balancer, Aurora, EventBridge and SQS, Terraform and Terragrunt, separate accounts for stg and prd, deployments from GitHub Actions through OIDC, and a local environment that needs no AWS account.
 - **Quality.** One tool per concern behind `make check`, pinned tool versions with checksums, supply chain defenses, and CI that runs the same commands as a laptop.
-- **Agents.** Rules are enforced by checks that print what to fix. `AGENTS.md` stays short.
+- **Agents.** Rules are enforced by checks that print what to fix. `AGENTS.md` stays short, and gains an instruction only when the evaluation in `evals/` shows a failure that no check can catch.
 - **Language.** English is the source, and every document has a Japanese translation next to it.
 
 ## Get started
@@ -80,7 +80,7 @@ The local system and `make check-all` need Docker. After `make up`, open <http:/
 | Area | Checks |
 |---|---|
 | Every file | Spelling, EditorConfig rules, secrets |
-| Go | Formatting, golangci-lint (including go vet), tests with the race detector; in `make check-all`, known vulnerabilities, the integration tests against PostgreSQL and AWS Emulator, and a smoke test of the whole local system |
+| Go | Formatting, golangci-lint (including go vet), tests with the race detector; in `make check-all`, known vulnerabilities, the integration tests against PostgreSQL and AWS Emulator, a smoke test of the whole local system, and mutation tests of the domain and the use cases of the core context (`test-mutation`) |
 | Architecture of the backend | `lint-arch`: imports between contexts and layers, a domain without I/O, routes only from the API documents, schemas named in SQL, and the glossary of each context |
 | Generated code | The Go code generated from the API documents and from the SQL of each context, and the TypeScript types generated from the API documents (`gen-check-api-ts`), are what the generators write now |
 | TypeScript and Next.js | Prettier, ESLint with import boundaries, type check, unused code, unit tests on the test runner of Node (`test-frontend`); in `make check-all`, the end-to-end test in a browser with Playwright (`e2e`) |
@@ -88,11 +88,12 @@ The local system and `make check-all` need Docker. After `make up`, open <http:/
 | GitHub Actions | actionlint, zizmor, ghalint, pinact |
 | Terraform and Terragrunt | Formatting, tflint, Trivy, the module READMEs (terraform-docs), and the same units in stg and prd (`lint-infra-live`); in `make check-all`, the validation and the tests of each module (`validate-terraform`), the validation of every unit (`validate-live`), and the rehearsal of stg on AWS Emulator (`rehearse-infra`) |
 | SQL | squawk; in `make check-all`, squawk on the DDL of each schema change (`lint-sql-plan`), every query prepared against its schema (`lint-sqlc`), the comments and documents of each schema (`lint-db-docs`), and the image that prepares the database in AWS (`test-db-image`) |
-| OpenAPI and AsyncAPI | Redocly; breaking changes against the base branch with oasdiff (`lint-contracts-breaking`) |
+| OpenAPI and AsyncAPI | Redocly; breaking changes against the base branch with oasdiff (`lint-contracts-breaking`); in `make check-all`, requests that Schemathesis generates from each OpenAPI document, sent to the APIs built from the checkout (`test-api-fuzz`) |
 | JSON Schemas of events | Their form, their examples, and their messages in the AsyncAPI documents (`lint-events`); breaking changes against the base branch (`lint-events-breaking`) |
 | YAML, JSON, and TOML | Prettier, yamllint, taplo, JSON Schema validation of configuration files |
 | Markdown | markdownlint, links, English style (Vale), Japanese style (textlint) |
 | Documents | Format of decision records, their index, and translations that match their English source |
+| Agent harness | The hooks, fed sample events (`test-hooks`), and the length of `AGENTS.md`; in `make check-all`, the graders of the evaluation, proven without an agent (`test-evals`) |
 | Dependencies | Vulnerabilities and licenses with Trivy, in `make check-all` |
 
 `make check` has a time budget of 60 seconds and uses no network. Every finding is one line with the file, the line, and the rule.
@@ -104,6 +105,7 @@ The local system and `make check-all` need Docker. After `make up`, open <http:/
 - [AGENTS.md](AGENTS.md): instructions for coding agents, with those for the backend and the frontend in `backend/AGENTS.md` and `frontend/AGENTS.md`.
 - [docs/adr/](docs/adr/README.md): decision records.
 - [docs/guides/](docs/guides/): how to do recurring work.
+- [evals/](evals/README.md): the evaluation of the agent harness, and what its runs have shown so far.
 - [SECURITY.md](SECURITY.md): how to report a vulnerability.
 
 ## Third-party files

@@ -34,6 +34,7 @@ The reason for a rule is in the decision record that the rule cites ([docs/adr/]
 | `docs/contexts/` | The README and the glossary of each bounded context. |
 | `docs/problems/` | The page of each problem type that the APIs answer with. |
 | `docs/guides/` | How to do recurring work, such as adding an endpoint or changing a schema. The skills in `.claude/skills/` follow them. |
+| `evals/` | The evaluation of the harness: tasks, graders, and the records of the runs ([README](evals/README.md)). |
 | `.claude/` | Hooks, skills, and subagents for Claude Code. |
 
 The app directories appear as the milestones in the README add them.
@@ -47,6 +48,7 @@ The app directories appear as the milestones in the README add them.
 - **Generated files and lockfiles.** Do not edit them by hand. Change the source and run `make gen`, or use the package manager. After a change to a `schema.sql`, also run `make gen-db-docs` (needs Docker).
 - **Schemas.** Change only the `schema.sql` of a context; there are no migration files. Never add a line to `schema-changes.allow` on your own: letting a dangerous statement through is a decision of review. (TPL-0010)
 - **Scanner exceptions.** Never add an entry to `.trivyignore.yaml` on your own: accepting a finding of Trivy is a decision of review. Change the code so that the finding goes away, or stop and say so. (TPL-0024)
+- **Mutation tests.** Never add a line to `equivalent-mutants.allow` on your own: letting a mutant live is a decision of review. Kill a surviving mutant with a test, or make the code simpler. (TPL-0023, [guide](docs/guides/mutation-tests.md))
 - **Commits.** Conventional Commits, one purpose per commit. Do not skip hooks.
 - **GitHub Actions.** After checkout, the setup of mise, and the sign-in to AWS, a workflow step calls `make` and nothing else. Actions are pinned to a commit SHA. (TPL-0018, TPL-0024)
 - **Environments.** `infra/live/stg/` and `infra/live/prd/` differ in `env.hcl` alone: change a unit in `infra/live/_units/`, for both. (TPL-0015)

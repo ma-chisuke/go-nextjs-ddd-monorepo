@@ -361,7 +361,7 @@ flowchart LR
 ## 決まりと、それを守らせるもの
 
 次の決まりはどれも、変更が決まりを破るとチェックが失敗するので守られる。
-`make check` はネットワークを使わずに数秒で終わる。`make check-all` は手元の PostgreSQL と AWS Emulator を要するチェックを加えたもので、CI が実行する。
+`make check` はネットワークを使わずに数秒で終わる。`make check-all` は、遅いチェックや、手元の PostgreSQL と AWS Emulator を要するチェックを加えたもので、CI が実行する。
 
 | 決まり | 守らせるもの | 失敗する場面 |
 |---|---|---|
@@ -376,6 +376,7 @@ flowchart LR
 | API の文書にない HTTP のルートはない（TPL-0007 の層3） | `lint-arch` のルール `arch/route-registration`。ルートを登録できるのは、生成コードと `platform/httpserver` だけである | `make check` |
 | API の文書に反するリクエストは、どのハンドラーにも届かない（TPL-0007） | `platform/httpserver` のリクエストの検証（kin-openapi） | 実行時 |
 | 各応答は、ステータス・ヘッダー・本文のすべてで API の文書に合う。problem も例外ではない（TPL-0007 の層4） | API のテストのクライアント `platform/apitest`。すべての応答を kin-openapi で検証する | `make check` |
+| API の文書から生成したリクエストへの答えは、操作が宣言するステータスを持ち、文書が示すメディアタイプ・ヘッダー・本文を持つ。どのリクエストにも 5xx を返さず、文書が許すリクエストを読めないものや正しくないものとして拒まない（TPL-0007 の層5） | チェックアウトからビルドした API に対する Schemathesis（`test-api-fuzz`） | `make check-all` |
 | 業務エラーにはそれぞれ専用の problem があり、problem にはそれぞれ `docs/problems/` のページがある（TPL-0008） | `problems.go` の switch に対するリンター exhaustive と、`problems_test.go` のテスト | `make check` |
 | API の文書のエラーの応答は `application/problem+json` である（TPL-0008） | Redocly CLI のルール `rule/problem-details-only`（`lint-contracts`） | `make check` |
 | API の文書は、バージョンでそう示さない限り、クライアントとの互換性を壊さない（TPL-0007 の層6） | oasdiff（`lint-contracts-breaking`） | `make check` |
@@ -396,6 +397,7 @@ flowchart LR
 | テーブルと列にはすべてコメントがあり、スキーマの文書は最新である（TPL-0023） | tbls（`lint-db-docs`） | `make check-all` |
 | 1つの会議室の確定した予約どうしは重ならない（TPL-0009） | 排他制約 `reservations_no_overlap`。Reservation の結合テストが、同時の予約で試す | 実行時・`make check-all` |
 | 文脈の用語集は、`domain` パッケージ（ないときは `app`）がエクスポートする型をすべて、英語と日本語の両方で挙げる（TPL-0003） | `lint-arch` のルール `arch/glossary` | `make check` |
+| 中核の文脈のドメインとユースケースのテストは、そのコードのどの変更にも気づく。生き残るミュータントはなく、どの行もテストで実行される。例外は、ミュータントが等価であることを示す、レビュー済みの `equivalent-mutants.allow` の行だけである（TPL-0003、TPL-0023） | `make/go.mk` の `MUTATION_PACKAGES` にあるパッケージに対する gomutants（`test-mutation`） | `make check-all` |
 | フロントエンドの機能はほかの機能を import せず、`lib` は機能を import しない（TPL-0003） | ESLint。eslint-plugin-boundaries のルール `boundaries/dependencies`（`lint-frontend`） | `make check` |
 | API を呼ぶのは Next.js のサーバーだけである。`server/` の下のモジュールは `server-only` を import し、そのモジュールを import するクライアントコンポーネントはない（TPL-0014） | ESLint のルール `no-restricted-syntax`（`lint-frontend`）。クライアントコンポーネントが `server-only` を import したときの `next build` | `make check`・イメージのビルド |
 | フロントエンドのリンクは、存在するルートを指す | Next.js の型付きのルート。TypeScript のコンパイラーで調べる（`lint-frontend-types`） | `make check` |
@@ -411,6 +413,7 @@ flowchart LR
 | どのユニットも、`infra/live/providers.lock.hcl` にある provider だけを入れる（TPL-0024） | `infra/live/root.hcl` の `-lockfile=readonly` | Terragrunt の実行のたび |
 | データベースを準備するイメージは、スーパーユーザーではないマスターユーザーとして動き、もう一度動かしても何も変えず、各実行時のロールには自分のスキーマだけを読ませる（TPL-0009、TPL-0016） | 手元の PostgreSQL に対する `test-db-image` | `make check-all` |
 | prd が変わるのは、レビュー担当者がジョブを承認したあとのワークフローを通したときだけである（TPL-0018） | GitHub Actions の外では prd を拒む `tools/scripts/infra.sh`。GitHub の環境 `prd` | 実行時 |
+| ハーネスの評価の各作業は、いまのリポジトリでは不合格になり、その解答では `make check` を含むすべての基準に合格する（TPL-0020） | エージェントなしで動かす採点（`test-evals`） | `make check-all` |
 
 次の決まりを守らせるチェックはまだないので、レビューで守る。
 
@@ -421,5 +424,6 @@ flowchart LR
 - 画面が、problem の title や detail を解析しないこと（TPL-0008）
 - 公開の入口を作るモジュールが `infra/modules/web` だけであること（TPL-0014）
 - `.trivyignore.yaml` の項目を人が承認していること（TPL-0024）
+- `equivalent-mutants.allow` の行が示す証明を、人が認めていること（TPL-0023）
 
-<!-- i18n-source: ARCHITECTURE.md sha256:9abea43a68e9749a2a2823f278b034a0432ccea778393d58086034aaf92ccfe8 -->
+<!-- i18n-source: ARCHITECTURE.md sha256:4bf2a06015b3f6d659c905bf63c7a42b64d4ac441b474addfd1b372e5d6e15c1 -->

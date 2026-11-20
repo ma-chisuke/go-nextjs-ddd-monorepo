@@ -360,7 +360,7 @@ On a pull request, the workflow `Plan` runs `make infra-plan` for stg and for pr
 ## Rules and what enforces them
 
 Each rule below holds because a check fails when a change breaks it.
-`make check` runs in seconds without the network; `make check-all` adds the checks that need the local PostgreSQL and AWS Emulator, and CI runs it.
+`make check` runs in seconds without the network; `make check-all` adds the checks that are slow or need the local PostgreSQL and AWS Emulator, and CI runs it.
 
 | Rule | What enforces it | Fails in |
 |---|---|---|
@@ -375,6 +375,7 @@ Each rule below holds because a check fails when a change breaks it.
 | No HTTP route exists outside the API document (TPL-0007, layer 3) | `lint-arch` rule `arch/route-registration`: only generated code and `platform/httpserver` register routes | `make check` |
 | A request that breaks the API document reaches no handler (TPL-0007) | The request validation of `platform/httpserver`, with kin-openapi | Run time |
 | Each response matches the API document: its status, its headers, and its body, problems included (TPL-0007, layer 4) | `platform/apitest`, the client of the API tests, which validates every response with kin-openapi | `make check` |
+| Each answer to a request generated from an API document has a status that the operation declares, with the media type, headers, and body that the document gives; no request gets a 5xx, and none that the document allows is refused as unreadable or invalid (TPL-0007, layer 5) | Schemathesis, against the APIs built from the checkout (`test-api-fuzz`) | `make check-all` |
 | Each business error has a problem of its own, and each problem a page in `docs/problems/` (TPL-0008) | The linter exhaustive on the switches of `problems.go`, and the test in `problems_test.go` | `make check` |
 | Error responses in the API documents are `application/problem+json` (TPL-0008) | Redocly CLI, rule `rule/problem-details-only` (`lint-contracts`) | `make check` |
 | An API document breaks no client unless its version says so (TPL-0007, layer 6) | oasdiff (`lint-contracts-breaking`) | `make check` |
@@ -395,6 +396,7 @@ Each rule below holds because a check fails when a change breaks it.
 | Each table and column has a comment, and the schema documents are current (TPL-0023) | tbls (`lint-db-docs`) | `make check-all` |
 | Two confirmed reservations of one room never overlap (TPL-0009) | The exclusion constraint `reservations_no_overlap`, tried with concurrent bookings by the integration tests of Reservation | Run time, `make check-all` |
 | The glossary of a context lists each exported type of its `domain` package, or of `app` in a context without one, in both languages (TPL-0003) | `lint-arch` rule `arch/glossary` | `make check` |
+| The tests of the domain and the use cases of a core context notice each change to their code: no mutant lives, and every line runs in a test, unless a reviewed line of `equivalent-mutants.allow` proves a mutant equivalent (TPL-0003, TPL-0023) | gomutants, on the packages of `MUTATION_PACKAGES` in `make/go.mk` (`test-mutation`) | `make check-all` |
 | A feature of the frontend imports no other feature, and `lib` imports no feature (TPL-0003) | ESLint, rule `boundaries/dependencies` of eslint-plugin-boundaries (`lint-frontend`) | `make check` |
 | Only the server of Next.js calls the APIs: a module under `server/` imports `server-only`, and no client component imports such a module (TPL-0014) | ESLint, rule `no-restricted-syntax` (`lint-frontend`); `next build`, when a client component imports `server-only` | `make check`, build of the image |
 | A link of the frontend leads to a route that exists | The typed routes of Next.js, through the TypeScript compiler (`lint-frontend-types`) | `make check` |
@@ -410,6 +412,7 @@ Each rule below holds because a check fails when a change breaks it.
 | Every unit installs the providers that `infra/live/providers.lock.hcl` names (TPL-0024) | `-lockfile=readonly` in `infra/live/root.hcl` | Every Terragrunt run |
 | The image that prepares the database works as a master user that is not a superuser, changes nothing when it runs again, and lets each runtime role read its own schema and no other (TPL-0009, TPL-0016) | `test-db-image`, against the local PostgreSQL | `make check-all` |
 | prd changes only through the workflow, after a reviewer approved the job (TPL-0018) | `tools/scripts/infra.sh`, which refuses prd outside GitHub Actions; the GitHub environment `prd` | Run time |
+| Each task of the evaluation of the harness fails on the repository as it is, and passes every criterion with its solution, `make check` included (TPL-0020) | The graders, run without an agent (`test-evals`) | `make check-all` |
 
 No check enforces these rules yet, so review does:
 
@@ -419,4 +422,5 @@ No check enforces these rules yet, so review does:
 - a feature of the frontend that calls the API of its own context only (TPL-0003);
 - a screen that never parses the title or the detail of a problem (TPL-0008);
 - a public entry in no module but `infra/modules/web` (TPL-0014);
-- an entry of `.trivyignore.yaml` that a person approved (TPL-0024).
+- an entry of `.trivyignore.yaml` that a person approved (TPL-0024);
+- a line of `equivalent-mutants.allow` whose proof a person accepted (TPL-0023).
