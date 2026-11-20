@@ -84,7 +84,7 @@ func (h *operations) BookRoom(ctx context.Context, request BookRoomRequestObject
 		IdempotencyKey: request.Params.IdempotencyKey,
 		Room:           domain.RoomID(body.RoomId),
 		Period:         domain.Period{Start: body.StartsAt, End: body.EndsAt},
-		Attendees:      int(body.Attendees),
+		Attendees:      body.Attendees,
 		Organizer:      body.OrganizerEmail,
 	})
 	if err != nil {
@@ -155,10 +155,7 @@ func (h *operations) RescheduleReservation(ctx context.Context, request Reschedu
 		Read:        read,
 		Start:       body.StartsAt,
 		End:         body.EndsAt,
-	}
-	if body.Attendees != nil {
-		attendees := int(*body.Attendees)
-		in.Attendees = &attendees
+		Attendees:   body.Attendees,
 	}
 	v, err := h.reservations.RescheduleReservation(ctx, in)
 	if err != nil {
@@ -194,7 +191,7 @@ func reservationBody(r domain.Reservation) Reservation {
 		RoomId:         uuid.UUID(r.Room()),
 		StartsAt:       r.Period().Start.UTC(),
 		EndsAt:         r.Period().End.UTC(),
-		Attendees:      int32(r.Attendees()), //nolint:gosec // The API document and the database keep attendees within an int32.
+		Attendees:      r.Attendees(),
 		OrganizerEmail: r.Organizer(),
 		Status:         statusBody(r.Status()),
 	}

@@ -28,7 +28,7 @@ type reservationConfirmedData struct {
 	RoomID         uuid.UUID `json:"roomId"`
 	StartsAt       time.Time `json:"startsAt"`
 	EndsAt         time.Time `json:"endsAt"`
-	Attendees      int       `json:"attendees"`
+	Attendees      int32     `json:"attendees"`
 	OrganizerEmail string    `json:"organizerEmail"`
 }
 

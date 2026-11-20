@@ -2,7 +2,9 @@ package app
 
 import (
 	"encoding/json"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -94,7 +96,7 @@ func TestEachExampleOfTheContractMakesAMail(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		raw, err := os.ReadFile(path) //nolint:gosec // The path is that of a contract in the repository.
+		raw, err := fs.ReadFile(os.DirFS(filepath.Dir(path)), filepath.Base(path))
 		if err != nil {
 			t.Fatal(err)
 		}

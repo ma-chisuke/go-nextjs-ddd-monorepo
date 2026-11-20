@@ -263,7 +263,7 @@ func TestStoreKeepsTheEventsOfEachChange(t *testing.T) {
 	if len(stored) == 3 {
 		var data struct {
 			StartsAt  time.Time `json:"startsAt"`
-			Attendees int       `json:"attendees"`
+			Attendees int32     `json:"attendees"`
 		}
 		if err := json.Unmarshal(stored[1].Data, &data); err != nil {
 			t.Fatal(err)
@@ -501,7 +501,7 @@ func TestReservationConstraints(t *testing.T) {
 	tests := []struct {
 		name       string
 		start, end time.Time
-		attendees  int
+		attendees  int32
 		status     string
 	}{
 		{"ends before it starts", hours(11, 10).Start, hours(11, 10).End, 4, "confirmed"},

@@ -22,9 +22,11 @@ import (
 
 // Room is a meeting room that can be booked.
 type Room struct {
-	ID       uuid.UUID
-	Name     string
-	Capacity int
+	ID   uuid.UUID
+	Name string
+	// Capacity has the type that the API document and the database give it,
+	// so that it needs no conversion on its way.
+	Capacity int32
 	// OpenFrom and OpenUntil are the times of day between which the room can
 	// be used, read in TimeZone.
 	OpenFrom  TimeOfDay
@@ -49,7 +51,7 @@ func NewRooms(queries postgres.Querier, now func() time.Time) *Rooms {
 // RegisterRoomInput is what RegisterRoom needs.
 type RegisterRoomInput struct {
 	Name      string
-	Capacity  int
+	Capacity  int32
 	OpenFrom  TimeOfDay
 	OpenUntil TimeOfDay
 	TimeZone  string
@@ -71,7 +73,7 @@ func (r *Rooms) RegisterRoom(ctx context.Context, in RegisterRoomInput) (Room, e
 	row, err := r.queries.InsertRoom(ctx, postgres.InsertRoomParams{
 		ID:        id,
 		Name:      in.Name,
-		Capacity:  int32(in.Capacity), //nolint:gosec // The API document limits capacity to 1000.
+		Capacity:  in.Capacity,
 		OpenFrom:  in.OpenFrom.pg(),
 		OpenUntil: in.OpenUntil.pg(),
 		TimeZone:  in.TimeZone,
@@ -108,7 +110,7 @@ type cursor struct {
 // ListRooms returns at most limit rooms after cursor, in the order of their
 // names, and the cursor of the next page. The next cursor is empty on the
 // last page. An empty cursor asks for the first page.
-func (r *Rooms) ListRooms(ctx context.Context, limit int, after string) (rooms []Room, next string, err error) {
+func (r *Rooms) ListRooms(ctx context.Context, limit int32, after string) (rooms []Room, next string, err error) {
 	var c cursor
 	if after != "" {
 		raw, err := base64.RawURLEncoding.DecodeString(after)
@@ -120,12 +122,12 @@ func (r *Rooms) ListRooms(ctx context.Context, limit int, after string) (rooms [
 	rows, err := r.queries.ListRooms(ctx, postgres.ListRoomsParams{
 		AfterName: c.Name,
 		AfterID:   c.ID,
-		PageSize:  int32(limit) + 1, //nolint:gosec // The API document limits limit to 100.
+		PageSize:  limit + 1,
 	})
 	if err != nil {
 		return nil, "", fmt.Errorf("list rooms: %w", err)
 	}
-	if len(rows) > limit {
+	if len(rows) > int(limit) {
 		rows = rows[:limit]
 		last := rows[len(rows)-1]
 		raw, err := json.Marshal(cursor{Name: last.Name, ID: last.ID})
@@ -145,7 +147,7 @@ func roomFrom(row postgres.Room) Room {
 	return Room{
 		ID:        row.ID,
 		Name:      row.Name,
-		Capacity:  int(row.Capacity),
+		Capacity:  row.Capacity,
 		OpenFrom:  timeOfDayFrom(row.OpenFrom),
 		OpenUntil: timeOfDayFrom(row.OpenUntil),
 		TimeZone:  row.TimeZone,

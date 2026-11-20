@@ -65,7 +65,7 @@ func (h *operations) RegisterRoom(ctx context.Context, request RegisterRoomReque
 	}
 	room, err := h.rooms.RegisterRoom(ctx, app.RegisterRoomInput{
 		Name:      body.Name,
-		Capacity:  int(body.Capacity),
+		Capacity:  body.Capacity,
 		OpenFrom:  openFrom,
 		OpenUntil: openUntil,
 		TimeZone:  body.TimeZone,
@@ -90,9 +90,9 @@ func (h *operations) GetRoom(ctx context.Context, request GetRoomRequestObject) 
 
 // ListRooms implements the operation listRooms.
 func (h *operations) ListRooms(ctx context.Context, request ListRoomsRequestObject) (ListRoomsResponseObject, error) {
-	limit := defaultLimit
+	var limit int32 = defaultLimit
 	if request.Params.Limit != nil {
-		limit = int(*request.Params.Limit)
+		limit = *request.Params.Limit
 	}
 	cursor := ""
 	if request.Params.Cursor != nil {
@@ -116,7 +116,7 @@ func roomResponse(room app.Room) Room {
 	return Room{
 		Id:        room.ID,
 		Name:      room.Name,
-		Capacity:  int32(room.Capacity), //nolint:gosec // The database limits capacity to 1000.
+		Capacity:  room.Capacity,
 		OpenFrom:  room.OpenFrom.String(),
 		OpenUntil: room.OpenUntil.String(),
 		TimeZone:  room.TimeZone,

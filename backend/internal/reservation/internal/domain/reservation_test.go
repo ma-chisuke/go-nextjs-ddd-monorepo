@@ -64,7 +64,7 @@ func TestBook(t *testing.T) {
 		name      string
 		room      domain.Room
 		period    domain.Period
-		attendees int
+		attendees int32
 		kind      domain.Kind // 0: the booking succeeds
 	}{
 		{"one hour inside the opening hours", room, on(20, 10, 0, 11, 0), 4, 0},
@@ -219,7 +219,7 @@ func TestRestore(t *testing.T) {
 // which rule, with the numbers of the rule.
 func TestErrorDetails(t *testing.T) {
 	t.Parallel()
-	refused := func(room domain.Room, period domain.Period, attendees int) error {
+	refused := func(room domain.Room, period domain.Period, attendees int32) error {
 		_, _, err := domain.Book(reservationID, room, period, attendees, "organizer@example.com", now)
 		return err
 	}

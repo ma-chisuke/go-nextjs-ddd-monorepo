@@ -85,7 +85,7 @@ Each finding names the JSON pointer of the place, what it was, and what it is. T
 
    `backend/internal/reservation/internal/adapter/postgres/events_test.go` is the example. It holds a sample of each type of domain event, passes each through the mapping and `AssertMatchesContract`, and fails when the domain gains a type of event without a sample. The store refuses a change whose domain event has no mapping.
 
-   Check: `test-go`.
+   Check: `test-go`, and `make test-integration`, which needs Docker and takes about a minute: a test of the relay compares the whole data of a published event with what it expects.
 
 4. In each consumer that handles the event, read its data in the anticorruption layer of the consumer, and turn every example of the schema into what the consumer does with it. `backend/internal/notification/internal/app/events_test.go` is the example: it reads the schemas as files, so a new example reaches it. Then add the event to the subscription of the consumer, as [Subscribe to events](#subscribe-to-events) describes.
 

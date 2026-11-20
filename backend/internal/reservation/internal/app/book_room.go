@@ -22,7 +22,7 @@ type BookRoomInput struct {
 	IdempotencyKey string
 	Room           domain.RoomID
 	Period         domain.Period
-	Attendees      int
+	Attendees      int32
 	// Organizer is the email address of the person who books the room.
 	Organizer string
 }
@@ -110,7 +110,7 @@ func (in BookRoomInput) fingerprint() (string, error) {
 		Room      uuid.UUID `json:"room"`
 		Start     time.Time `json:"start"`
 		End       time.Time `json:"end"`
-		Attendees int       `json:"attendees"`
+		Attendees int32     `json:"attendees"`
 		Organizer string    `json:"organizer"`
 	}{uuid.UUID(in.Room), in.Period.Start.UTC(), in.Period.End.UTC(), in.Attendees, in.Organizer})
 	if err != nil {

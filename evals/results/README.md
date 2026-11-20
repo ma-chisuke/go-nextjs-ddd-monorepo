@@ -45,7 +45,7 @@ Two of the eight runs passed, one in each arm. What the round showed:
 
 - **With the harness, the agent kept what `make check` holds.** All four runs with the harness ran `make check` and ended with it passing. Without the harness, two of the four runs ran it, and the run of `time-zone-in-mail` ended with a finding of `lint-i18n`.
 - **Neither arm kept what `make check` does not hold.** The six failed runs failed on three things, and each task failed on the same thing in both arms.
-  - `room-floor`, an ignore comment. Both agents gave the floor the type `int`, converted it to `int32` for the database, and silenced gosec with `//nolint:gosec` and a reason. `AGENTS.md` forbids an ignore comment, and the code of the repository has seven, four of them at a conversion of this shape. The agent with the harness had the rule, and followed the code. The solution of the task needs no conversion: it keeps the `int32` that the API document gives.
+  - `room-floor`, an ignore comment. Both agents gave the floor the type `int`, converted it to `int32` for the database, and silenced gosec with `//nolint:gosec` and a reason. `AGENTS.md` forbids an ignore comment, and the code of the repository had seven at the time, four of them at a conversion of this shape. The agent with the harness had the rule, and followed the code. The solution of the task needs no conversion: it keeps the `int32` that the API document gives.
   - `time-zone-in-mail`, an integration test. A test of the relay compares the whole data of a published event, and the new property made it fail. The test runs against PostgreSQL in `make check-all`, not in `make check`.
   - `reservation-length`, a scenario in a browser. The guide and the skill for a screen ask for a scenario in `frontend/e2e/`, and no check does. Both agents wrote the unit test of the pure logic and stopped there.
 
@@ -70,7 +70,7 @@ The runs cannot show how often each arm fails, whether a difference holds for an
 ## What to do next
 
 - Run each arm of each task at least five times before reading a rate out of the table.
-- Make the rule on ignore comments and the code agree. Remove the seven comments from the code, or record which comments review allows and let a check hold exactly that.
+- Make the rule on ignore comments and the code agree. Five of the seven comments are gone since the round. Capacity, the limit of a page, and attendees keep the `int32` of the API document, so the code that an agent copies has no conversion. Two comments are left in Go, each where the linter is wrong about the code, and the shell scripts have seventeen directives for ShellCheck. Record which comments review allows, and let a check hold exactly that.
 - Give the agent a slow check that fits into a run. The guide for events names `make check-all`; `make test-integration` is the part of it that a change to an event or to the database needs.
 - Prepare the copy so that `make check-all` can pass in it, and repair the bare arm so that `make check` can pass in it.
 - Decide whether a small change to a screen that exists needs a scenario in a browser. The guide says so, and nothing checks it.

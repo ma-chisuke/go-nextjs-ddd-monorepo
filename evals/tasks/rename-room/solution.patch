@@ -16,7 +16,7 @@ diff --git a/backend/internal/facility/internal/adapter/http/handler.go b/backen
 +
  // ListRooms implements the operation listRooms.
  func (h *operations) ListRooms(ctx context.Context, request ListRoomsRequestObject) (ListRoomsResponseObject, error) {
- 	limit := defaultLimit
+ 	var limit int32 = defaultLimit
 diff --git a/backend/internal/facility/internal/adapter/http/handler_test.go b/backend/internal/facility/internal/adapter/http/handler_test.go
 --- a/backend/internal/facility/internal/adapter/http/handler_test.go
 +++ b/backend/internal/facility/internal/adapter/http/handler_test.go
@@ -179,7 +179,7 @@ diff --git a/backend/internal/facility/internal/adapter/postgres/queries/rooms.s
 diff --git a/backend/internal/facility/internal/app/rooms.go b/backend/internal/facility/internal/app/rooms.go
 --- a/backend/internal/facility/internal/app/rooms.go
 +++ b/backend/internal/facility/internal/app/rooms.go
-@@ -98,6 +98,24 @@
+@@ -100,6 +100,24 @@
  	return roomFrom(row), nil
  }
  

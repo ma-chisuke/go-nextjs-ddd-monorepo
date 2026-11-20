@@ -12,7 +12,7 @@ type Room struct {
 	// ID identifies the room.
 	ID RoomID
 	// Capacity is the largest number of people that the room holds.
-	Capacity int
+	Capacity int32
 	// Hours are the times of day between which the room can be used, read
 	// in TimeZone.
 	Hours OpeningHours
