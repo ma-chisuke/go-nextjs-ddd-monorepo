@@ -56,6 +56,9 @@ func TestBook(t *testing.T) {
 	// A room that is open almost all day, for the periods around midnight.
 	lateRoom := room
 	lateRoom.Hours = domain.OpeningHours{Opens: domain.NewTimeOfDay(0, 0), Closes: domain.NewTimeOfDay(23, 45)}
+	// A room without a time zone reads its opening hours in UTC.
+	utcRoom := room
+	utcRoom.TimeZone = nil
 
 	tests := []struct {
 		name      string
@@ -76,6 +79,7 @@ func TestBook(t *testing.T) {
 		{"started one step ago", room, on(18, 9, 45, 11, 0), 4, domain.KindPeriodInPast},
 		{"started yesterday", room, on(17, 10, 0, 11, 0), 4, domain.KindPeriodInPast},
 		{"nobody attends", room, on(20, 10, 0, 11, 0), 0, domain.KindNoAttendees},
+		{"the organizer alone attends", room, on(20, 10, 0, 11, 0), 1, 0},
 		{"the attendees fill the room", room, on(20, 10, 0, 11, 0), 8, 0},
 		{"one attendee too many", room, on(20, 10, 0, 11, 0), 9, domain.KindOverCapacity},
 		{"starts when the room opens", room, on(20, 9, 0, 10, 0), 4, 0},
@@ -89,6 +93,12 @@ func TestBook(t *testing.T) {
 		},
 		{"ends when a late room closes", lateRoom, on(20, 23, 0, 23, 45), 4, 0},
 		{"runs into the next day", lateRoom, domain.Period{Start: at(20, 23, 30), End: at(21, 0, 15)}, 4, domain.KindOutsideOpeningHours},
+		{
+			"inside the opening hours of a room without a time zone", utcRoom,
+			domain.Period{Start: time.Date(2026, 11, 20, 10, 0, 0, 0, time.UTC), End: time.Date(2026, 11, 20, 11, 0, 0, 0, time.UTC)},
+			4, 0,
+		},
+		{"inside the opening hours in Tokyo, before them in UTC", utcRoom, on(20, 10, 0, 11, 0), 4, domain.KindOutsideOpeningHours},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -197,11 +207,65 @@ func TestRestore(t *testing.T) {
 	// such as one in the past.
 	period := on(1, 10, 0, 11, 0)
 	r := domain.Restore(reservationID, roomID, period, 3, "organizer@example.com", domain.StatusConfirmed)
-	if r.ID() != reservationID || r.Room() != roomID || r.Period() != period || r.Attendees() != 3 || r.Status() != domain.StatusConfirmed {
+	if r.ID() != reservationID || r.Room() != roomID || r.Period() != period || r.Attendees() != 3 ||
+		r.Organizer() != "organizer@example.com" || r.Status() != domain.StatusConfirmed {
 		t.Errorf("the restored reservation is not the stored one: %+v", r)
 	}
 	_, _, err := r.Cancel(now)
 	wantKind(t, err, domain.KindCancellationTooLate)
+}
+
+// The detail of a business error tells people what in their request breaks
+// which rule, with the numbers of the rule.
+func TestErrorDetails(t *testing.T) {
+	t.Parallel()
+	refused := func(room domain.Room, period domain.Period, attendees int) error {
+		_, _, err := domain.Book(reservationID, room, period, attendees, "organizer@example.com", now)
+		return err
+	}
+	utcRoom := room
+	utcRoom.TimeZone = nil
+	booked := book(t, on(20, 10, 0, 11, 0))
+	_, _, tooLate := booked.Cancel(at(20, 9, 45))
+	cancelled, _, err := booked.Cancel(now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, cancelledAgain := cancelled.Cancel(now)
+	_, _, rescheduledCancelled := cancelled.Reschedule(room, on(20, 14, 0, 15, 0), 4, now)
+
+	tests := []struct {
+		name string
+		err  error
+		want string
+	}{
+		{"out of order", refused(room, on(20, 11, 0, 10, 0), 4), "The period must end after it starts."},
+		{"off the grid", refused(room, on(20, 10, 5, 11, 0), 4), "The period must start and end on a multiple of 15 minutes, such as 10:00, 10:15, or 10:30."},
+		{"too long", refused(room, on(20, 10, 0, 14, 15), 4), "The period lasts 255 minutes, and a reservation lasts at most 4 hours."},
+		{"in the past", refused(room, on(18, 9, 45, 11, 0), 4), "The period starts in the past."},
+		{"nobody attends", refused(room, on(20, 10, 0, 11, 0), 0), "A reservation has at least 1 attendee."},
+		{"over capacity", refused(room, on(20, 10, 0, 11, 0), 9), "The room holds 8 people, and 9 attend."},
+		{
+			"outside the opening hours", refused(room, on(20, 8, 45, 10, 0), 4),
+			"The room is open from 09:00 to 18:00 in Asia/Tokyo, and the period must lie inside these hours on one day.",
+		},
+		{
+			"outside the opening hours of a room without a time zone", refused(utcRoom, on(20, 10, 0, 11, 0), 4),
+			"The room is open from 09:00 to 18:00 in UTC, and the period must lie inside these hours on one day.",
+		},
+		{
+			"cancelled too late", tooLate,
+			"A reservation can be cancelled until 30 minutes before it starts, and that was at 2026-11-20T00:30:00Z.",
+		},
+		{"cancelled again", cancelledAgain, "The reservation is cancelled already."},
+		{"rescheduled after its cancellation", rescheduledCancelled, "The reservation is cancelled, so it cannot be rescheduled."},
+	}
+	for _, tt := range tests {
+		var business *domain.Error
+		if !errors.As(tt.err, &business) || business.Error() != tt.want {
+			t.Errorf("%s: got the error %v, want a business error that says %q", tt.name, tt.err, tt.want)
+		}
+	}
 }
 
 func TestPeriodOverlaps(t *testing.T) {
@@ -251,10 +315,13 @@ func TestIDText(t *testing.T) {
 
 func TestStatusText(t *testing.T) {
 	t.Parallel()
+	// The zero value is no status, and neither is the number after the last
+	// status.
 	for status, want := range map[domain.Status]string{
-		domain.StatusConfirmed: "confirmed",
-		domain.StatusCancelled: "cancelled",
-		domain.Status(0):       "Status(0)",
+		domain.StatusConfirmed:     "confirmed",
+		domain.StatusCancelled:     "cancelled",
+		domain.Status(0):           "Status(0)",
+		domain.StatusCancelled + 1: "Status(3)",
 	} {
 		if got := status.String(); got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -265,11 +332,17 @@ func TestStatusText(t *testing.T) {
 // Every kind is listed once, so that the tests that walk Kinds see each.
 func TestKinds(t *testing.T) {
 	t.Parallel()
+	kinds := domain.Kinds()
 	seen := map[domain.Kind]bool{}
-	for i, kind := range domain.Kinds() {
+	for i, kind := range kinds {
 		if kind != domain.Kind(i+1) || seen[kind] {
 			t.Errorf("Kinds()[%d] is %d: list every kind once, in the order of their values", i, kind)
 		}
 		seen[kind] = true
+	}
+	// The list ends with the last kind. A new kind goes after it, and takes
+	// its place here.
+	if last := domain.KindReservationCancelled; len(kinds) != int(last) {
+		t.Errorf("Kinds() lists %d kinds, want every kind up to %d", len(kinds), last)
 	}
 }

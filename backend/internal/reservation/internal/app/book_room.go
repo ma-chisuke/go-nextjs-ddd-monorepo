@@ -40,7 +40,7 @@ func (s *Reservations) BookRoom(ctx context.Context, in BookRoomInput) (Versione
 	if err != nil {
 		return Versioned{}, fmt.Errorf("book room: %w", err)
 	}
-	if v, found, err := s.repeated(ctx, in.IdempotencyKey, fingerprint); found || err != nil {
+	if v, answered, err := s.repeated(ctx, in.IdempotencyKey, fingerprint); answered {
 		return v, err
 	}
 	room, err := s.room(ctx, in.Room)
@@ -64,9 +64,9 @@ func (s *Reservations) BookRoom(ctx context.Context, in BookRoomInput) (Versione
 	if errors.Is(err, ErrOverlap) || errors.Is(err, ErrKeyTaken) {
 		// Another request was stored between the checks above and this one.
 		// If it came with the same key, this request repeats it.
-		v, found, repeatErr := s.repeated(ctx, in.IdempotencyKey, fingerprint)
+		v, answered, repeatErr := s.repeated(ctx, in.IdempotencyKey, fingerprint)
 		switch {
-		case found || repeatErr != nil:
+		case answered:
 			return v, repeatErr
 		case errors.Is(err, ErrOverlap):
 			return Versioned{}, alreadyBooked(r)
@@ -78,10 +78,12 @@ func (s *Reservations) BookRoom(ctx context.Context, in BookRoomInput) (Versione
 	return Versioned{Reservation: r, Version: version}, nil
 }
 
-// repeated looks for the idempotency key. found is false when the key is new.
-// When the key came before with the same request, v is the reservation that
-// it booked; with another request, err says that the key was reused.
-func (s *Reservations) repeated(ctx context.Context, key, fingerprint string) (v Versioned, found bool, err error) {
+// repeated looks for the idempotency key. answered is false when the key is
+// new, and the booking goes on. Otherwise v and err are the answer to the
+// request: when the key came before with the same request, v is the
+// reservation that it booked; with another request, err says that the key was
+// reused; and when the store fails, err is its failure.
+func (s *Reservations) repeated(ctx context.Context, key, fingerprint string) (v Versioned, answered bool, err error) {
 	stored, err := s.store.FindKey(ctx, key)
 	if errors.Is(err, ErrNotFound) {
 		return Versioned{}, false, nil
