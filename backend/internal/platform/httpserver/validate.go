@@ -1,9 +1,15 @@
 package httpserver
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"io"
+	"math"
+	"mime"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -34,7 +40,8 @@ func RegisterFormats() {
 // API document before a handler sees it: the operation exists, the parameters
 // and the body have the documented shape. A request that fails gets a problem
 // (TPL-0008); production validates requests only, and tests also validate
-// responses (TPL-0007).
+// responses (TPL-0007). A JSON body that passes reaches the handler with its
+// whole numbers written as integers (wholeNumbersAsIntegers).
 func ValidateRequests(doc *openapi3.T) (func(http.Handler) http.Handler, error) {
 	RegisterFormats()
 	router, err := gorillamux.NewRouter(doc)
@@ -48,8 +55,15 @@ func ValidateRequests(doc *openapi3.T) (func(http.Handler) http.Handler, error) 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			route, pathParams, err := router.FindRoute(r)
+			if errors.Is(err, routers.ErrMethodNotAllowed) {
+				// A 405 names the methods that the URL has (RFC 9110,
+				// section 15.5.6).
+				w.Header().Set("Allow", strings.Join(allowedMethods(router, r), ", "))
+				problem.Write(w, problem.New(problem.MethodNotAllowed, ""))
+				return
+			}
 			if err != nil {
-				problem.Write(w, routeProblem(err))
+				problem.Write(w, problem.New(problem.NotFound, ""))
 				return
 			}
 			input := &openapi3filter.RequestValidationInput{
@@ -62,16 +76,125 @@ func ValidateRequests(doc *openapi3.T) (func(http.Handler) http.Handler, error) 
 				problem.Write(w, requestProblem(r.Context(), err))
 				return
 			}
+			if err := wholeNumbersAsIntegers(r); err != nil {
+				problem.Write(w, problem.New(problem.MalformedRequest, "The request body cannot be read: "+err.Error()))
+				return
+			}
 			next.ServeHTTP(w, r)
 		})
 	}, nil
 }
 
-func routeProblem(err error) *problem.Problem {
-	if errors.Is(err, routers.ErrMethodNotAllowed) {
-		return problem.New(problem.MethodNotAllowed, "")
+// methods are the methods that an operation of an API document can have.
+var methods = []string{
+	http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut, http.MethodPatch,
+	http.MethodDelete, http.MethodOptions, http.MethodTrace,
+}
+
+// allowedMethods returns the methods of the operations at the URL of r.
+func allowedMethods(router routers.Router, r *http.Request) []string {
+	var allowed []string
+	for _, method := range methods {
+		probe := r.WithContext(r.Context())
+		probe.Method = method
+		if _, _, err := router.FindRoute(probe); err == nil {
+			allowed = append(allowed, method)
+		}
 	}
-	return problem.New(problem.NotFound, "")
+	return allowed
+}
+
+// largestExactInteger is 2^53: every integer up to it in magnitude has an
+// exact float64, so the validator, which reads numbers as float64, and the
+// handler agree on its value.
+const largestExactInteger = 1 << 53
+
+// wholeNumbersAsIntegers writes each number of a JSON request body that has a
+// fraction or an exponent and still holds a whole number, such as 4.0 or 1e3,
+// in the form of an integer, 4 or 1000.
+//
+// JSON Schema counts such a number as an integer, so the validator accepts it
+// where the document asks for an integer. The handler decodes the body with
+// encoding/json, which refuses it for an integer type, and would answer that
+// the body cannot be read. After the rewrite, the handler reads every body
+// that the validator accepted. A body without such a number passes as it is.
+func wholeNumbersAsIntegers(r *http.Request) error {
+	if r.Body == nil || r.Body == http.NoBody || !isJSON(r.Header.Get("Content-Type")) {
+		return nil
+	}
+	raw, err := io.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	_ = r.Body.Close()
+	setBody(r, raw)
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.UseNumber()
+	var value any
+	if err := decoder.Decode(&value); err != nil {
+		return err
+	}
+	value, changed := wholeNumbers(value)
+	if !changed {
+		return nil
+	}
+	rewritten, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	setBody(r, rewritten)
+	return nil
+}
+
+// wholeNumbers returns v with its whole numbers written as integers, and
+// whether it changed any.
+func wholeNumbers(v any) (any, bool) {
+	switch v := v.(type) {
+	case json.Number:
+		s := v.String()
+		if !strings.ContainsAny(s, ".eE") {
+			return v, false
+		}
+		f, err := strconv.ParseFloat(s, 64)
+		if err != nil || f != math.Trunc(f) || math.Abs(f) > largestExactInteger {
+			return v, false
+		}
+		return json.Number(strconv.FormatInt(int64(f), 10)), true
+	case map[string]any:
+		changed := false
+		for key, item := range v {
+			var c bool
+			v[key], c = wholeNumbers(item)
+			changed = changed || c
+		}
+		return v, changed
+	case []any:
+		changed := false
+		for i, item := range v {
+			var c bool
+			v[i], c = wholeNumbers(item)
+			changed = changed || c
+		}
+		return v, changed
+	default:
+		return v, false
+	}
+}
+
+// isJSON reports whether a media type is JSON: application/json, or a type
+// with the suffix +json.
+func isJSON(contentType string) bool {
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	return err == nil && (mediaType == "application/json" || strings.HasSuffix(mediaType, "+json"))
+}
+
+// setBody replaces the body of r with body.
+func setBody(r *http.Request, body []byte) {
+	r.Body = io.NopCloser(bytes.NewReader(body))
+	r.ContentLength = int64(len(body))
+	r.GetBody = func() (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(body)), nil
+	}
 }
 
 // requestProblem turns the errors of the validator into one problem. A body

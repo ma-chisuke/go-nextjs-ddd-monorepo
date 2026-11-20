@@ -1,0 +1,152 @@
+# The settings of Schemathesis for `make test-api-fuzz` (TPL-0007, layer 5):
+# it generates requests from each API document in contracts/http/ and sends
+# them to the API of its context. tools/scripts/api-fuzz.sh passes this file,
+# the document, and the URL of the API.
+#
+# Every check of Schemathesis runs on every operation, in its four phases:
+# the examples of the document, requests that cover each constraint of the
+# document from both sides, generated requests, and sequences that follow the
+# Location headers of the answers. The exceptions are below, each with its
+# reason.
+
+# One request at a time, so that the APIs see the requests in the same order
+# in every run.
+workers = 1
+
+# The machine that runs the check may be busy with other work, and the APIs
+# answer more slowly then; a request that waits longer than this is a finding.
+# The APIs themselves give up writing an answer after 30 seconds
+# (backend/internal/platform/httpserver).
+request-timeout = 30
+
+# Hypothesis fails a test whose data it generates slowly. That depends on how
+# busy the machine is, not on the API, and would make a run differ from the
+# one before.
+suppress-health-check = ["too_slow"]
+
+[generation]
+# The same requests in every run, with the same code and the same documents
+# (TPL-0007: "with a fixed seed"). Hypothesis takes the seed of each test from
+# the test instead of at random, and keeps no database of examples, so that
+# nothing that one run found changes the next.
+deterministic = true
+# The number of generated requests for each operation in the fuzzing phase,
+# and of sequences in the stateful phase. The examples and the coverage phase
+# send what the document gives, whatever this number. With 100, the default
+# of Hypothesis, `make test-api-fuzz` sent about 1,900 requests to the two
+# APIs and took 45 to 50 seconds on a laptop in November 2026, half of it to
+# build the APIs and to create the database; 1 minute 47 seconds while other
+# checks kept the same laptop busy.
+max-examples = 100
+
+# The cache keeps what a run discovered, and the next run sends it again: a
+# run would depend on the one before. tools/scripts/api-fuzz.sh also starts
+# each run in an empty directory.
+[cache]
+enabled = false
+
+# The report and the output show every value as it was sent. Sanitization
+# would hide the value of Idempotency-Key, which a finding may need to be
+# repeated, and the APIs take no credentials.
+[output.sanitization]
+enabled = false
+
+# positive_data_acceptance expects a request that the document allows to
+# succeed. A JSON Schema cannot state every rule of an operation, so an API
+# refuses some of these requests with a problem that the document of the
+# operation declares; the operations below accept those statuses, next to the
+# ones that the check accepts by default (2xx, 3xx, 401, 403, 404, 409, 429,
+# 5xx). A status that is not in the list stays a finding, such as a 400 for a
+# body that the API cannot read.
+
+[[project]]
+title = "Facility API"
+
+# A room opens before it closes, in a time zone that exists:
+# invalid-opening-hours and unknown-time-zone, both 422.
+[[project.operations]]
+include-operation-id = "registerRoom"
+checks.positive_data_acceptance.expected-statuses = [
+  "2xx",
+  "3xx",
+  "401",
+  "403",
+  "404",
+  "409",
+  "422",
+  "429",
+  "5xx",
+]
+
+# The cursor is one that the API returned: invalid-cursor, 422.
+[[project.operations]]
+include-operation-id = "listRooms"
+checks.positive_data_acceptance.expected-statuses = [
+  "2xx",
+  "3xx",
+  "401",
+  "403",
+  "404",
+  "409",
+  "422",
+  "429",
+  "5xx",
+]
+
+[[project]]
+title = "Reservation API"
+
+# The rules of a period, of the attendees, and of the room, which the
+# description of the operation names: period-out-of-order and the other
+# problems of the domain, unknown-room, and idempotency-key-reused, all 422.
+[[project.operations]]
+include-operation-id = "bookRoom"
+checks.positive_data_acceptance.expected-statuses = [
+  "2xx",
+  "3xx",
+  "401",
+  "403",
+  "404",
+  "409",
+  "422",
+  "429",
+  "5xx",
+]
+
+# The cursor is one that the API returned (invalid-cursor), and `to` is later
+# than `from` (validation-error), both 422.
+[[project.operations]]
+include-operation-id = "listReservations"
+checks.positive_data_acceptance.expected-statuses = [
+  "2xx",
+  "3xx",
+  "401",
+  "403",
+  "404",
+  "409",
+  "422",
+  "429",
+  "5xx",
+]
+
+# The document leaves If-Match optional, so that a request without it gets
+# 428 precondition-required from the operation rather than 422 from the
+# validation, as RFC 6585 asks. An If-Match that does not name the current
+# version gets 412 precondition-failed. The changed reservation follows the
+# rules of a new one, and a cancellation comes at the latest 30 minutes before
+# the start (cancellation-too-late): 422.
+[[project.operations]]
+include-operation-id = ["rescheduleReservation", "cancelReservation"]
+checks.positive_data_acceptance.expected-statuses = [
+  "2xx",
+  "3xx",
+  "401",
+  "403",
+  "404",
+  "409",
+  "412",
+  "422",
+  "428",
+  "429",
+  "5xx",
+]

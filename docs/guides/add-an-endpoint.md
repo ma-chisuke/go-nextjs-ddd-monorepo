@@ -40,6 +40,8 @@ In a supporting context such as Facility, which has no domain layer, skip step 3
 
 7. Give each new kind of business error a problem. In `internal/adapter/http/problems.go`, add a `problem.Type` with a new slug, a title, and a status that the operation declares in the API document, and a case for the kind to the switch. Write its page `docs/problems/<slug>.md` in the form of the other pages, and the translation `docs/problems/<slug>.ja.md`, then run `make i18n-stamp`.
 
+   A rule that a JSON Schema cannot express, such as one across two properties, refuses some requests that the document allows. Add the status of its problem to `positive_data_acceptance` of the operation in `tools/schemathesis/schemathesis.toml`, with the rule as the reason; otherwise `test-api-fuzz` reports each such refusal (step 10).
+
    Check: `make check` fails while the switch lacks the kind (the linter exhaustive, in `lint-go`), and while the page is missing (the test in `problems_test.go`).
 
 8. Test the operation in `internal/adapter/http/handler_test.go`, through the client of `platform/apitest`: the request that succeeds, and a request for each problem that the operation can answer.
@@ -59,3 +61,5 @@ In a supporting context such as Facility, which has no domain layer, skip step 3
     make check
     CHECK_SCOPE=changed make check-all   # adds the checks that need PostgreSQL (Docker)
     ```
+
+    Check: `make check-all` runs `test-api-fuzz`, which sends requests that Schemathesis generates from the document to the API, built from the checkout: the examples of the document, requests that test each constraint from both sides, generated requests, and sequences of them. A finding is an answer that the document does not allow, or a 5xx. [Change an API](api-changes.md#check-the-api-against-requests-generated-from-its-document) tells how to read a finding, send its request again, and decide which side to fix.

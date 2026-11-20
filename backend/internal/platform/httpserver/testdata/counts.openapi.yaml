@@ -1,0 +1,40 @@
+# The API of the tests of the request validation: two operations on /counts,
+# one that reads the counts, and one that takes a body with integers.
+openapi: 3.1.0
+info:
+  title: Counts
+  version: 0.1.0
+servers:
+  - url: /
+paths:
+  /counts:
+    get:
+      operationId: getCounts
+      responses:
+        "200":
+          description: The counts.
+    post:
+      operationId: addCounts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [count]
+              properties:
+                count:
+                  type: integer
+                  minimum: 0
+                  maximum: 1000
+                more:
+                  type: array
+                  items:
+                    type: integer
+                ratio:
+                  type: number
+                label:
+                  type: string
+      responses:
+        "204":
+          description: The counts were added.

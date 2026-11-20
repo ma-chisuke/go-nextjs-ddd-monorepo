@@ -137,6 +137,22 @@ func TestRegisterRoomRejections(t *testing.T) {
 	}
 }
 
+// JSON Schema counts 8.0 as an integer, so the document allows it for the
+// capacity, and the API takes it as 8.
+func TestRegisterRoomWithAWholeNumberWrittenWithAFraction(t *testing.T) {
+	t.Parallel()
+	body := `{"name":"Aoba","capacity":8.0,"openFrom":"09:00","openUntil":"18:00","timeZone":"Asia/Tokyo"}`
+	res := newClient(t).Do(http.MethodPost, "/rooms", []byte(body))
+	if res.Status != http.StatusCreated {
+		t.Fatalf("got status %d, want 201\n%s", res.Status, res.Body)
+	}
+	var created facilityhttp.Room
+	res.JSON(t, &created)
+	if created.Capacity != 8 {
+		t.Errorf("got capacity %d, want 8", created.Capacity)
+	}
+}
+
 func TestRegisterRoomWithAnotherMediaType(t *testing.T) {
 	t.Parallel()
 	res := newClient(t).Do(http.MethodPost, "/rooms", []byte("name=Aoba"), apitest.Header("Content-Type", "text/plain"))
@@ -205,7 +221,11 @@ func TestRequestsOutsideTheDocument(t *testing.T) {
 	t.Parallel()
 	client := newClient(t)
 	wantProblem(t, client.Do(http.MethodGet, "/meeting-rooms", nil), "not-found", http.StatusNotFound)
-	wantProblem(t, client.Do(http.MethodDelete, "/rooms", nil), "method-not-allowed", http.StatusMethodNotAllowed)
+	res := client.Do(http.MethodDelete, "/rooms", nil)
+	wantProblem(t, res, "method-not-allowed", http.StatusMethodNotAllowed)
+	if got, want := res.Header.Get("Allow"), "GET, POST"; got != want {
+		t.Errorf("got Allow %q, want %q", got, want)
+	}
 }
 
 func TestHealthCheck(t *testing.T) {

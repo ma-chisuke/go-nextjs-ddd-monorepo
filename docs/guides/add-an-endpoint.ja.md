@@ -40,6 +40,8 @@ Facility のようにドメイン層のない補完の文脈では、手順3を�
 
 7. 新しい種類の業務エラーに problem を与える。`internal/adapter/http/problems.go` に、新しい slug・タイトル・ステータスを持つ `problem.Type` を足し、switch にその種類の case を足す。ステータスは、操作が API の文書で宣言しているものにする。ページ `docs/problems/<slug>.md` をほかのページと同じ形で書き、対訳 `docs/problems/<slug>.ja.md` も書いて、`make i18n-stamp` を実行する。
 
+   JSON Schema では書けない決まり（2つのプロパティにまたがる決まりなど）は、文書が許すリクエストの一部を拒む。その problem のステータスを、`tools/schemathesis/schemathesis.toml` にある操作の `positive_data_acceptance` に足し、決まりを理由として書き添える。足さなければ、`test-api-fuzz` がそうした拒否をそれぞれ指摘する（手順10）。
+
    確認：switch にその種類がない間（`lint-go` のリンター exhaustive）と、ページがない間（`problems_test.go` のテスト）、`make check` は失敗する。
 
 8. `internal/adapter/http/handler_test.go` で、`platform/apitest` のクライアントを通して操作をテストする。成功するリクエストと、操作が返しうる problem ごとのリクエストを送る。
@@ -60,4 +62,6 @@ Facility のようにドメイン層のない補完の文脈では、手順3を�
     CHECK_SCOPE=changed make check-all   # PostgreSQL（Docker）を要するチェックを加える
     ```
 
-<!-- i18n-source: add-an-endpoint.md sha256:93c03395346619cb543fc286c8677e25a3f9ec014cc748c7cffe87881eeb6f4c -->
+    確認：`make check-all` は `test-api-fuzz` を実行する。このチェックは、Schemathesis が文書から生成したリクエストを、チェックアウトからビルドした API に送る。送るのは、文書の例、各制約を両側から試すリクエスト、生成したリクエスト、それらを続けて送る一連のリクエストである。指摘は、文書が許さない答えか 5xx である。指摘の読み方、そのリクエストの送り直し方、どちらの側を直すかの決め方は、[API を変更する](api-changes.ja.md#文書から生成したリクエストで-api-を確かめる)にある。
+
+<!-- i18n-source: add-an-endpoint.md sha256:ca682f6f435ae82f40f6fa1c448c6a10968b5df165bc692a93c2081c244bf02e -->
