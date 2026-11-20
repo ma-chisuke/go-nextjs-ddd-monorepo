@@ -1,11 +1,14 @@
 # Frontend (Next.js): the types generated from the API documents, ESLint, the
-# TypeScript compiler, knip, and the unit tests. Prettier formats these files
-# through make/repo.mk. Next.js 16 removed `next lint` and `next build` no
-# longer lints, so these targets are the only gate.
-# Settings: frontend/eslint.config.mjs, frontend/tsconfig.json, frontend/knip.jsonc.
+# TypeScript compiler, knip, the unit tests, and the mutation tests of the
+# unit tests. Prettier formats these files through make/repo.mk. Next.js 16
+# removed `next lint` and `next build` no longer lints, so these targets are
+# the only gate.
+# Settings: frontend/eslint.config.mjs, frontend/tsconfig.json, frontend/knip.jsonc,
+# frontend/stryker.config.mjs.
 
 GEN_TARGETS += gen-api-ts
 CHECK_TARGETS += gen-check-api-ts lint-frontend lint-frontend-types lint-frontend-unused test-frontend
+CHECK_ALL_TARGETS += test-mutation-frontend
 
 FRONTEND_BIN := $(CURDIR)/frontend/node_modules/.bin
 FRONTEND_GEN := tools/scripts/gen-frontend.sh
@@ -64,6 +67,29 @@ test-frontend:
 	@$(TASK) $@ 'if [ -n "$$($(FILES) $(FRONTEND_TS) frontend/package.json)" ]; then \
 		cd frontend && node --test --test-reporter=dot "src/**/*.test.ts" 2>&1 \
 		|| { node --test "src/**/*.test.ts" 2>&1 | grep -vE "^(✔|ℹ)"; exit 1; }; fi'
+
+# Mutation testing of the pure logic (TPL-0023): StrykerJS changes the code of
+# each module of src/ that has a unit test next to it, in small ways, and runs
+# the unit tests against each change. A change that every test passes fails
+# the check, unless a reviewed line of equivalent-mutants.allow shows that no
+# test can tell it apart. The modules follow from the tests, so a new module
+# with a test needs no edit here. Run some modules with
+# `make test-mutation-frontend MUTATION_MODULES=frontend/src/lib/input.ts`, and
+# one mutant with `make mutant-frontend ID=<mutant>`.
+# See docs/guides/mutation-tests.md.
+FRONTEND_UNIT_TESTS := $(shell find frontend/src -name '*.test.ts' 2> /dev/null)
+MUTATION_FRONTEND_SOURCES := $(foreach t,$(FRONTEND_UNIT_TESTS),"$(t)" "$(t:.test.ts=.ts)") \
+	"frontend/stryker.config.mjs" "frontend/package.json" "equivalent-mutants.allow" "tools/stryker"
+MUTATION_MODULES ?=
+
+.PHONY: mutant-frontend
+
+test-mutation-frontend:
+	@$(TASK) $@ 'if [ -n "$$($(FILES) $(MUTATION_FRONTEND_SOURCES))" ]; then \
+		tools/scripts/mutation.sh frontend $(MUTATION_MODULES); fi'
+
+mutant-frontend: ## Run one mutant that test-mutation-frontend found: make mutant-frontend ID=<mutant>
+	@tools/scripts/mutation.sh frontend-mutant "$(ID)"
 
 # The development server of Next.js, against the APIs of the local system
 # (`make up`), on http://127.0.0.1:3000.
