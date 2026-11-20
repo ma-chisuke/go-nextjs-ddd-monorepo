@@ -223,3 +223,8 @@ Use these Japanese terms. The table grows when a new term appears; add the term 
 | write-only argument (Terraform) | 書き込み専用の引数 |
 | mock (of a provider, or of the outputs of a unit) | モック |
 | rehearsal (`make rehearse-infra`) | リハーサル |
+| mutation testing, mutant | ミューテーションテスト、ミュータント |
+| kill (a mutant), live (of a mutant) | 殺す、生き残る |
+| equivalent mutant | 等価なミュータント |
+| coverage (of the tests) | カバレッジ |
+| allowance (of an equivalent mutant, in `equivalent-mutants.allow`) | 許可 |

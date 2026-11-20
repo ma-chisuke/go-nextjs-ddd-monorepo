@@ -2,6 +2,8 @@ package app_test
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -134,7 +136,12 @@ func TestBookRoomIdempotently(t *testing.T) {
 	first := f.book(t, "k1", on(10, 11))
 
 	// The same request with the same key gets the same reservation, and
-	// books nothing new, even after the reservation changed.
+	// books nothing new: the reservation does not stand in its own way.
+	if again := f.book(t, "k1", on(10, 11)); again != first {
+		t.Errorf("got %+v, want the reservation of the first request, %+v", again, first)
+	}
+
+	// The same holds after the reservation changed.
 	cancelled, err := f.uc.CancelReservation(t.Context(), first.Reservation.ID(), first.Version)
 	if err != nil {
 		t.Fatal(err)
@@ -236,6 +243,12 @@ func TestBookRoomInARace(t *testing.T) {
 	if got != winner {
 		t.Errorf("got %+v, want the reservation of the request that won, %+v", got, winner)
 	}
+
+	// Another request with the key of the winner that lost the race is
+	// refused, as it would be without the race.
+	racing = app.New(&racingStore{Store: store}, apptest.NewRooms(roomA), apptest.NewClock(now), ids)
+	_, err = racing.BookRoom(t.Context(), booking("k1", on(12, 13)))
+	wantAppKind(t, err, app.KindIdempotencyKeyReused)
 	wantEvents(t, store, confirmedEvent(winner.Reservation.ID(), on(10, 11), 4))
 }
 
@@ -246,6 +259,9 @@ func TestBookRoomWhenFacilitySaysNo(t *testing.T) {
 	in.Room = nobody
 	_, err := f.uc.BookRoom(t.Context(), in)
 	wantAppKind(t, err, app.KindUnknownRoom)
+	if want := "No room has the id ff000000-0000-0000-0000-000000000000."; err == nil || err.Error() != want {
+		t.Errorf("got the error %v, want %q", err, want)
+	}
 
 	cause := fmt.Errorf("%w: connection refused", app.ErrRoomsUnavailable)
 	f.rooms.Fail(cause)
@@ -254,13 +270,19 @@ func TestBookRoomWhenFacilitySaysNo(t *testing.T) {
 	if !errors.Is(err, cause) {
 		t.Errorf("the error %v does not keep its cause, which the log needs", err)
 	}
+	want := "The rooms cannot be checked now. Try again later. (cause: the directory of rooms does not answer: connection refused)"
+	if err == nil || err.Error() != want {
+		t.Errorf("got the error %v, want %q: the log reads the cause after the detail", err, want)
+	}
 
-	// Any other failure of the directory is not a business error.
-	f.rooms.Fail(errors.New("the directory broke"))
+	// Any other failure of the directory is not a business error, and the
+	// log keeps it.
+	broke := errors.New("the directory broke")
+	f.rooms.Fail(broke)
 	_, err = f.uc.BookRoom(t.Context(), booking("k3", on(10, 11)))
 	var business *app.Error
-	if err == nil || errors.As(err, &business) {
-		t.Errorf("got %v, want an error that is not a business error", err)
+	if !errors.Is(err, broke) || errors.As(err, &business) {
+		t.Errorf("got %v, want the failure of the directory, not a business error", err)
 	}
 	wantEvents(t, f.store)
 }
@@ -302,15 +324,19 @@ func TestRescheduleReservation(t *testing.T) {
 		t.Errorf("got %+v, want version 3, from 12:00 to 14:00, with 6 attendees", moved)
 	}
 
-	// The version that the client read is the current one.
+	// The version that the client read is the current one. A change that
+	// names an older one is refused before the rules apply: the client reads
+	// the reservation again first.
+	tooMany := 9
 	_, err = f.uc.RescheduleReservation(t.Context(), app.RescheduleReservationInput{Reservation: id, Read: 2, Attendees: &attendees})
+	wantAppKind(t, err, app.KindVersionMismatch)
+	_, err = f.uc.RescheduleReservation(t.Context(), app.RescheduleReservationInput{Reservation: id, Read: 2, Attendees: &tooMany})
 	wantAppKind(t, err, app.KindVersionMismatch)
 	// Another reservation holds 14:00 to 15:00.
 	later := at(20, 15, 0)
 	_, err = f.uc.RescheduleReservation(t.Context(), app.RescheduleReservationInput{Reservation: id, Read: 3, End: &later})
 	wantAppKind(t, err, app.KindRoomAlreadyBooked)
 	// The rules of a booking apply.
-	tooMany := 9
 	_, err = f.uc.RescheduleReservation(t.Context(), app.RescheduleReservationInput{Reservation: id, Read: 3, Attendees: &tooMany})
 	wantDomainKind(t, err, domain.KindOverCapacity)
 	// A reservation that does not exist.
@@ -342,7 +368,8 @@ func TestChangeInARace(t *testing.T) {
 	t.Parallel()
 	store := &apptest.Store{}
 	ids := &apptest.IDs{}
-	booked, err := app.New(store, apptest.NewRooms(roomA), apptest.NewClock(now), ids).BookRoom(t.Context(), booking("k1", on(10, 11)))
+	uc := app.New(store, apptest.NewRooms(roomA), apptest.NewClock(now), ids)
+	booked, err := uc.BookRoom(t.Context(), booking("k1", on(10, 11)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -352,7 +379,21 @@ func TestChangeInARace(t *testing.T) {
 	attendees := 2
 	_, err = racing.RescheduleReservation(t.Context(), app.RescheduleReservationInput{Reservation: booked.Reservation.ID(), Read: 1, Attendees: &attendees})
 	wantAppKind(t, err, app.KindVersionMismatch)
-	wantEvents(t, store, confirmedEvent(booked.Reservation.ID(), on(10, 11), 4))
+
+	// The store refuses an overlapping period that the check of a
+	// rescheduling missed.
+	later, err := uc.BookRoom(t.Context(), booking("k2", on(12, 13)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	racing = app.New(&racingStore{Store: store}, apptest.NewRooms(roomA), apptest.NewClock(now), ids)
+	start := at(20, 10, 0)
+	_, err = racing.RescheduleReservation(t.Context(), app.RescheduleReservationInput{Reservation: later.Reservation.ID(), Read: 1, Start: &start})
+	wantAppKind(t, err, app.KindRoomAlreadyBooked)
+
+	wantEvents(t, store,
+		confirmedEvent(booked.Reservation.ID(), on(10, 11), 4),
+		confirmedEvent(later.Reservation.ID(), on(12, 13), 4))
 }
 
 func TestCancelReservation(t *testing.T) {
@@ -414,10 +455,15 @@ func TestListReservations(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// list follows the cursors to the last page, and fails the test after
+	// more pages than the reservations could fill.
 	list := func(in app.ListReservationsInput) []string {
 		t.Helper()
 		var starts []string
-		for {
+		for pages := 1; ; pages++ {
+			if pages > 10 {
+				t.Fatalf("%+v: the cursors lead to more than 10 pages", in)
+			}
 			page, next, err := f.uc.ListReservations(t.Context(), in)
 			if err != nil {
 				t.Fatal(err)
@@ -453,53 +499,268 @@ func TestListReservations(t *testing.T) {
 		}
 	}
 
-	_, _, err := f.uc.ListReservations(t.Context(), app.ListReservationsInput{Limit: 2, Cursor: "not-a-cursor"})
+	// The last page has no cursor, even when it is full.
+	page, next, err := f.uc.ListReservations(t.Context(), app.ListReservationsInput{Limit: 5})
+	if err != nil || len(page) != 5 || next != "" {
+		t.Errorf("got %d reservations, the cursor %q, and the error %v; want all 5 and no cursor", len(page), next, err)
+	}
+	// A limit below 1 lists one reservation a page.
+	page, next, err = f.uc.ListReservations(t.Context(), app.ListReservationsInput{Limit: 0})
+	if err != nil || len(page) != 1 || next == "" {
+		t.Errorf("got %d reservations, the cursor %q, and the error %v; want 1 and a cursor", len(page), next, err)
+	}
+
+	_, _, err = f.uc.ListReservations(t.Context(), app.ListReservationsInput{Limit: 2, Cursor: "not-a-cursor"})
+	wantAppKind(t, err, app.KindInvalidCursor)
+	// A cursor is base64url text. One with a character outside that alphabet
+	// is refused, even when the text before the character decodes to a
+	// cursor of this API. The decoded cursor is filled with spaces, which
+	// JSON ignores, so that the decoder reads all of it before the character.
+	raw, err := base64.RawURLEncoding.DecodeString(next)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for len(raw)%3 != 0 {
+		raw = append(raw, ' ')
+	}
+	_, _, err = f.uc.ListReservations(t.Context(), app.ListReservationsInput{Limit: 2, Cursor: base64.RawURLEncoding.EncodeToString(raw) + "*"})
 	wantAppKind(t, err, app.KindInvalidCursor)
 }
 
-// failingStore fails in every method, as a store whose database is down.
-type failingStore struct{ *apptest.Store }
+// listingStore records the queries that reach List.
+type listingStore struct {
+	*apptest.Store
+	queries []app.ListQuery
+}
+
+func (s *listingStore) List(ctx context.Context, q app.ListQuery) ([]domain.Reservation, error) {
+	s.queries = append(s.queries, q)
+	return s.Store.List(ctx, q)
+}
+
+// A page asks the store for one reservation more than it holds, to learn
+// whether another page follows, and for no more.
+func TestListReservationsAsksForOneMore(t *testing.T) {
+	t.Parallel()
+	store := &listingStore{Store: &apptest.Store{}}
+	uc := app.New(store, apptest.NewRooms(roomA), apptest.NewClock(now), &apptest.IDs{})
+	if _, _, err := uc.ListReservations(t.Context(), app.ListReservationsInput{Limit: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if len(store.queries) != 1 || store.queries[0].Limit != 3 {
+		t.Errorf("got the queries %+v, want one with the limit 3", store.queries)
+	}
+}
+
+// brokenStore fails in the method named broken, as a store whose database
+// goes down in the middle of a use case.
+type brokenStore struct {
+	*apptest.Store
+	broken string
+}
 
 var errDown = errors.New("the database is down")
 
-func (failingStore) Get(context.Context, domain.ReservationID) (app.Versioned, error) {
-	return app.Versioned{}, errDown
+func (s brokenStore) Add(ctx context.Context, r domain.Reservation, events []domain.Event, key app.IdempotencyKey, at time.Time) (app.Version, error) {
+	if s.broken == "Add" {
+		return 0, errDown
+	}
+	return s.Store.Add(ctx, r, events, key, at)
 }
 
-func (failingStore) FindKey(context.Context, string) (app.IdempotencyKey, error) {
-	return app.IdempotencyKey{}, errDown
+func (s brokenStore) Get(ctx context.Context, id domain.ReservationID) (app.Versioned, error) {
+	if s.broken == "Get" {
+		return app.Versioned{}, errDown
+	}
+	return s.Store.Get(ctx, id)
 }
 
-func (failingStore) List(context.Context, app.ListQuery) ([]domain.Reservation, error) {
-	return nil, errDown
+func (s brokenStore) Update(ctx context.Context, r domain.Reservation, events []domain.Event, read app.Version, at time.Time) (app.Version, error) {
+	if s.broken == "Update" {
+		return 0, errDown
+	}
+	return s.Store.Update(ctx, r, events, read, at)
+}
+
+func (s brokenStore) Overlaps(ctx context.Context, room domain.RoomID, period domain.Period, except domain.ReservationID) (bool, error) {
+	if s.broken == "Overlaps" {
+		return false, errDown
+	}
+	return s.Store.Overlaps(ctx, room, period, except)
+}
+
+func (s brokenStore) List(ctx context.Context, q app.ListQuery) ([]domain.Reservation, error) {
+	if s.broken == "List" {
+		return nil, errDown
+	}
+	return s.Store.List(ctx, q)
+}
+
+func (s brokenStore) FindKey(ctx context.Context, key string) (app.IdempotencyKey, error) {
+	if s.broken == "FindKey" {
+		return app.IdempotencyKey{}, errDown
+	}
+	return s.Store.FindKey(ctx, key)
 }
 
 // A failure of the store is not a business error: it reaches the client as
-// an internal error, and the log keeps it.
+// an internal error, and the log keeps it. Each use case passes on the
+// failure of each method that it calls.
 func TestFailuresOfTheStore(t *testing.T) {
 	t.Parallel()
-	uc := app.New(failingStore{&apptest.Store{}}, apptest.NewRooms(roomA), apptest.NewClock(now), &apptest.IDs{})
-	ctx := t.Context()
-	_, err1 := uc.GetReservation(ctx, apptest.ID(1))
-	_, err2 := uc.BookRoom(ctx, booking("k1", on(10, 11)))
-	_, _, err3 := uc.ListReservations(ctx, app.ListReservationsInput{Limit: 1})
-	_, err4 := uc.CancelReservation(ctx, apptest.ID(1), 1)
-	for _, err := range []error{err1, err2, err3, err4} {
+	attendees := 2
+	tests := []struct {
+		name   string
+		broken string
+		call   func(ctx context.Context, uc *app.Reservations, booked app.Versioned) error
+	}{
+		{"get", "Get", func(ctx context.Context, uc *app.Reservations, booked app.Versioned) error {
+			_, err := uc.GetReservation(ctx, booked.Reservation.ID())
+			return err
+		}},
+		{"look for the key of a booking", "FindKey", func(ctx context.Context, uc *app.Reservations, _ app.Versioned) error {
+			_, err := uc.BookRoom(ctx, booking("k2", on(12, 13)))
+			return err
+		}},
+		{"get the reservation of a repeated booking", "Get", func(ctx context.Context, uc *app.Reservations, _ app.Versioned) error {
+			_, err := uc.BookRoom(ctx, booking("k1", on(10, 11)))
+			return err
+		}},
+		{"check a booking for overlaps", "Overlaps", func(ctx context.Context, uc *app.Reservations, _ app.Versioned) error {
+			_, err := uc.BookRoom(ctx, booking("k2", on(12, 13)))
+			return err
+		}},
+		{"add a booking", "Add", func(ctx context.Context, uc *app.Reservations, _ app.Versioned) error {
+			_, err := uc.BookRoom(ctx, booking("k2", on(12, 13)))
+			return err
+		}},
+		{"check a rescheduling for overlaps", "Overlaps", func(ctx context.Context, uc *app.Reservations, booked app.Versioned) error {
+			_, err := uc.RescheduleReservation(ctx, app.RescheduleReservationInput{Reservation: booked.Reservation.ID(), Read: 1, Attendees: &attendees})
+			return err
+		}},
+		{"update a rescheduling", "Update", func(ctx context.Context, uc *app.Reservations, booked app.Versioned) error {
+			_, err := uc.RescheduleReservation(ctx, app.RescheduleReservationInput{Reservation: booked.Reservation.ID(), Read: 1, Attendees: &attendees})
+			return err
+		}},
+		{"load a cancellation", "Get", func(ctx context.Context, uc *app.Reservations, booked app.Versioned) error {
+			_, err := uc.CancelReservation(ctx, booked.Reservation.ID(), 1)
+			return err
+		}},
+		{"update a cancellation", "Update", func(ctx context.Context, uc *app.Reservations, booked app.Versioned) error {
+			_, err := uc.CancelReservation(ctx, booked.Reservation.ID(), 1)
+			return err
+		}},
+		{"list", "List", func(ctx context.Context, uc *app.Reservations, _ app.Versioned) error {
+			_, _, err := uc.ListReservations(ctx, app.ListReservationsInput{Limit: 1})
+			return err
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			f := newFixture(t)
+			booked := f.book(t, "k1", on(10, 11))
+			uc := app.New(brokenStore{Store: f.store, broken: tt.broken}, f.rooms, f.clock, &apptest.IDs{})
+			err := tt.call(t.Context(), uc, booked)
+			var business *app.Error
+			if !errors.Is(err, errDown) || errors.As(err, &business) {
+				t.Errorf("got %v, want the failure of the store, not a business error", err)
+			}
+			wantEvents(t, f.store, confirmedEvent(booked.Reservation.ID(), on(10, 11), 4))
+		})
+	}
+}
+
+// A use case refuses a period that another reservation holds before it asks
+// the store to write anything: the check of overlaps gives the common case its
+// answer early, even when the write would fail.
+func TestOverlapsAreRefusedBeforeAWrite(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t)
+	f.book(t, "k1", on(10, 12))
+	later := f.book(t, "k2", on(12, 13))
+
+	uc := app.New(brokenStore{Store: f.store, broken: "Add"}, f.rooms, f.clock, &apptest.IDs{})
+	_, err := uc.BookRoom(t.Context(), booking("k3", on(11, 13)))
+	wantAppKind(t, err, app.KindRoomAlreadyBooked)
+
+	uc = app.New(brokenStore{Store: f.store, broken: "Update"}, f.rooms, f.clock, &apptest.IDs{})
+	start := at(20, 11, 0)
+	_, err = uc.RescheduleReservation(t.Context(), app.RescheduleReservationInput{Reservation: later.Reservation.ID(), Read: 1, Start: &start})
+	wantAppKind(t, err, app.KindRoomAlreadyBooked)
+}
+
+// The clock and the generator of ids can be plain functions, and a booking
+// for which no id can be made books nothing.
+func TestPortsAsFunctions(t *testing.T) {
+	t.Parallel()
+	store := &apptest.Store{}
+	clock := app.ClockFunc(func() time.Time { return now })
+	ids := app.IDGeneratorFunc(func() (domain.ReservationID, error) { return apptest.ID(7), nil })
+	booked, err := app.New(store, apptest.NewRooms(roomA), clock, ids).BookRoom(t.Context(), booking("k1", on(10, 11)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if booked.Reservation.ID() != apptest.ID(7) {
+		t.Errorf("got the id %s, want the one of the function, %s", booked.Reservation.ID(), apptest.ID(7))
+	}
+
+	errNoID := errors.New("no randomness")
+	ids = app.IDGeneratorFunc(func() (domain.ReservationID, error) { return domain.ReservationID{}, errNoID })
+	_, err = app.New(store, apptest.NewRooms(roomA), clock, ids).BookRoom(t.Context(), booking("k2", on(12, 13)))
+	var business *app.Error
+	if !errors.Is(err, errNoID) || errors.As(err, &business) {
+		t.Errorf("got %v, want the failure of the generator of ids, not a business error", err)
+	}
+	wantEvents(t, store, confirmedEvent(apptest.ID(7), on(10, 11), 4))
+}
+
+// JSON writes no time after the year 9999, so neither the fingerprint of a
+// booking nor the cursor of a list can hold one. Such a time is a failure,
+// not a business error, and the log keeps what JSON said; the API never
+// sends one.
+func TestTimesAfterTheYear9999(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t)
+	far := func(day int) domain.Period {
+		return domain.Period{Start: time.Date(10000, time.January, day, 10, 0, 0, 0, tokyo), End: time.Date(10000, time.January, day, 11, 0, 0, 0, tokyo)}
+	}
+	wantJSONFailure := func(err error) {
+		t.Helper()
 		var business *app.Error
-		if !errors.Is(err, errDown) || errors.As(err, &business) {
-			t.Errorf("got %v, want the failure of the store, not a business error", err)
+		var marshal *json.MarshalerError
+		if !errors.As(err, &marshal) || errors.As(err, &business) {
+			t.Errorf("got %v, want the failure of JSON, not a business error", err)
 		}
 	}
+	_, err := f.uc.BookRoom(t.Context(), booking("k1", far(3)))
+	wantJSONFailure(err)
+
+	for i, key := range []string{"k1", "k2"} {
+		r := domain.Restore(apptest.ID(uint64(i+1)), roomA.ID, far(3+i), 4, "organizer@example.com", domain.StatusConfirmed)
+		if _, err := f.store.Add(t.Context(), r, nil, app.IdempotencyKey{Key: key, Reservation: r.ID()}, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_, _, err = f.uc.ListReservations(t.Context(), app.ListReservationsInput{Limit: 1})
+	wantJSONFailure(err)
+	wantEvents(t, f.store)
 }
 
 // Every kind is listed once, so that the tests that walk Kinds see each.
 func TestKinds(t *testing.T) {
 	t.Parallel()
+	kinds := app.Kinds()
 	seen := map[app.Kind]bool{}
-	for i, kind := range app.Kinds() {
+	for i, kind := range kinds {
 		if kind != app.Kind(i+1) || seen[kind] {
 			t.Errorf("Kinds()[%d] is %d: list every kind once, in the order of their values", i, kind)
 		}
 		seen[kind] = true
+	}
+	// The list ends with the last kind. A new kind goes after it, and takes
+	// its place here.
+	if last := app.KindInvalidCursor; len(kinds) != int(last) {
+		t.Errorf("Kinds() lists %d kinds, want every kind up to %d", len(kinds), last)
 	}
 }

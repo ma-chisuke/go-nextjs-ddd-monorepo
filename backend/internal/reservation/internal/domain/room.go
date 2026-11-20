@@ -64,10 +64,14 @@ func (r Room) location() *time.Location {
 // time zone of the room. The room closes on that day, so a period that runs
 // into the next day is never inside them.
 func (r Room) isOpenDuring(p Period) bool {
-	y, m, d := p.Start.In(r.location()).Date()
-	opens := time.Date(y, m, d, r.Hours.Opens.Hour(), r.Hours.Opens.Minute(), 0, 0, r.location())
-	closes := time.Date(y, m, d, r.Hours.Closes.Hour(), r.Hours.Closes.Minute(), 0, 0, r.location())
-	return !p.Start.Before(opens) && !p.End.After(closes)
+	return !p.Start.Before(r.at(p.Start, r.Hours.Opens)) && !p.End.After(r.at(p.Start, r.Hours.Closes))
+}
+
+// at returns the instant at which the clock of the room shows t, on the day
+// on which it shows day.
+func (r Room) at(day time.Time, t TimeOfDay) time.Time {
+	y, m, d := day.In(r.location()).Date()
+	return time.Date(y, m, d, t.Hour(), t.Minute(), 0, 0, r.location())
 }
 
 // describeHours writes the opening hours and the time zone, for the detail of
