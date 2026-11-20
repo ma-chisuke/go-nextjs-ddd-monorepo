@@ -1,3 +1,36 @@
+diff --git a/backend/internal/reservation/internal/adapter/http/api.gen.go b/backend/internal/reservation/internal/adapter/http/api.gen.go
+--- a/backend/internal/reservation/internal/adapter/http/api.gen.go
++++ b/backend/internal/reservation/internal/adapter/http/api.gen.go
+@@ -1468,17 +1468,18 @@ var swaggerSpec = []string{
+ 	"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",
++	"Ks7dr2IN2zxs/jMA",
+ }
+ 
+ // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,
 diff --git a/backend/internal/reservation/internal/adapter/http/handler_test.go b/backend/internal/reservation/internal/adapter/http/handler_test.go
 --- a/backend/internal/reservation/internal/adapter/http/handler_test.go
 +++ b/backend/internal/reservation/internal/adapter/http/handler_test.go
@@ -124,6 +157,25 @@ diff --git a/backend/internal/reservation/internal/domain/reservation_test.go b/
  		t.Errorf("Kinds() lists %d kinds, want every kind up to %d", len(kinds), last)
  	}
  }
+diff --git a/contracts/http/reservation.openapi.yaml b/contracts/http/reservation.openapi.yaml
+--- a/contracts/http/reservation.openapi.yaml
++++ b/contracts/http/reservation.openapi.yaml
+@@ -34,10 +34,11 @@ paths:
+       summary: Book a room
+       description: |
+         Books a room for a period. The period starts and ends on a quarter
+-        hour, lasts at most 4 hours, does not start in the past, and lies
+-        inside the opening hours of the room on one day, read in the time zone
+-        of the room. The attendees fit the capacity of the room, and no other
+-        confirmed reservation of the room overlaps the period.
++        hour, lasts at most 4 hours, starts neither in the past nor more than
++        90 days ahead, and lies inside the opening hours of the room on one
++        day, read in the time zone of the room. The attendees fit the capacity
++        of the room, and no other confirmed reservation of the room overlaps
++        the period.
+ 
+         A request that is sent again with the same `Idempotency-Key` and the
+         same body answers with the reservation that the first one made, and
 diff --git a/docs/contexts/reservation/README.ja.md b/docs/contexts/reservation/README.ja.md
 --- a/docs/contexts/reservation/README.ja.md
 +++ b/docs/contexts/reservation/README.ja.md
@@ -237,3 +289,22 @@ diff --git a/frontend/src/features/reservation/problems.ts b/frontend/src/featur
      case "over-capacity":
        return atField("attendees", "More people attend than the room holds.");
      case "no-attendees":
+diff --git a/frontend/src/lib/api/reservation.gen.ts b/frontend/src/lib/api/reservation.gen.ts
+--- a/frontend/src/lib/api/reservation.gen.ts
++++ b/frontend/src/lib/api/reservation.gen.ts
+@@ -23,10 +23,11 @@ export interface paths {
+         /**
+          * Book a room
+          * @description Books a room for a period. The period starts and ends on a quarter
+-         *     hour, lasts at most 4 hours, does not start in the past, and lies
+-         *     inside the opening hours of the room on one day, read in the time zone
+-         *     of the room. The attendees fit the capacity of the room, and no other
+-         *     confirmed reservation of the room overlaps the period.
++         *     hour, lasts at most 4 hours, starts neither in the past nor more than
++         *     90 days ahead, and lies inside the opening hours of the room on one
++         *     day, read in the time zone of the room. The attendees fit the capacity
++         *     of the room, and no other confirmed reservation of the room overlaps
++         *     the period.
+          *
+          *     A request that is sent again with the same `Idempotency-Key` and the
+          *     same body answers with the reservation that the first one made, and

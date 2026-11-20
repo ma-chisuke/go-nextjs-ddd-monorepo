@@ -90,7 +90,9 @@ list() {
 }
 
 known() {
-  list | grep -q -x -- "${1:-}" || fail "no task is named \"${1:-}\"; the tasks are: $(list | tr '\n' ' ')"
+  # grep reads the whole list: with -q it would stop at the first match,
+  # and the list, still writing, would fail the pipeline.
+  list | grep -x -- "${1:-}" > /dev/null || fail "no task is named \"${1:-}\"; the tasks are: $(list | tr '\n' ' ')"
 }
 
 # The files of the harness, as the commit holds them.
@@ -177,7 +179,7 @@ criterion() {
   if out=$("$@" 2>&1); then
     printf 'pass\t%s\t\n' "$name" >> "$criteria"
   else
-    printf 'fail\t%s\t%s\n' "$name" "$(printf '%s' "$out" | tail -n 4 | tr '\n\t' '  ' | cut -c 1-400)" >> "$criteria"
+    printf 'fail\t%s\t%s\n' "$name" "$(printf '%s' "$out" | tail -n 4 | tr '\n\t' '  ' | cut -c 1-500)" >> "$criteria"
   fi
 }
 
@@ -189,7 +191,9 @@ checks_pass() {
   until out=$(CHECK_BUDGET=0 CHECK_BASE=graded make check 2>&1); do
     tries=$((tries + 1))
     if [ "$tries" -ge 3 ] || ! grep -q 'parallel golangci-lint is running' <<< "$out"; then
-      printf '%s\n' "$out" | grep -v '^ok ' | tail -n 12
+      # The checks that failed, by name, then the end of what they printed.
+      printf 'failed: %s\n' "$(printf '%s\n' "$out" | sed -n 's/^FAIL  *\([^ ]*\).*/\1/p' | tr '\n' ' ')"
+      printf '%s\n' "$out" | grep -v -e '^ok ' -e '^FAIL ' | tail -n 3
       return 1
     fi
     sleep 20

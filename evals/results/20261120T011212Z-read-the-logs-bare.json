@@ -1,0 +1,45 @@
+{
+  "task": "read-the-logs",
+  "arm": "bare",
+  "model": "sonnet",
+  "commit": "9549e9b801175a0939ead7f4959505879c70b243",
+  "started": "20261120T011212Z",
+  "cli": "2.1.328 (Claude Code)",
+  "seconds": 25,
+  "agent": {
+    "outcome": "success",
+    "turns": 10,
+    "cost_usd": 0.1627294,
+    "output_tokens": 2761,
+    "refused_commands": 2
+  },
+  "changed_lines": 22,
+  "criteria": [
+    {
+      "name": "english-has-the-section",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "translation-has-the-section",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "translation-is-japanese",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "rules-kept",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "checks-pass",
+      "pass": true,
+      "detail": ""
+    }
+  ],
+  "passed": true
+}
