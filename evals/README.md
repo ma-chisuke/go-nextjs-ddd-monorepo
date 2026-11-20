@@ -73,6 +73,8 @@ A criterion that fails with the harness, and that `make check` did not catch, is
 
 `make test-evals` is part of `make check-all`, and runs when a file of `evals/` or a file that a solution changes is in scope. A change to the code under a solution therefore fails until the solution follows it.
 
+No document outside `evals/` links into this directory; it is named by its path instead. A run removes the directory from the copy, where such a link would be broken and `make check` would fail for a reason that has nothing to do with the task. `make test-evals` fails on such a link, because the solutions are graded in the same kind of copy.
+
 ## The records so far
 
 `make eval-report` prints the table. [results/README.md](results/README.md) says what the runs so far showed, and what they are too few to show.

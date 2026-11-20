@@ -105,7 +105,7 @@ make check   # 速いチェック。数秒で終わる
 - [AGENTS.ja.md](AGENTS.ja.md)：コーディングエージェント向けの指示。バックエンドとフロントエンドについての指示は、`backend/AGENTS.ja.md` と `frontend/AGENTS.ja.md` にある。
 - [docs/adr/](docs/adr/README.ja.md)：決定の記録。
 - [docs/guides/](docs/guides/)：繰り返す作業のやり方。
-- [evals/](evals/README.ja.md)：エージェントのハーネスの評価と、これまでの実行が示したこと。
+- `evals/README.ja.md`：エージェントのハーネスの評価と、これまでの実行が示したこと。
 - [SECURITY.ja.md](SECURITY.ja.md)：脆弱性の報告のしかた。
 
 ## 第三者のファイル
@@ -117,4 +117,4 @@ make check   # 速いチェック。数秒で終わる
 
 [MIT No Attribution](LICENSE)。表示を残さずに、テンプレートをコピーして自分のものにできる。
 
-<!-- i18n-source: README.md sha256:57e13f62c75e8fd89d496d66e72db68eebf4b6d7545da306dcfecee962cf826a -->
+<!-- i18n-source: README.md sha256:2fd0b7becb7671cb52cc046e3d828408987f161fc10267dc8de4b199a21f76e7 -->

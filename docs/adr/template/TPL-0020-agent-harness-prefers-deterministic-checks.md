@@ -62,7 +62,7 @@ The evaluation in `evals/` measures the harness, and works as follows.
 The first runs, on November 20, 2026, gave each of the two tasks once to each arm, with the model `sonnet`, and three of the four runs passed every criterion.
 Without the harness, the agent did the work of the task `booking-horizon` and never ran `make check`, which then reported five findings: generated code that was stale in two files, a Go file that was not formatted, and two sentences of a translation. With the harness, the agent ran `make gen` and `make check` before it stopped.
 In the task `read-the-logs`, both arms updated the translation; without the harness, the agent computed the marker of the translation by hand.
-No criterion failed with the harness, so no instruction was added. Four runs prove nothing: they are a first look, and [the records of the evaluation](../../../evals/results/README.md) say what they cannot show.
+No criterion failed with the harness, so no instruction was added. Four runs prove nothing: they are a first look, and the records of the evaluation, `evals/results/README.md`, say what they cannot show.
 
 ### Consequences
 
@@ -115,4 +115,4 @@ No criterion failed with the harness, so no instruction was added. Four runs pro
 - [Evaluating AGENTS.md: Are Repository-Level Context Files Helpful for Coding Agents?](https://arxiv.org/abs/2602.11988), Thibaud Gloaguen and others, ETH Zurich and LogicStar.ai, 2026.
 - [AGENTS.md](https://agents.md/)
 - The tools behind `make check` are chosen in TPL-0023.
-- [Evaluate the agent harness](../../../evals/README.md) describes the arms, the tasks, and how to run and read the evaluation.
+- `evals/README.md` describes the arms, the tasks, and how to run and read the evaluation. No document outside `evals/` links into it: a run removes the directory from the copy that the agent works in, and a link would be broken there.

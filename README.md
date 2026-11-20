@@ -105,7 +105,7 @@ The local system and `make check-all` need Docker. After `make up`, open <http:/
 - [AGENTS.md](AGENTS.md): instructions for coding agents, with those for the backend and the frontend in `backend/AGENTS.md` and `frontend/AGENTS.md`.
 - [docs/adr/](docs/adr/README.md): decision records.
 - [docs/guides/](docs/guides/): how to do recurring work.
-- [evals/](evals/README.md): the evaluation of the agent harness, and what its runs have shown so far.
+- `evals/README.md`: the evaluation of the agent harness, and what its runs have shown so far.
 - [SECURITY.md](SECURITY.md): how to report a vulnerability.
 
 ## Third-party files

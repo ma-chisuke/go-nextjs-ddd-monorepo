@@ -34,7 +34,7 @@ The reason for a rule is in the decision record that the rule cites ([docs/adr/]
 | `docs/contexts/` | The README and the glossary of each bounded context. |
 | `docs/problems/` | The page of each problem type that the APIs answer with. |
 | `docs/guides/` | How to do recurring work, such as adding an endpoint or changing a schema. The skills in `.claude/skills/` follow them. |
-| `evals/` | The evaluation of the harness: tasks, graders, and the records of the runs ([README](evals/README.md)). |
+| `evals/` | The evaluation of the harness: tasks, graders, and the records of the runs (`evals/README.md`). |
 | `.claude/` | Hooks, skills, and subagents for Claude Code. |
 
 ## Rules that differ from common defaults

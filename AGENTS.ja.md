@@ -34,7 +34,7 @@
 | `docs/contexts/` | 区切られた文脈ごとの README と用語集。 |
 | `docs/problems/` | API が返す problem の種類ごとのページ。 |
 | `docs/guides/` | エンドポイントを足す、スキーマを変える、といった繰り返す作業のやり方。`.claude/skills/` のスキルはこれに従う。 |
-| `evals/` | ハーネスの評価。作業、採点、実行の記録を置く（[README](evals/README.ja.md)）。 |
+| `evals/` | ハーネスの評価。作業、採点、実行の記録を置く（`evals/README.ja.md`）。 |
 | `.claude/` | Claude Code のフック・スキル・サブエージェント。 |
 
 ## 一般的な既定と違う決まり
@@ -52,4 +52,4 @@
 - **環境。** `infra/live/stg/` と `infra/live/prd/` の違いは `env.hcl` だけである。ユニットは `infra/live/_units/` で、両方の環境について変える。（TPL-0015）
 - **禁止。** `.env` を読まない。force push をしない。`main` に push しない。prd にインフラを適用しない。
 
-<!-- i18n-source: AGENTS.md sha256:d4eadeb845cacf136c34c65bc5c2b3f128d99a6b0febcbf944abc1e39dff7ade -->
+<!-- i18n-source: AGENTS.md sha256:9e6097c3679e44a09b5375ea78821434edd55ca6af121f7ace100614727816ad -->

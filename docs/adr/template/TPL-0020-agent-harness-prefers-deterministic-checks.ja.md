@@ -62,7 +62,7 @@ ETH Zurich による2026年の「Evaluating AGENTS.md: Are Repository-Level Cont
 最初の実行は、2026年11月20日に行った。2つの作業をそれぞれの条件で1回ずつ、モデル `sonnet` で実行し、4回のうち3回がすべての基準に合格した。
 ハーネスがない条件では、エージェントは作業 `booking-horizon` の変更を一通り書いたが、`make check` を一度も実行しなかった。あとで実行した `make check` は、5件の指摘を出した。2つのファイルで古くなっていた生成コード、整形されていない Go のファイル1つ、対訳の2つの文である。ハーネスがある条件では、エージェントは止まる前に `make gen` と `make check` を実行した。
 作業 `read-the-logs` では、どちらの条件でも対訳が更新された。ハーネスがない条件では、エージェントは対訳のマーカーを手で計算した。
-ハーネスがある条件で不合格になった基準はないので、指示は足していない。4回の実行は何も証明しない。これは最初の観察にすぎず、これらの実行で示せないことは[評価の記録](../../../evals/results/README.ja.md)に書いてある。
+ハーネスがある条件で不合格になった基準はないので、指示は足していない。4回の実行は何も証明しない。これは最初の観察にすぎず、これらの実行で示せないことは、評価の記録 `evals/results/README.ja.md` に書いてある。
 
 ### 結果
 
@@ -115,6 +115,6 @@ ETH Zurich による2026年の「Evaluating AGENTS.md: Are Repository-Level Cont
 - [Evaluating AGENTS.md: Are Repository-Level Context Files Helpful for Coding Agents?](https://arxiv.org/abs/2602.11988)。Thibaud Gloaguen ほか（ETH Zurich と LogicStar.ai）、2026年。
 - [AGENTS.md](https://agents.md/)
 - `make check` の背後にある道具の選び方は TPL-0023 にある。
-- [エージェントのハーネスを評価する](../../../evals/README.ja.md)が、評価の条件・作業・動かし方・結果の読み方を説明している。
+- `evals/README.ja.md` が、評価の条件・作業・動かし方・結果の読み方を説明している。`evals/` の外の文書は、その中にリンクを張らない。実行は、エージェントが作業するコピーからこのディレクトリを取り除くので、リンクがそこで切れるからである。
 
-<!-- i18n-source: TPL-0020-agent-harness-prefers-deterministic-checks.md sha256:4388b59340316854451be46efb5888c5b9f61b3cf6dae3bc8e8a6210acc2a348 -->
+<!-- i18n-source: TPL-0020-agent-harness-prefers-deterministic-checks.md sha256:f6ebeb4f8f7a8ea54e5782d490151d52bde33f5953ab68cdc173d9973085dbfb -->

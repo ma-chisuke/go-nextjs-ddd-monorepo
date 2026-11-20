@@ -71,10 +71,12 @@ make eval-report
 4. 自分でその作業をし、変更を `solution.patch` として保存する。Git のオブジェクトの名前を書いた行は除く。つづりのチェックが、それを単語として読んでしまうからである。コマンドは `git diff | sed '/^index /d' > evals/tasks/<task>/solution.patch` である。
 5. `make test-evals` を実行する。いまのリポジトリがすでに作業の基準に合格するとき、解答がもう適用できないとき、解答が基準に不合格のときに、失敗する。
 
+`evals/` の外の文書は、このディレクトリの中にリンクを張らず、パスで名指しする。実行は、コピーからこのディレクトリを取り除く。リンクがあると、コピーの中でそれが切れ、作業と関係のない理由で `make check` が失敗する。解答も同じ種類のコピーで採点するので、`make test-evals` はそのようなリンクで失敗する。
+
 `make test-evals` は `make check-all` の一部である。`evals/` のファイル、または解答の変えるファイルが対象に入ると動く。そのため、解答の下にあるコードを変えたときは、解答をそれに合わせるまで失敗する。
 
 ## これまでの記録
 
 `make eval-report` が表を出力する。これまでの実行が示したことと、回数が少なくて示せていないことは、[results/README.ja.md](results/README.ja.md) にある。
 
-<!-- i18n-source: README.md sha256:96cf4872fdbd4bd4ddfb5fb532d8214feed3158232557c488d867dfb122f5e85 -->
+<!-- i18n-source: README.md sha256:29655b3881a33290dc09480abd12940a0be6cf6f883e0a91caba4b9892a0c23e -->
