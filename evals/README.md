@@ -32,6 +32,10 @@ A task is a directory `tasks/<task>/`:
 |---|---|---|
 | `read-the-logs` | A new section in a guide | The translation changes with the English text (TPL-0021) |
 | `booking-horizon` | A business rule in the core context, with a new type of problem | The rule lives in the domain, and the pages, the README of the context, and the words on the screen follow it (TPL-0004, TPL-0008) |
+| `rename-room` | An operation of the API of a supporting context: rename a room | The operation starts in the API document, and the generated code, the queries, both stores (the real one and the fake of the API tests), the API tests, and the README of the context follow it (TPL-0006, TPL-0007) |
+| `room-floor` | An optional property of a room, kept in the database | The schema, the queries, the generated code, and the API document move together, and the change of the schema is one that a database with data can take (TPL-0010, TPL-0011) |
+| `time-zone-in-mail` | A new property of an integration event, which its consumer reads | The contract between two contexts changes compatibly, on both sides, without a new version and without one context importing the other (TPL-0005, TPL-0013) |
+| `reservation-length` | One more fact on a screen: the length of each reservation | The logic is pure and has a unit test, the page that the server renders shows it, and a scenario in a browser covers it |
 
 Every task also has two criteria that hold for every change of this repository: `make check` passes, and the change weakens no check. It touches no allowance or ignore file, no hook, and no check, and it adds no ignore comment.
 
@@ -68,8 +72,14 @@ A criterion that fails with the harness, and that `make check` did not catch, is
 1. Choose a change that a person of the team would ask for, and whose result can be judged by commands.
 2. Write `task.txt` as that person would: what is wanted and why, without the list of files to touch. The list is what the evaluation measures.
 3. Write `grade.sh` with a function `grade_task` that calls `criterion <name> <command>...`. Judge the behavior from outside, as the acceptance test of `booking-horizon` does through the API; a criterion that looks for a name that only one solution would choose fails good work.
-4. Do the task yourself, and save the change as `solution.patch`, without the lines that name the objects of Git, which the spelling check would read as words: `git diff | sed '/^index /d' > evals/tasks/<task>/solution.patch`.
-5. Run `make test-evals`. It fails when the repository as it is already passes the criteria of the task, when the solution does not apply any more, or when the solution fails a criterion.
+   A grader needs no Docker of its own and no network. What the copy does not hold, it takes from the helpers that `run.sh` names under "What a grader may use": a database of its own on the local PostgreSQL, with the schema of the copy (`with_database`), a free port (`free_port`), the integration tests of a context (`integration_tests`), and the packages of Node installed in the copy (`own_dependencies`). A grader that starts a server stops it, also when it fails.
+4. Do the task yourself, and save the change as `solution.patch`. Stage new files with `git add -N` first. Leave out the lines that name the objects of Git, and the text after the line numbers of a hunk, which Git cuts off in the middle of a word: the spelling check would read both as words:
+
+   ```sh
+   git diff | sed -e '/^index /d' -e 's/^\(@@ [^@]* @@\).*/\1/' > evals/tasks/<task>/solution.patch
+   ```
+
+5. Run `make test-evals`, which starts the local PostgreSQL if it does not run. It fails when the repository as it is already passes the criteria of the task, when the solution does not apply any more, or when the solution fails a criterion. Break the solution in the way that each criterion is there to catch, and see the criterion fail.
 
 `make test-evals` is part of `make check-all`, and runs when a file of `evals/` or a file that a solution changes is in scope. A change to the code under a solution therefore fails until the solution follows it.
 
