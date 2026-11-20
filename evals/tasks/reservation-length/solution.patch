@@ -1,0 +1,163 @@
+diff --git a/docs/contexts/reservation/README.ja.md b/docs/contexts/reservation/README.ja.md
+--- a/docs/contexts/reservation/README.ja.md
++++ b/docs/contexts/reservation/README.ja.md
+@@ -75,12 +75,12 @@
+ 
+ | ページ | 見せるもの | 操作 |
+ |---|---|---|
+-| `/rooms/{roomId}` | 会議室のタイムゾーンでの、ある日付の予約。前後の日付へのリンクと、その日付に会議室を予約するフォームがある | `listReservations`、`bookRoom` |
++| `/rooms/{roomId}` | 会議室のタイムゾーンでの、ある日付の予約。予約ごとに時間帯と長さを示す。前後の日付へのリンクと、その日付に会議室を予約するフォームがある | `listReservations`、`bookRoom` |
+ | `/reservations/{reservationId}` | 予約とその会議室。確定している間は、予約を変更するフォームと取り消すフォームがある | `getReservation`、`rescheduleReservation`、`cancelReservation` |
+ 
+-- 人は、会議室のタイムゾーンで時間帯を読み、入力する。`period.ts` がそれを API の日時に変え、そのタイムゾーンの時計が飛ばす時刻であれば、そう伝える。
++- 人は、会議室のタイムゾーンで時間帯を読み、入力する。`period.ts` がそれを API の日時に変え、そのタイムゾーンの時計が飛ばす時刻であれば、そう伝える。予約の長さは、`1 h 30 min` のように、予約の始まりから終わりまでに過ぎる時間で示す。時計が切り替わる時刻をまたぐ予約でも同じである。
+ - 予約するフォームは、フォームを描くときに Next.js のサーバーが作る `Idempotency-Key` を送る。フォームは、そのキーと、そのキーで送った予約のフィンガープリントを持ち続ける。同じ予約をもう一度送っても予約は1回だけで、同じフォームから別の予約を送ると新しいキーになる（`booking.ts`）。
+ - 変更するフォームと取り消すフォームは、ページが表示したバージョンを `If-Match` で送る。precondition-failed か reservation-cancelled のときは、ページがメッセージと予約の今の状態を表示する（`changes.ts`）。
+ - 人が対処できる problem の種類には、それぞれ専用の文言がある。関係する項目があれば、文言はその項目に出る（`problems.ts`）。ほかの problem は、title と detail をそのまま表示する。
+ 
+-<!-- i18n-source: README.md sha256:7ccc9a86e690bed20d83a3a66063496eb512ae03f745a5c4fcec1d586f79f875 -->
++<!-- i18n-source: README.md sha256:0a4699ceadec15fbf22e876300d709cb25dbf2239487f38d411f84c0e4b4bf1c -->
+diff --git a/docs/contexts/reservation/README.md b/docs/contexts/reservation/README.md
+--- a/docs/contexts/reservation/README.md
++++ b/docs/contexts/reservation/README.md
+@@ -75,10 +75,10 @@
+ 
+ | Page | What it shows | Operations |
+ |---|---|---|
+-| `/rooms/{roomId}` | The reservations of the room on one date in its time zone, with links to the dates around it, and the form that books the room on that date | `listReservations`, `bookRoom` |
++| `/rooms/{roomId}` | The reservations of the room on one date in its time zone, each with its times and its length, with links to the dates around it, and the form that books the room on that date | `listReservations`, `bookRoom` |
+ | `/reservations/{reservationId}` | The reservation with its room, and the forms that reschedule and cancel it while it is confirmed | `getReservation`, `rescheduleReservation`, `cancelReservation` |
+ 
+-- A person reads and enters the period in the time zone of the room; `period.ts` turns it into the instants of the API, and says when the clocks of the zone skip a time.
++- A person reads and enters the period in the time zone of the room; `period.ts` turns it into the instants of the API, and says when the clocks of the zone skip a time. The length of a reservation is the time that passes between its instants, such as `1 h 30 min`, even across a change of the clocks.
+ - The form that books sends an `Idempotency-Key` that the server of Next.js makes when it renders the form, and keeps it with a fingerprint of the booking that went out with it. The same booking, sent again, books once; another booking from the same form gets a new key (`booking.ts`).
+ - The forms that reschedule and cancel send the version that the page showed in `If-Match`. On precondition-failed or reservation-cancelled, the page shows a notice and the reservation as it is now (`changes.ts`).
+ - Each kind of problem that a person can act on has words of its own, at the field that it is about where there is one (`problems.ts`). Any other problem shows its title and detail as they are.
+diff --git a/frontend/e2e/booking.spec.ts b/frontend/e2e/booking.spec.ts
+--- a/frontend/e2e/booking.spec.ts
++++ b/frontend/e2e/booking.spec.ts
+@@ -81,6 +81,20 @@
+   await expect(page.getByRole("link", { name: "13:30 to 14:30" })).toHaveCount(0);
+ });
+ 
++test("the reservations of a day say how long each one lasts", async ({ page }) => {
++  const room = unique("E2E room");
++  await registerRoom(page, room);
++  await bookTomorrow(page, { start: "10:00", end: "11:30", attendees: 2, organizer: organizer() });
++  await expect(page.getByText("The room is booked.")).toBeVisible();
++
++  // Back on the page of the room, on the day of the reservation.
++  await page.getByRole("main").getByRole("link", { name: room }).click();
++  await expect(page.getByRole("heading", { level: 1, name: room })).toBeVisible();
++  await page.getByRole("link", { name: "Next day" }).click();
++  const reservation = page.getByRole("listitem").filter({ hasText: "10:00 to 11:30" });
++  await expect(reservation.getByText("1 h 30 min", { exact: true })).toBeVisible();
++});
++
+ test("a change from a page that is out of date is refused, and the page shows the reservation as it is now", async ({
+   page,
+   context,
+diff --git a/frontend/src/app/globals.css b/frontend/src/app/globals.css
+--- a/frontend/src/app/globals.css
++++ b/frontend/src/app/globals.css
+@@ -272,6 +272,11 @@
+   text-decoration: line-through;
+ }
+ 
++.reservation-length {
++  color: var(--muted);
++  font-variant-numeric: tabular-nums;
++}
++
+ .reservation-facts {
+   color: var(--muted);
+ }
+diff --git a/frontend/src/features/reservation/components/day-reservations.tsx b/frontend/src/features/reservation/components/day-reservations.tsx
+--- a/frontend/src/features/reservation/components/day-reservations.tsx
++++ b/frontend/src/features/reservation/components/day-reservations.tsx
+@@ -4,13 +4,13 @@
+ import { ProblemNotice } from "@/lib/components/problem-notice";
+ import { addDays, dayWindow, formatDate } from "@/lib/zoned-time";
+ 
+-import { formatTimes, localPeriod } from "../period";
++import { formatLength, formatTimes, localPeriod } from "../period";
+ import type { Room } from "../room";
+ import { listReservations } from "../server/reservations";
+ 
+ /**
+- * The reservations of a room on one date in the time zone of the room, with
+- * links to the dates before and after. The list streams in behind its own
++ * The reservations of a room on one date in the time zone of the room, each
++ * with its times and its length, with links to the dates before and after. The list streams in behind its own
+  * <Suspense>, so the heading and the links show at once.
+  */
+ export function DayReservations({
+@@ -57,6 +57,9 @@
+             <Link href={`/reservations/${reservation.id}`} className="reservation-times">
+               {times}
+             </Link>
++            <span className="reservation-length">
++              {formatLength(reservation.startsAt, reservation.endsAt)}
++            </span>
+             <span className="reservation-status">
+               {reservation.status === "confirmed" ? "Confirmed" : "Cancelled"}
+             </span>
+diff --git a/frontend/src/features/reservation/period.test.ts b/frontend/src/features/reservation/period.test.ts
+--- a/frontend/src/features/reservation/period.test.ts
++++ b/frontend/src/features/reservation/period.test.ts
+@@ -1,7 +1,7 @@
+ import assert from "node:assert/strict";
+ import { test } from "node:test";
+ 
+-import { formatPeriod, formatTimes, localPeriod, readPeriod } from "./period.ts";
++import { formatLength, formatPeriod, formatTimes, localPeriod, readPeriod } from "./period.ts";
+ 
+ test("a period entered in Asia/Tokyo is nine hours ahead of UTC", () => {
+   assert.deepEqual(readPeriod("2026-11-20", "10:00", "11:30", "Asia/Tokyo"), {
+@@ -94,3 +94,20 @@
+     "Friday 20 November 2026, 23:00 to Saturday 21 November 2026, 00:30",
+   );
+ });
++
++test("the length of a period is in hours and minutes", () => {
++  assert.equal(formatLength("2026-11-20T01:00:00Z", "2026-11-20T02:30:00Z"), "1 h 30 min");
++  assert.equal(formatLength("2026-11-20T01:00:00Z", "2026-11-20T03:00:00Z"), "2 h");
++  assert.equal(formatLength("2026-11-20T01:00:00Z", "2026-11-20T01:45:00Z"), "45 min");
++  assert.equal(formatLength("2026-11-20T01:00:00Z", "2026-11-20T01:15:00Z"), "15 min");
++  assert.equal(formatLength("2026-11-20T01:00:00Z", "2026-11-20T05:00:00Z"), "4 h");
++});
++
++test("the length counts the instants, not the offsets they are written in", () => {
++  assert.equal(formatLength("2026-11-20T10:00:00+09:00", "2026-11-20T02:15:00Z"), "1 h 15 min");
++});
++
++test("across the change of the clocks, a period lasts what passes", () => {
++  // 01:00 EDT to 01:30 EST: the times of day say 30 minutes, and 90 pass.
++  assert.equal(formatLength("2026-11-01T05:00:00Z", "2026-11-01T06:30:00Z"), "1 h 30 min");
++});
+diff --git a/frontend/src/features/reservation/period.ts b/frontend/src/features/reservation/period.ts
+--- a/frontend/src/features/reservation/period.ts
++++ b/frontend/src/features/reservation/period.ts
+@@ -85,6 +85,22 @@
+   return `${start} to ${end}`;
+ }
+ 
++/**
++ * How long a period from `startsAt` to `endsAt` (RFC 3339) lasts, such as
++ * "1 h 30 min", "45 min", or "2 h". It counts the time that passes between
++ * the instants, so a period across a change of the clocks lasts what it
++ * lasts, not what its times of day say.
++ */
++export function formatLength(startsAt: string, endsAt: string): string {
++  const minutes = Math.round((new Date(endsAt).getTime() - new Date(startsAt).getTime()) / 60_000);
++  const hours = Math.floor(minutes / 60);
++  const rest = minutes % 60;
++  if (hours === 0) {
++    return `${String(rest)} min`;
++  }
++  return rest === 0 ? `${String(hours)} h` : `${String(hours)} h ${String(rest)} min`;
++}
++
+ /** The whole period, such as "Friday 20 November 2026, 10:00 to 11:00". */
+ export function formatPeriod(period: LocalPeriod): string {
+   return `${formatDate(period.date)}, ${formatTimes(period, period.date)}`;
