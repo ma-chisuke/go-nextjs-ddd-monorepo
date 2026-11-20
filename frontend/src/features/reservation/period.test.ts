@@ -8,6 +8,7 @@ test("a period entered in Asia/Tokyo is nine hours ahead of UTC", () => {
     ok: true,
     startsAt: new Date("2026-11-20T01:00:00Z"),
     endsAt: new Date("2026-11-20T02:30:00Z"),
+    fieldErrors: {},
   });
 });
 
@@ -16,6 +17,7 @@ test("a period entered in UTC is the same reading", () => {
     ok: true,
     startsAt: new Date("2026-11-20T10:00:00Z"),
     endsAt: new Date("2026-11-20T11:30:00Z"),
+    fieldErrors: {},
   });
 });
 
@@ -40,6 +42,7 @@ test("a time that happens twice starts at its first instant", () => {
     ok: true,
     startsAt: new Date("2026-11-01T05:00:00Z"),
     endsAt: new Date("2026-11-01T05:30:00Z"),
+    fieldErrors: {},
   });
 });
 
@@ -49,6 +52,7 @@ test("an end that happens twice is the first one after the start", () => {
     ok: true,
     startsAt: new Date("2026-11-01T05:45:00Z"),
     endsAt: new Date("2026-11-01T06:15:00Z"),
+    fieldErrors: {},
   });
 });
 

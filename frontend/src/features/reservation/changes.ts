@@ -50,8 +50,8 @@ export interface Target {
 }
 
 /** Whether a value is a version of a reservation as ETag gives it: a strong entity tag, such as "1" with its quotes. */
-export function isVersion(value: string | undefined): value is string {
-  return value !== undefined && /^"[0-9]+"$/.test(value);
+export function isVersion(value: string): boolean {
+  return /^"[0-9]+"$/.test(value);
 }
 
 const outdated: Notice = {
@@ -81,36 +81,34 @@ export function readReschedule(
   | { ok: true; target: Target; changes: ReservationChanges; values: RescheduleValues }
   | { ok: false; state: ChangeState } {
   const target = readTarget(form);
-  const timeZone = formText(form, "timeZone") ?? "";
+  const timeZone = formText(form, "timeZone");
   const shown = {
-    startsAt: formText(form, "shownStartsAt") ?? "",
-    endsAt: formText(form, "shownEndsAt") ?? "",
-    attendees: formText(form, "shownAttendees") ?? "",
+    startsAt: formText(form, "shownStartsAt"),
+    endsAt: formText(form, "shownEndsAt"),
+    attendees: formText(form, "shownAttendees"),
   };
   const values: RescheduleValues = {
-    date: formText(form, "date") ?? "",
-    start: formText(form, "start") ?? "",
-    end: formText(form, "end") ?? "",
-    attendees: formText(form, "attendees") ?? "",
+    date: formText(form, "date"),
+    start: formText(form, "start"),
+    end: formText(form, "end"),
+    attendees: formText(form, "attendees"),
   };
   if (target === undefined || !isTimeZone(timeZone)) {
     return { ok: false, state: { values, fieldErrors: {}, notice: outdated } };
   }
-  const errors: FieldErrors<ReservationField> = {};
-  if (!isDate(values.date)) {
-    errors.date = "Enter a date, such as 2026-11-20.";
-  }
+  // The times are read on the date, so a date that does not fit leaves them unread.
   const period = isDate(values.date)
     ? readPeriod(values.date, values.start, values.end, timeZone)
     : undefined;
-  if (period?.ok === false) {
-    Object.assign(errors, period.fieldErrors);
-  }
   const attendees = wholeNumber(values.attendees, 1, mostAttendees);
-  if (attendees === undefined) {
-    errors.attendees = `Enter a whole number from 1 to ${String(mostAttendees)}.`;
-  }
   if (period === undefined || !period.ok || attendees === undefined) {
+    const errors: FieldErrors<ReservationField> = { ...period?.fieldErrors };
+    if (period === undefined) {
+      errors.date = "Enter a date, such as 2026-11-20.";
+    }
+    if (attendees === undefined) {
+      errors.attendees = `Enter a whole number from 1 to ${String(mostAttendees)}.`;
+    }
     return { ok: false, state: { values, fieldErrors: errors } };
   }
   const changes: ReservationChanges = {};

@@ -94,18 +94,18 @@ export function readBooking(
   newKey: () => string,
 ): { ok: true; booking: Booking } | { ok: false; state: BookingState } {
   const roomId = formText(form, "roomId");
-  const date = formText(form, "date") ?? "";
-  const timeZone = formText(form, "timeZone") ?? "";
+  const date = formText(form, "date");
+  const timeZone = formText(form, "timeZone");
   const sentWith = formText(form, "sentWith");
   const submitted = {
     key: formText(form, "idempotencyKey"),
     sentWith: sentWith === "" ? undefined : sentWith,
   };
   const values: BookingValues = {
-    start: formText(form, "start") ?? "",
-    end: formText(form, "end") ?? "",
-    attendees: formText(form, "attendees") ?? "",
-    organizerEmail: formText(form, "organizerEmail") ?? "",
+    start: formText(form, "start"),
+    end: formText(form, "end"),
+    attendees: formText(form, "attendees"),
+    organizerEmail: formText(form, "organizerEmail"),
   };
   const failed = (
     fieldErrors: FieldErrors<ReservationField>,
@@ -114,8 +114,7 @@ export function readBooking(
     ok: false,
     state: {
       // Nothing went out: the key stays bound to what went out with it before.
-      idempotencyKey:
-        submitted.key !== undefined && isIdempotencyKey(submitted.key) ? submitted.key : newKey(),
+      idempotencyKey: isIdempotencyKey(submitted.key) ? submitted.key : newKey(),
       sentWith: submitted.sentWith,
       values,
       fieldErrors,
@@ -131,19 +130,16 @@ export function readBooking(
       },
     );
   }
-  const errors: FieldErrors<ReservationField> = {};
   const period = readPeriod(date, values.start, values.end, timeZone);
-  if (!period.ok) {
-    Object.assign(errors, period.fieldErrors);
-  }
   const attendees = wholeNumber(values.attendees, 1, mostAttendees);
-  if (attendees === undefined) {
-    errors.attendees = `Enter a whole number from 1 to ${String(mostAttendees)}.`;
-  }
-  if (!isEmailAddress(values.organizerEmail)) {
-    errors.organizerEmail = "Enter an email address, such as organizer@example.com.";
-  }
-  if (!period.ok || attendees === undefined || Object.keys(errors).length > 0) {
+  if (!period.ok || attendees === undefined || !isEmailAddress(values.organizerEmail)) {
+    const errors: FieldErrors<ReservationField> = { ...period.fieldErrors };
+    if (attendees === undefined) {
+      errors.attendees = `Enter a whole number from 1 to ${String(mostAttendees)}.`;
+    }
+    if (!isEmailAddress(values.organizerEmail)) {
+      errors.organizerEmail = "Enter an email address, such as organizer@example.com.";
+    }
     return failed(errors);
   }
   const request: NewReservation = {
@@ -170,11 +166,11 @@ export function readBooking(
  * booking with it before, or carries no key that the API accepts.
  */
 export function chooseKey(
-  submitted: { key?: string | undefined; sentWith?: string | undefined },
+  submitted: { key: string; sentWith?: string | undefined },
   fingerprint: string,
   newKey: () => string,
 ): string {
-  if (submitted.key === undefined || !isIdempotencyKey(submitted.key)) {
+  if (!isIdempotencyKey(submitted.key)) {
     return newKey();
   }
   if (submitted.sentWith !== undefined && submitted.sentWith !== fingerprint) {

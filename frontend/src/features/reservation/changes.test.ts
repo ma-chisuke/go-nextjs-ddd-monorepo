@@ -133,5 +133,5 @@ test("isVersion accepts a strong entity tag of digits", () => {
   assert.equal(isVersion('"12"'), true);
   assert.equal(isVersion("1"), false);
   assert.equal(isVersion('W/"1"'), false);
-  assert.equal(isVersion(undefined), false);
+  assert.equal(isVersion(""), false);
 });

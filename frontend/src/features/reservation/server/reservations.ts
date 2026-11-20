@@ -42,7 +42,7 @@ export const getReservation = cache(async (reservationId: string): Promise<Resul
     if (data === undefined) {
       return { error };
     }
-    const version = response.headers.get("ETag") ?? undefined;
+    const version = response.headers.get("ETag") ?? "";
     if (!isVersion(version)) {
       // Without its version, the page could not change the reservation.
       return { error: unavailable(service, new Error("The answer carried no ETag.")) };
