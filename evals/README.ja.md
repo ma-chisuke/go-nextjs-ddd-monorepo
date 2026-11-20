@@ -68,7 +68,7 @@ make eval-report
 1. チームの人が頼みそうな変更で、結果をコマンドで判定できるものを選ぶ。
 2. `task.txt` を、その人が頼むように書く。何がほしいかと、その理由を書き、触るファイルの一覧は書かない。その一覧こそ、評価が測るものである。
 3. `grade.sh` に、関数 `grade_task` を書く。この関数が、基準ごとに `criterion <name> <command>...` を呼ぶ。動作は外から判定する。`booking-horizon` の受け入れテストが API を通して判定するのと同じである。ある1つの解答だけが選ぶ名前を探す基準は、よい仕事を不合格にする。
-4. 自分でその作業をし、変更を `solution.patch` として保存する（`git diff > evals/tasks/<task>/solution.patch`）。
+4. 自分でその作業をし、変更を `solution.patch` として保存する。Git のオブジェクトの名前を書いた行は除く。つづりのチェックが、それを単語として読んでしまうからである。コマンドは `git diff | sed '/^index /d' > evals/tasks/<task>/solution.patch` である。
 5. `make test-evals` を実行する。いまのリポジトリがすでに作業の基準に合格するとき、解答がもう適用できないとき、解答が基準に不合格のときに、失敗する。
 
 `make test-evals` は `make check-all` の一部である。`evals/` のファイル、または解答の変えるファイルが対象に入ると動く。そのため、解答の下にあるコードを変えたときは、解答をそれに合わせるまで失敗する。
@@ -77,4 +77,4 @@ make eval-report
 
 `make eval-report` が表を出力する。これまでの実行が示したことと、回数が少なくて示せていないことは、[results/README.ja.md](results/README.ja.md) にある。
 
-<!-- i18n-source: README.md sha256:0eb77b57a77d1bfc13ca2e6c4b287911e59b65d64d6a27093a454d4e604fc573 -->
+<!-- i18n-source: README.md sha256:2b5f6daf595aba2a21ab691bf2a98ee0c1de333d95dcb95f1114890ee56837e4 -->

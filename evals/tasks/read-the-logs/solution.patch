@@ -1,5 +1,4 @@
 diff --git a/docs/guides/run-locally.ja.md b/docs/guides/run-locally.ja.md
-index 4c7b56f..9379c2d 100644
 --- a/docs/guides/run-locally.ja.md
 +++ b/docs/guides/run-locally.ja.md
 @@ -122,6 +122,20 @@ docker compose logs reservation-relay notification
@@ -30,7 +29,6 @@ index 4c7b56f..9379c2d 100644
 -<!-- i18n-source: run-locally.md sha256:7e9bb8d208550f13ed15740003656ba4fa46f74268b32ebf86cbf1ffea2438a2 -->
 +<!-- i18n-source: run-locally.md sha256:560b6129c03bee493f1f0745879f51fd3534e01f3cfe4f6fe708488626e8c547 -->
 diff --git a/docs/guides/run-locally.md b/docs/guides/run-locally.md
-index d0dded2..6212457 100644
 --- a/docs/guides/run-locally.md
 +++ b/docs/guides/run-locally.md
 @@ -122,6 +122,20 @@ docker compose logs reservation-relay notification

@@ -68,7 +68,7 @@ A criterion that fails with the harness, and that `make check` did not catch, is
 1. Choose a change that a person of the team would ask for, and whose result can be judged by commands.
 2. Write `task.txt` as that person would: what is wanted and why, without the list of files to touch. The list is what the evaluation measures.
 3. Write `grade.sh` with a function `grade_task` that calls `criterion <name> <command>...`. Judge the behavior from outside, as the acceptance test of `booking-horizon` does through the API; a criterion that looks for a name that only one solution would choose fails good work.
-4. Do the task yourself, and save the change as `solution.patch` (`git diff > evals/tasks/<task>/solution.patch`).
+4. Do the task yourself, and save the change as `solution.patch`, without the lines that name the objects of Git, which the spelling check would read as words: `git diff | sed '/^index /d' > evals/tasks/<task>/solution.patch`.
 5. Run `make test-evals`. It fails when the repository as it is already passes the criteria of the task, when the solution does not apply any more, or when the solution fails a criterion.
 
 `make test-evals` is part of `make check-all`, and runs when a file of `evals/` or a file that a solution changes is in scope. A change to the code under a solution therefore fails until the solution follows it.
