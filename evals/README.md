@@ -9,14 +9,15 @@ This directory is that evaluation: an agent does a task of this repository twice
 | Arm | What the agent gets |
 |---|---|
 | `harness` | The repository as it is |
-| `bare` | The repository without `AGENTS.md`, `CLAUDE.md`, and `.claude/` |
+| `bare` | The repository without `AGENTS.md`, `CLAUDE.md`, and `.claude/`, and without what only makes sense with them: the tests of the hooks, and the line of the README that lists the instruction files |
 
 Everything else is the same in both arms: the code, the guides, the checks, the Git hooks, the model, the limits, and the tools that the agent may use without asking (`allowed-tools.txt`).
 `make check` exists in both arms. Only the harness tells the agent to run it, and only the harness stops a turn that ends with a failing check.
 
 A run copies the files of one commit into a directory outside the checkout and makes a Git repository of its own there, so the agent cannot change this repository, and no instruction file of a parent directory reaches it. The copy has no `evals/`: an agent that found a solution there would not have to do the task.
 Settings and memory of the user are left out, so a run does not depend on whose machine it is.
-After a run of the bare arm, the files of the harness come back before the grading, so both arms are graded as the same repository.
+`make check` passes in both arms before the agent works, so a check that fails after a run is the work of the agent.
+After a run of the bare arm, the files of the harness come back before the grading, so both arms are graded with the same checks.
 
 ## The tasks
 
@@ -80,7 +81,7 @@ A criterion that fails with the harness, and that `make check` did not catch, is
    ```
 
    The command leaves out the generated code, which `make test-evals` writes again with `make gen` after it applies the solution, so that a change to an API document does not break the solution of every task that touches the API. It also leaves out the lines that name the objects of Git, and the text after the line numbers of a hunk, which Git cuts off in the middle of a word: the spelling check would read both as words.
-5. Run `make test-evals`, which starts the local PostgreSQL if it does not run. It fails when the repository as it is already passes the criteria of the task, when the solution does not apply any more, or when the solution fails a criterion. Break the solution in the way that each criterion is there to catch, and see the criterion fail.
+5. Run `make test-evals`, which starts the local PostgreSQL if it does not run. It first proves the bare arm: `make check` passes in a copy without the harness, and again once the harness is back. For each task, it fails when the repository as it is already passes the criteria of the task, when the solution does not apply any more, or when the solution fails a criterion. Break the solution in the way that each criterion is there to catch, and see the criterion fail.
 
 `make test-evals` is part of `make check-all`, and runs when a file of `evals/` or a file that a solution changes is in scope. A change to the code under a solution therefore fails until the solution follows it.
 

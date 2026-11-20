@@ -16,9 +16,11 @@
 # The arms:
 #   harness   the repository as it is
 #   bare      the repository without the harness: no AGENTS.md, no CLAUDE.md,
-#             no .claude/ (settings, hooks, skills, subagents). Everything
-#             else stays, the checks included: `make check` exists in both
-#             arms, and only the harness arm is told to run it.
+#             no .claude/ (settings, hooks, skills, subagents), and neither
+#             the tests of the hooks nor the line of the README that lists
+#             the instruction files. Everything else stays, the checks
+#             included: `make check` exists and passes in both arms, and
+#             only the harness arm is told to run it.
 #
 # A run copies the files of a commit (EVAL_REF, default HEAD) into a
 # directory outside this checkout and makes a Git repository of its own there,
@@ -57,7 +59,7 @@
 # must meet: `make check` passes, and the change weakens no check (it touches
 # no allowance or ignore file, no hook, no check, and adds no ignore comment).
 # After a run of the bare arm, the files of the harness are put back before
-# the grading, so both arms are graded as the same repository.
+# the grading, so both arms are graded with the same checks.
 set -euo pipefail
 
 # Nothing of the make that called this script may reach the copies: its
@@ -100,9 +102,27 @@ known() {
   list | grep -x -- "${1:-}" > /dev/null || fail "no task is named \"${1:-}\"; the tasks are: $(list | tr '\n' ' ')"
 }
 
-# The files of the harness, as the commit holds them.
+# The files of the harness, as the commit holds them: the instruction files,
+# .claude/, and the check that tests the hooks, which has nothing to test
+# without them.
 harness_paths() {
-  git ls-tree -r --name-only "$ref" | grep -E '(^|/)(AGENTS(\.ja)?|CLAUDE)\.md$|^\.claude/'
+  git ls-tree -r --name-only "$ref" | grep -E '(^|/)(AGENTS(\.ja)?|CLAUDE)\.md$|^\.claude/|^make/harness\.mk$|^tools/tests/hooks_test\.sh$'
+}
+
+# unlist_harness <directory>: the README lists the instruction files. In the
+# bare arm that line would link to nothing, and lint-links would fail whatever
+# the agent did. The line goes in both languages, and the marker of the
+# translation follows its source (tools/internal/i18n). The line does not come
+# back before the grading: no check reads it.
+unlist_harness() {
+  local dir="$1" file hash
+  for file in README.md README.ja.md; do
+    grep -v -E '^- \[AGENTS(\.ja)?\.md\]\(AGENTS(\.ja)?\.md\)' "$dir/$file" > "$dir/$file.new"
+    mv "$dir/$file.new" "$dir/$file"
+  done
+  hash=$(shasum -a 256 "$dir/README.md" | cut -d ' ' -f 1)
+  sed -e "s/^\(<!-- i18n-source: README\.md sha256:\)[0-9a-f]*/\1$hash/" "$dir/README.ja.md" > "$dir/README.ja.md.new"
+  mv "$dir/README.ja.md.new" "$dir/README.ja.md"
 }
 
 # What a change may not touch: the files through which a check is weakened
@@ -124,6 +144,7 @@ prepare() {
       rm -f "${dir:?}/$path"
     done
     rm -rf "${dir:?}/.claude"
+    unlist_harness "$dir"
   fi
   (
     cd "$dir"
@@ -188,12 +209,13 @@ criterion() {
   fi
 }
 
-# The checks of the repository, without their time budget: a grader measures
-# the change, not the machine. golangci-lint refuses to run twice at once on
-# one machine, so a run that met another one is tried again.
+# checks_pass [<base>]: the checks of the repository, compared with the commit
+# <base> (default: graded), without their time budget: a grader measures the
+# change, not the machine. golangci-lint refuses to run twice at once on one
+# machine, so a run that met another one is tried again.
 checks_pass() {
-  local out tries=0
-  until out=$(CHECK_BUDGET=0 CHECK_BASE=graded make check 2>&1); do
+  local base="${1:-graded}" out tries=0
+  until out=$(CHECK_BUDGET=0 CHECK_BASE="$base" make check 2>&1); do
     tries=$((tries + 1))
     if [ "$tries" -ge 3 ] || ! grep -q 'parallel golangci-lint is running' <<< "$out"; then
       # The checks that failed, by name, then the end of what they printed.
@@ -456,11 +478,35 @@ run() {
 # For each task: the repository as it is must fail a criterion of the task,
 # and with the solution it must pass every criterion, the common ones
 # included. One finding per line.
+# verify_bare: the bare arm, without an agent. `make check` passes in a copy
+# without the harness, so a check that fails there after a run is the work of
+# the agent, and it passes again once the harness is back.
+verify_bare() {
+  local dir="$work/verify-bare-$$" out status=0
+  prepare "$dir" bare
+  link_dependencies "$dir"
+  if ! out=$(cd "$dir" && checks_pass base); then
+    echo "evals/run.sh:1: [evals] make check fails in the bare arm before an agent worked: $(printf '%s' "$out" | tr '\n' ' ' | cut -c 1-300)"
+    status=1
+  fi
+  restore_harness "$dir"
+  if ! out=$(cd "$dir" && checks_pass); then
+    echo "evals/run.sh:1: [evals] make check fails in the bare arm after the harness came back: $(printf '%s' "$out" | tr '\n' ' ' | cut -c 1-300)"
+    status=1
+  fi
+  rm -rf "${dir:?}"
+  return "$status"
+}
+
 verify() {
   local task dir status=0 selected
   selected="$*"
-  [ -n "$selected" ] || selected=$(list)
   mkdir -p "$work"
+  # Without a named task, the arms are proven too.
+  if [ -z "$selected" ]; then
+    selected=$(list)
+    verify_bare || status=1
+  fi
   for task in $selected; do
     known "$task"
     dir="$work/verify-$task-$$"
