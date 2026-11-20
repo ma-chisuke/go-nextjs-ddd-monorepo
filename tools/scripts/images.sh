@@ -41,8 +41,11 @@ list() {
   printf '%s\n' web db
 }
 
+# grep reads the whole list: with -q it would stop at the first match, and
+# the list, still writing, would fail the pipeline (pipefail). That happened
+# on a busy runner, for an image that is not the last of the list.
 known() {
-  list | grep -q -x -- "$1" || {
+  list | grep -x -- "$1" > /dev/null || {
     echo "images: no image is named \"$1\"; the images are: $(list | tr '\n' ' ')" >&2
     exit 2
   }

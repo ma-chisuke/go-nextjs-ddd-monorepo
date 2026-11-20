@@ -139,6 +139,9 @@ validate() {
 #     units under contexts/.
 lint() {
   local status=0 first="" reference="" environment unit file key
+  # Each lookup lets grep read its whole input: with -q it would stop at
+  # the first match, and a writer that is still writing would fail the
+  # pipeline (pipefail), which would look like a key that is missing.
   finding() {
     printf '%s:1: [infra-live] %s\n' "$1" "$2"
     status=1
@@ -171,11 +174,11 @@ lint() {
         || finding "$live/$environment/env.hcl" "the unit $unit of $first is missing: copy $live/$first/$unit/"
     done
     for key in $(keys_of "$first"); do
-      keys_of "$environment" | grep -q -x "$key" \
+      keys_of "$environment" | grep -x "$key" > /dev/null \
         || finding "$live/$environment/env.hcl" "the key $key of $live/$first/env.hcl is missing"
     done
     for key in $(keys_of "$environment"); do
-      keys_of "$first" | grep -q -x "$key" \
+      keys_of "$first" | grep -x "$key" > /dev/null \
         || finding "$live/$environment/env.hcl" "the key $key is not in $live/$first/env.hcl: every env.hcl sets the same keys"
     done
   done
@@ -192,13 +195,13 @@ lint() {
   listed=$(sed -n -E 's/^  contexts += \[(.*)\]$/\1/p' "$live/system.hcl" | tr -d '" ' | tr ',' '\n' | sed '/^$/d' | sort)
   commands=$(find backend/cmd -mindepth 1 -maxdepth 1 -type d 2> /dev/null | sed 's|.*/||' | sort)
   for key in $commands; do
-    printf '%s\n' "$listed" | grep -q -x "$key" \
+    printf '%s\n' "$listed" | grep -x "$key" > /dev/null \
       || finding "$live/system.hcl" "the context $key of backend/cmd/ is not in \`contexts\`"
     [ -f "$live/_units/contexts/$key.hcl" ] \
       || finding "$live/system.hcl" "the context $key has no unit: add $live/_units/contexts/$key.hcl and $live/<environment>/contexts/$key/terragrunt.hcl"
   done
   for key in $listed; do
-    printf '%s\n' "$commands" | grep -q -x "$key" \
+    printf '%s\n' "$commands" | grep -x "$key" > /dev/null \
       || finding "$live/system.hcl" "\`contexts\` names $key, which has no command in backend/cmd/"
   done
   return "$status"
