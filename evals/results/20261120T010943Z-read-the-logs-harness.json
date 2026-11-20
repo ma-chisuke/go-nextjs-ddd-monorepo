@@ -10,7 +10,7 @@
     "outcome": "success",
     "turns": 8,
     "cost_usd": 0.1583636,
-    "output_tokens": 1805,
+    "output_tokens": 1826,
     "refused_commands": 1
   },
   "changed_lines": 22,

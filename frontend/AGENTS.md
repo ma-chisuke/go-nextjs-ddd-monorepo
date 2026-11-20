@@ -41,7 +41,7 @@ A module with unit tests imports nothing of Next.js, and imports other modules b
 - `gen-check-api-ts`: `src/lib/api/*.gen.ts` is what `make gen` writes. Do not edit it. (TPL-0006, TPL-0007)
 - `lint-frontend-types`: a call that the API document does not allow, or a link to a route that does not exist, fails `tsc`. (TPL-0007)
 - `lint-frontend-unused`: no file, export, or dependency that nothing uses.
-- `test-frontend`, and `e2e` in `make check-all`: pure logic has unit tests; what a screen does is tested in a browser.
+- `test-frontend`, and `e2e` and `test-mutation-frontend` in `make check-all`: pure logic has unit tests that notice each change to it; what a screen does is tested in a browser. (TPL-0023)
 
 ## Rules that review enforces
 

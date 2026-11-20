@@ -1,0 +1,50 @@
+{
+  "task": "time-zone-in-mail",
+  "arm": "bare",
+  "model": "sonnet",
+  "commit": "4c00b79258b835a6ab598c648d8805f8a57ee952",
+  "started": "20261120T143927Z",
+  "cli": "2.1.328 (Claude Code)",
+  "seconds": 171,
+  "agent": {
+    "outcome": "success",
+    "turns": 49,
+    "cost_usd": 0.6585822999999998,
+    "output_tokens": 19017,
+    "refused_commands": 7
+  },
+  "changed_lines": 140,
+  "criteria": [
+    {
+      "name": "events-name-the-time-zone",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "mail-in-the-time-zone",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "contract-has-an-optional-property",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "integration-tests-pass",
+      "pass": false,
+      "detail": "--- FAIL: TestTheRelayPublishesABooking (0.02s)     outbox_integration_test.go:409: the relay published the data         {\"endsAt\": \"2030-06-03T11:00:00Z\", \"roomId\": \"01a1f969-3fc6-7582-a446-74186b6ba55a\", \"startsAt\": \"2030-06-03T10:00:00Z\", \"timeZone\": \"UTC\", \"attendees\": 3, \"reservationId\": \"01a1f969-3fc7-72d2-ba45-e3953d590f9d\", \"organizerEmail\": \"organizer@example.com\"}         want"
+    },
+    {
+      "name": "rules-kept",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "checks-pass",
+      "pass": false,
+      "detail": "failed: lint-i18n  check: 47 passed, 1 failed in 30s check: fix the findings above and run the same command again. `make fmt` fixes formatting. make: *** [check] Error 1"
+    }
+  ],
+  "passed": false
+}

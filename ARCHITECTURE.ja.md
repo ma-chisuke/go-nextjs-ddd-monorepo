@@ -398,6 +398,7 @@ flowchart LR
 | 1つの会議室の確定した予約どうしは重ならない（TPL-0009） | 排他制約 `reservations_no_overlap`。Reservation の結合テストが、同時の予約で試す | 実行時・`make check-all` |
 | 文脈の用語集は、`domain` パッケージ（ないときは `app`）がエクスポートする型をすべて、英語と日本語の両方で挙げる（TPL-0003） | `lint-arch` のルール `arch/glossary` | `make check` |
 | 中核の文脈のドメインとユースケースのテストは、そのコードのどの変更にも気づく。生き残るミュータントはなく、どの行もテストで実行される。例外は、ミュータントが等価であることを示す、レビュー済みの `equivalent-mutants.allow` の行だけである（TPL-0003、TPL-0023） | `make/go.mk` の `MUTATION_PACKAGES` にあるパッケージに対する gomutants（`test-mutation`） | `make check-all` |
+| フロントエンドの純粋なロジックの単体テストは、そのロジックのどの変更にも気づく。生き残るミュータントはなく、どの行もテストで実行される。例外は、ミュータントが等価であることを示す、レビュー済みの `equivalent-mutants.allow` の行だけである（TPL-0023） | `frontend/src/` のモジュールのうち、隣に `*.test.ts` があるものに対する StrykerJS（`test-mutation-frontend`） | `make check-all` |
 | フロントエンドの機能はほかの機能を import せず、`lib` は機能を import しない（TPL-0003） | ESLint。eslint-plugin-boundaries のルール `boundaries/dependencies`（`lint-frontend`） | `make check` |
 | API を呼ぶのは Next.js のサーバーだけである。`server/` の下のモジュールは `server-only` を import し、そのモジュールを import するクライアントコンポーネントはない（TPL-0014） | ESLint のルール `no-restricted-syntax`（`lint-frontend`）。クライアントコンポーネントが `server-only` を import したときの `next build` | `make check`・イメージのビルド |
 | フロントエンドのリンクは、存在するルートを指す | Next.js の型付きのルート。TypeScript のコンパイラーで調べる（`lint-frontend-types`） | `make check` |
@@ -426,4 +427,4 @@ flowchart LR
 - `.trivyignore.yaml` の項目を人が承認していること（TPL-0024）
 - `equivalent-mutants.allow` の行が示す証明を、人が認めていること（TPL-0023）
 
-<!-- i18n-source: ARCHITECTURE.md sha256:4bf2a06015b3f6d659c905bf63c7a42b64d4ac441b474addfd1b372e5d6e15c1 -->
+<!-- i18n-source: ARCHITECTURE.md sha256:cd37a2303f5195f15fd2d1a160b487bf7a9853f964027a80765e3ca4a6347269 -->

@@ -15,7 +15,7 @@ Go の API と Next.js の画面を1つのリポジトリに置く製品のた�
 | M2 | イベント：送信箱、EventBridge、SQS、手元の AWS エミュレーターと、文脈 Notification | 完了 |
 | M3 | Next.js のフロントエンドと、エンドツーエンドテスト | 完了 |
 | M4 | stg と prd の Terraform・Terragrunt と、デプロイ | 完了。ただし AWS にはまだ適用していない。モジュールは AWS provider のモックに対してテストし、すべてのユニットを検証し、stg を AWS Emulator でリハーサルしている |
-| M5 | エージェントのハーネスの評価、性質にもとづく API のテスト、ミューテーションテスト | 完了。ただし2つが残っている。フロントエンドにはミューテーションテストがない。評価の実行は4回だけで、測定ではなく最初の観察にとどまる |
+| M5 | エージェントのハーネスの評価、性質にもとづく API のテスト、ミューテーションテスト | 完了。ただし1つが残っている。評価の実行は、6つの作業のそれぞれの条件で1回ずつ、計12回だけである。測定ではなく最初の観察にとどまる |
 
 見本の業務は会議室の予約で、施設（Facility）・予約（Reservation）・通知（Notification）の3つの文脈からなる。
 
@@ -83,7 +83,7 @@ make check   # 速いチェック。数秒で終わる
 | Go | 整形、golangci-lint（go vet を含む）、race detector 付きのテスト。`make check-all` では、既知の脆弱性、PostgreSQL と AWS Emulator に対する結合テスト、手元のシステム全体のスモークテスト、中核の文脈のドメインとユースケースに対するミューテーションテスト（`test-mutation`） |
 | バックエンドの構成 | `lint-arch`。文脈と層の間の import、I/O をしないドメイン、API の文書からだけ作るルート、SQL に書いたスキーマの名前、文脈ごとの用語集 |
 | 生成コード | API の文書と各文脈の SQL から生成した Go のコードと、API の文書から生成した TypeScript の型（`gen-check-api-ts`）が、生成器がいま書く内容と同じであること |
-| TypeScript と Next.js | Prettier、import の境界を含む ESLint、型の検査、使っていないコード、Node のテストランナーで動く単体テスト（`test-frontend`）。`make check-all` では、Playwright によるブラウザーでのエンドツーエンドテスト（`e2e`） |
+| TypeScript と Next.js | Prettier、import の境界を含む ESLint、型の検査、使っていないコード、Node のテストランナーで動く単体テスト（`test-frontend`）。`make check-all` では、Playwright によるブラウザーでのエンドツーエンドテスト（`e2e`）と、純粋なロジックのミューテーションテスト（`test-mutation-frontend`） |
 | シェルと Dockerfile | shfmt、shellcheck、hadolint |
 | GitHub Actions | actionlint、zizmor、ghalint、pinact |
 | Terraform と Terragrunt | 整形、tflint、Trivy、モジュールの README（terraform-docs）、stg と prd のユニットが同じであること（`lint-infra-live`）。`make check-all` では、各モジュールの検証とテスト（`validate-terraform`）、すべてのユニットの検証（`validate-live`）、AWS Emulator での stg のリハーサル（`rehearse-infra`） |
@@ -117,4 +117,4 @@ make check   # 速いチェック。数秒で終わる
 
 [MIT No Attribution](LICENSE)。表示を残さずに、テンプレートをコピーして自分のものにできる。
 
-<!-- i18n-source: README.md sha256:2fd0b7becb7671cb52cc046e3d828408987f161fc10267dc8de4b199a21f76e7 -->
+<!-- i18n-source: README.md sha256:1fb5aed1d01132b424e70051f3fdced332d464ffd1fbfc9bfdb4d1cda9f0da59 -->

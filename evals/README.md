@@ -47,8 +47,8 @@ make eval EVAL_TASK=read-the-logs EVAL_ARM=bare
 make eval-report
 ```
 
-`make eval` starts Claude Code without a terminal (`claude -p`), which spends the usage of the account of whoever runs it, and takes between a few minutes and half an hour for one run. No check starts it.
-It writes a record to `results/`: the task, the arm, the commit, the model, the turns and the time, the commands that were refused, and each criterion with its result. The change of the agent itself stays outside the repository; the last line of the run says where.
+`make eval` starts Claude Code without a terminal (`claude -p`), which spends the usage of the account of whoever runs it, and takes between a minute and three quarters of an hour for one run. No check starts it.
+It writes a record to `results/`: the task, the arm, the commit, the model, the time, the output tokens, the commands that were refused, and each criterion with its result. The turns of a record are those of the last stretch of the run, because Claude Code counts them from zero again each time a command in the background wakes the agent; do not compare them between runs. A run that the usage limit of the account or an error of the API ended writes no record, and `make eval` fails. The change of the agent itself stays outside the repository; the last line of the run says where.
 
 | Variable | Meaning | Default |
 |---|---|---|
