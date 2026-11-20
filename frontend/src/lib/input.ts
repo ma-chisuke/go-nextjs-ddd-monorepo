@@ -41,12 +41,14 @@ export function isUuid(value: string): boolean {
 
 // The pattern and the longest email address of the API documents. The
 // pattern needs at least three characters, which is the shortest length that
-// the documents allow.
+// the documents allow. The documents also refuse U+0000, which the API
+// cannot store; it is checked apart, because a pattern with a control
+// character is hard to read.
 const emailPattern = /^[^@\s]+@[^@\s]+$/;
 
 /** Whether a value is an email address as the API documents accept one. */
 export function isEmailAddress(value: string): boolean {
-  return value.length <= 254 && emailPattern.test(value);
+  return value.length <= 254 && !value.includes("\u0000") && emailPattern.test(value);
 }
 
 /**

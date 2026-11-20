@@ -47,6 +47,7 @@ test("isEmailAddress follows the pattern of the API documents", () => {
   assert.equal(isEmailAddress("organizer"), false);
   assert.equal(isEmailAddress("two@at@example.com"), false);
   assert.equal(isEmailAddress("with space@example.com"), false);
+  assert.equal(isEmailAddress("organizer\u0000@example.com"), false);
   // At most 254 characters.
   assert.equal(isEmailAddress(`${"a".repeat(250)}@b.c`), true);
   assert.equal(isEmailAddress(`${"a".repeat(250)}@b.cd`), false);
