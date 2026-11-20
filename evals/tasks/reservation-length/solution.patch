@@ -114,7 +114,7 @@ diff --git a/frontend/src/features/reservation/period.test.ts b/frontend/src/fea
  
  test("a period entered in Asia/Tokyo is nine hours ahead of UTC", () => {
    assert.deepEqual(readPeriod("2026-11-20", "10:00", "11:30", "Asia/Tokyo"), {
-@@ -94,3 +94,20 @@
+@@ -114,3 +114,20 @@
      "Friday 20 November 2026, 23:00 to Saturday 21 November 2026, 00:30",
    );
  });
@@ -138,7 +138,7 @@ diff --git a/frontend/src/features/reservation/period.test.ts b/frontend/src/fea
 diff --git a/frontend/src/features/reservation/period.ts b/frontend/src/features/reservation/period.ts
 --- a/frontend/src/features/reservation/period.ts
 +++ b/frontend/src/features/reservation/period.ts
-@@ -85,6 +85,22 @@
+@@ -86,6 +86,22 @@
    return `${start} to ${end}`;
  }
  

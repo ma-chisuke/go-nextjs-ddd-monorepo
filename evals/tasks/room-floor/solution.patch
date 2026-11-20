@@ -1,94 +1,3 @@
-diff --git a/backend/internal/facility/internal/adapter/http/api.gen.go b/backend/internal/facility/internal/adapter/http/api.gen.go
---- a/backend/internal/facility/internal/adapter/http/api.gen.go
-+++ b/backend/internal/facility/internal/adapter/http/api.gen.go
-@@ -40,6 +40,11 @@
- 	// Examples: 8
- 	Capacity int32 `json:"capacity"`
- 
-+	// Floor The floor of the building on which the room is, below the ground when negative. Leave it out when the room has none to give.
-+	//
-+	// Examples: 3
-+	Floor *int32 `json:"floor,omitempty"`
-+
- 	// Name The name that people use for the room.
- 	//
- 	// Examples: Aoba
-@@ -90,6 +95,9 @@
- 	// CreatedAt When the room was registered.
- 	CreatedAt time.Time `json:"createdAt"`
- 
-+	// Floor The floor of the building on which the room is, below the ground when negative, or null when the room was registered without one.
-+	Floor *int32 `json:"floor"`
-+
- 	// Id The id of the room.
- 	Id openapi_types.UUID `json:"id"`
- 
-@@ -770,35 +778,36 @@
- // const string: with thousands of chunks the chained `+` fold is several
- // times slower for the Go compiler than parsing a slice literal.
- var swaggerSpec = []string{
--	"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",
--	"9pu1482s+d8A",
-+	"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",
- }
- 
- // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,
 diff --git a/backend/internal/facility/internal/adapter/http/handler.go b/backend/internal/facility/internal/adapter/http/handler.go
 --- a/backend/internal/facility/internal/adapter/http/handler.go
 +++ b/backend/internal/facility/internal/adapter/http/handler.go
@@ -176,9 +85,9 @@ diff --git a/backend/internal/facility/internal/adapter/http/handler_test.go b/b
  func TestRegisterRoomRejections(t *testing.T) {
  	t.Parallel()
  	with := func(key string, value any) map[string]any {
-@@ -113,8 +157,11 @@
- 		{"name is empty", with("name", ""), "validation-error", http.StatusUnprocessableEntity, "/name"},
- 		{"name is missing", without("name"), "validation-error", http.StatusUnprocessableEntity, "/name"},
+@@ -116,8 +160,11 @@
+ 		// before the store fails with 500.
+ 		{"name holds U+0000", with("name", "Aoba\x00"), "validation-error", http.StatusUnprocessableEntity, "/name"},
  		{"openFrom is not a time of day", with("openFrom", "9am"), "validation-error", http.StatusUnprocessableEntity, "/openFrom"},
 +		{"floor is below the lowest", with("floor", -6), "validation-error", http.StatusUnprocessableEntity, "/floor"},
 +		{"floor is above the highest", with("floor", 201), "validation-error", http.StatusUnprocessableEntity, "/floor"},
@@ -189,16 +98,6 @@ diff --git a/backend/internal/facility/internal/adapter/http/handler_test.go b/b
  		{"the room closes before it opens", with("openUntil", "08:00"), "invalid-opening-hours", http.StatusUnprocessableEntity, ""},
  		{"the room opens and closes at the same time", with("openUntil", "09:00"), "invalid-opening-hours", http.StatusUnprocessableEntity, ""},
  		{"the time zone does not exist", with("timeZone", "Mars/Olympus"), "unknown-time-zone", http.StatusUnprocessableEntity, ""},
-diff --git a/backend/internal/facility/internal/adapter/postgres/models.gen.go b/backend/internal/facility/internal/adapter/postgres/models.gen.go
---- a/backend/internal/facility/internal/adapter/postgres/models.gen.go
-+++ b/backend/internal/facility/internal/adapter/postgres/models.gen.go
-@@ -27,4 +27,6 @@
- 	TimeZone string
- 	// When the room was registered.
- 	CreatedAt time.Time
-+	// The floor of the building on which the room is, from -5 to 200, below the ground when negative. NULL when the room was registered without it.
-+	Floor pgtype.Int4
- }
 diff --git a/backend/internal/facility/internal/adapter/postgres/queries/rooms.sql b/backend/internal/facility/internal/adapter/postgres/queries/rooms.sql
 --- a/backend/internal/facility/internal/adapter/postgres/queries/rooms.sql
 +++ b/backend/internal/facility/internal/adapter/postgres/queries/rooms.sql
@@ -227,79 +126,6 @@ diff --git a/backend/internal/facility/internal/adapter/postgres/queries/rooms.s
  FROM rooms
  WHERE (name, id) > (sqlc.arg(after_name)::text, sqlc.arg(after_id)::uuid)
  ORDER BY name, id
-diff --git a/backend/internal/facility/internal/adapter/postgres/rooms.sql.gen.go b/backend/internal/facility/internal/adapter/postgres/rooms.sql.gen.go
---- a/backend/internal/facility/internal/adapter/postgres/rooms.sql.gen.go
-+++ b/backend/internal/facility/internal/adapter/postgres/rooms.sql.gen.go
-@@ -14,7 +14,7 @@
- )
- 
- const getRoom = `-- name: GetRoom :one
--SELECT id, name, capacity, open_from, open_until, time_zone, created_at
-+SELECT id, name, capacity, open_from, open_until, time_zone, created_at, floor
- FROM rooms
- WHERE id = $1
- `
-@@ -30,17 +30,18 @@
- 		&i.OpenUntil,
- 		&i.TimeZone,
- 		&i.CreatedAt,
-+		&i.Floor,
- 	)
- 	return i, err
- }
- 
- const insertRoom = `-- name: InsertRoom :one
--INSERT INTO rooms (id, name, capacity, open_from, open_until, time_zone, created_at)
-+INSERT INTO rooms (id, name, capacity, open_from, open_until, time_zone, created_at, floor)
- VALUES (
-     $1, $2, $3, $4,
--    $5, $6, $7
-+    $5, $6, $7, $8
- )
--RETURNING id, name, capacity, open_from, open_until, time_zone, created_at
-+RETURNING id, name, capacity, open_from, open_until, time_zone, created_at, floor
- `
- 
- type InsertRoomParams struct {
-@@ -51,6 +52,7 @@
- 	OpenUntil pgtype.Time
- 	TimeZone  string
- 	CreatedAt time.Time
-+	Floor     pgtype.Int4
- }
- 
- func (q *Queries) InsertRoom(ctx context.Context, arg InsertRoomParams) (Room, error) {
-@@ -62,6 +64,7 @@
- 		arg.OpenUntil,
- 		arg.TimeZone,
- 		arg.CreatedAt,
-+		arg.Floor,
- 	)
- 	var i Room
- 	err := row.Scan(
-@@ -72,12 +75,13 @@
- 		&i.OpenUntil,
- 		&i.TimeZone,
- 		&i.CreatedAt,
-+		&i.Floor,
- 	)
- 	return i, err
- }
- 
- const listRooms = `-- name: ListRooms :many
--SELECT id, name, capacity, open_from, open_until, time_zone, created_at
-+SELECT id, name, capacity, open_from, open_until, time_zone, created_at, floor
- FROM rooms
- WHERE (name, id) > ($1::text, $2::uuid)
- ORDER BY name, id
-@@ -108,6 +112,7 @@
- 			&i.OpenUntil,
- 			&i.TimeZone,
- 			&i.CreatedAt,
-+			&i.Floor,
- 		); err != nil {
- 			return nil, err
- 		}
 diff --git a/backend/internal/facility/internal/adapter/postgres/schema.sql b/backend/internal/facility/internal/adapter/postgres/schema.sql
 --- a/backend/internal/facility/internal/adapter/postgres/schema.sql
 +++ b/backend/internal/facility/internal/adapter/postgres/schema.sql
@@ -449,31 +275,6 @@ diff --git a/backend/internal/facility/internal/app/rooms_integration_test.go b/
  			t.Errorf("%s: the database accepted the row", tt.name)
  		}
  	}
-diff --git a/backend/internal/reservation/internal/adapter/facility/client.gen.go b/backend/internal/reservation/internal/adapter/facility/client.gen.go
---- a/backend/internal/reservation/internal/adapter/facility/client.gen.go
-+++ b/backend/internal/reservation/internal/adapter/facility/client.gen.go
-@@ -34,6 +34,11 @@
- 	// Examples: 8
- 	Capacity int32 `json:"capacity"`
- 
-+	// Floor The floor of the building on which the room is, below the ground when negative. Leave it out when the room has none to give.
-+	//
-+	// Examples: 3
-+	Floor *int32 `json:"floor,omitempty"`
-+
- 	// Name The name that people use for the room.
- 	//
- 	// Examples: Aoba
-@@ -84,6 +89,9 @@
- 	// CreatedAt When the room was registered.
- 	CreatedAt time.Time `json:"createdAt"`
- 
-+	// Floor The floor of the building on which the room is, below the ground when negative, or null when the room was registered without one.
-+	Floor *int32 `json:"floor"`
-+
- 	// Id The id of the room.
- 	Id openapi_types.UUID `json:"id"`
- 
 diff --git a/backend/internal/reservation/internal/adapter/facility/directory_test.go b/backend/internal/reservation/internal/adapter/facility/directory_test.go
 --- a/backend/internal/reservation/internal/adapter/facility/directory_test.go
 +++ b/backend/internal/reservation/internal/adapter/facility/directory_test.go
@@ -488,7 +289,7 @@ diff --git a/backend/internal/reservation/internal/adapter/facility/directory_te
 diff --git a/contracts/http/facility.openapi.yaml b/contracts/http/facility.openapi.yaml
 --- a/contracts/http/facility.openapi.yaml
 +++ b/contracts/http/facility.openapi.yaml
-@@ -166,10 +166,17 @@
+@@ -169,10 +169,17 @@
            minLength: 1
            maxLength: 64
            examples: [Asia/Tokyo]
@@ -507,7 +308,7 @@ diff --git a/contracts/http/facility.openapi.yaml b/contracts/http/facility.open
        properties:
          id:
            type: string
-@@ -189,6 +196,10 @@
+@@ -192,6 +199,10 @@
          timeZone:
            type: string
            description: The IANA time zone in which `openFrom` and `openUntil` are read.
@@ -648,31 +449,3 @@ diff --git a/docs/generated/db/facility/facility.rooms.md b/docs/generated/db/fa
  }
  ```
  
-diff --git a/frontend/src/lib/api/facility.gen.ts b/frontend/src/lib/api/facility.gen.ts
---- a/frontend/src/lib/api/facility.gen.ts
-+++ b/frontend/src/lib/api/facility.gen.ts
-@@ -72,6 +72,12 @@
-              * @example Asia/Tokyo
-              */
-             timeZone: string;
-+            /**
-+             * Format: int32
-+             * @description The floor of the building on which the room is, below the ground when negative. Leave it out when the room has none to give.
-+             * @example 3
-+             */
-+            floor?: number;
-         };
-         /** @description A meeting room. */
-         Room: {
-@@ -91,6 +97,11 @@
-             openUntil: components["schemas"]["TimeOfDay"];
-             /** @description The IANA time zone in which `openFrom` and `openUntil` are read. */
-             timeZone: string;
-+            /**
-+             * Format: int32
-+             * @description The floor of the building on which the room is, below the ground when negative, or null when the room was registered without one.
-+             */
-+            floor: number | null;
-             /**
-              * Format: date-time
-              * @description When the room was registered.
