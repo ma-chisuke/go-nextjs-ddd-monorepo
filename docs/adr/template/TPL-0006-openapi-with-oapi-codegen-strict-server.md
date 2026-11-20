@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-18
+date: 2026-11-20
 ---
 
 # TPL-0006: Write each HTTP contract in OpenAPI 3.1, and generate the Go server with the oapi-codegen strict server
@@ -49,7 +49,8 @@ Chosen option: "OpenAPI 3.1 written first, with the oapi-codegen strict server a
 
 The first bounded context verified that an OpenAPI 3.1 document passes oapi-codegen v2.8.2, kin-openapi, Redocly CLI, and oasdiff, so the documents need no fallback to OpenAPI 3.0.3.
 The frontend milestone verified that openapi-typescript 7.13.0 reads the same documents as they are.
-Schemathesis arrives with a later milestone, and is not verified yet. If it cannot read 3.1, a new record states the change and the reason.
+Schemathesis 4.33.4, which runs layer 5 of TPL-0007, reads both API documents as they are, with no warning about a keyword that it does not support, so no record about going back to OpenAPI 3.0 is needed.
+Its first run showed one property of 3.1: it inherits from JSON Schema 2020-12 that a whole number written with a fraction, such as `4.0`, is an integer, which the generated Go code refused until the request validation of `platform/httpserver` began to rewrite such numbers as integers.
 
 This differs from the first plan in one point: the first plan bundled the API documents into one document for the Next.js app. Each document generates a file of its own instead, for three reasons. No step bundles the documents before the generator runs. Schemas that every document defines with the same name, such as `Problem`, cannot collide. And the frontend keeps the contexts apart as the backend does (TPL-0003): a feature imports the types of its own context.
 

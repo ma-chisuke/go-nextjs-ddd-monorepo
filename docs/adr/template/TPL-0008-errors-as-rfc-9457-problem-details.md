@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-18
+date: 2026-11-20
 ---
 
 # TPL-0008: Return every error as RFC 9457 problem details
@@ -65,6 +65,7 @@ These checks enforce this decision.
 - The rule `rule/problem-details-only` in `redocly.yaml`, which `lint-contracts` runs, fails when a 4xx or 5xx response in an OpenAPI document has a media type other than `application/problem+json` (TPL-0007, layer 7).
 - The linter exhaustive, in `lint-go`, fails when a kind of business error has no case in the table. A test in the HTTP adapter of each context, `problems_test.go`, fails when a kind maps to no problem of its own, or when a problem has no page under `docs/problems/` or no translation of the page.
 - The API tests validate every response against the document through the client of `backend/internal/platform/apitest` (TPL-0007, layer 4), so an error body that is not a problem, or a status that the operation does not declare, fails the test that produced it.
+- `test-api-fuzz`, in `make check-all`, checks the same for the requests that Schemathesis generates from each document (TPL-0007, layer 5): an answer with a status that the operation does not declare, or with another media type than the document gives for that status, is a finding.
 
 The frontend is a client of every API, and it reads problems as this record says.
 

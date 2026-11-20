@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-18
+date: 2026-11-20
 ---
 
 # TPL-0006: HTTP の契約を OpenAPI 3.1 で書き、Go のサーバーを oapi-codegen の strict server で生成する
@@ -49,7 +49,8 @@ Go のサーバー、画面の TypeScript のコード、文脈の間のクラ�
 
 最初の文脈で、OpenAPI 3.1 の文書が oapi-codegen v2.8.2・kin-openapi・Redocly CLI・oasdiff を通ることを確かめた。そのため、文書を OpenAPI 3.0.3 で書き直す必要はない。
 フロントエンドのマイルストーンで、openapi-typescript 7.13.0 が同じ文書をそのまま読めることを確かめた。
-Schemathesis は後のマイルストーンで加わるので、まだ確かめていない。これが 3.1 を読めなければ、その変更と理由を新しい記録に残す。
+TPL-0007 の層5を動かす Schemathesis 4.33.4 も、2つの API の文書をそのまま読み、対応していないキーワードについての警告も出さない。そのため、OpenAPI 3.0 に戻すための記録は要らない。
+その最初の実行で、3.1 の性質が1つ表に出た。3.1 は JSON Schema 2020-12 から、`4.0` のように小数部を付けて書いた整数も整数である、という扱いを受け継いでいる。生成した Go のコードは、こうした値を拒んでいた。そこで、いまは `platform/httpserver` のリクエストの検証が、こうした値を整数の形で書き直す。
 
 これは最初の計画と1点で異なる。最初の計画では、Next.js の Web アプリのために API の文書を1つにまとめていた。代わりに、各文書がそれぞれ自分のファイルを生成する。理由は3つある。生成器を動かす前に文書をまとめる手順が要らない。どの文書も同じ名前で定義するスキーマ（`Problem` など）がぶつからない。そして、フロントエンドもバックエンドと同じく文脈を分けておける（TPL-0003）。機能は、自分の文脈の型を import する。
 
@@ -115,4 +116,4 @@ Schemathesis は後のマイルストーンで加わるので、まだ確かめ�
 - [oapi-codegen](https://github.com/oapi-codegen/oapi-codegen)
 - [openapi-typescript](https://openapi-ts.dev/)
 
-<!-- i18n-source: TPL-0006-openapi-with-oapi-codegen-strict-server.md sha256:370244764114b4742c28914890c40b998fb5d8d6a781b28215f2b8e53485bb28 -->
+<!-- i18n-source: TPL-0006-openapi-with-oapi-codegen-strict-server.md sha256:687f21cf743bf9b319ec386d2228ab58290fe161127b8974985ab72a27122926 -->
