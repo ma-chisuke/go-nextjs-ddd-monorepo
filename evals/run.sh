@@ -421,6 +421,10 @@ run() {
     --slurpfile agent <(jq -c . "$out" 2> /dev/null || echo null) \
     --rawfile criteria "$criteria" \
     --rawfile patch "$work/$id.patch" '
+    # Claude Code counts the turns and the usage from zero again each time a
+    # command in the background wakes the agent, so `num_turns` and `usage`
+    # are those of the last stretch of a run. The cost and the usage of each
+    # model are those of the whole run.
     ($agent[0] // {}) as $a
     | ($criteria | split("\n") | map(select(length > 0) | split("\t")
         | {name: .[1], pass: (.[0] == "pass"), detail: (.[2] // "")})) as $c
@@ -431,14 +435,14 @@ run() {
           outcome: ($a.subtype // "no result"),
           turns: ($a.num_turns // null),
           cost_usd: ($a.total_cost_usd // null),
-          output_tokens: ($a.usage.output_tokens // null),
+          output_tokens: ([$a.modelUsage[]?.outputTokens] | add),
           refused_commands: (($a.permission_denials // []) | length)
         },
         changed_lines: ($patch | split("\n") | map(select(test("^[+-][^+-]"))) | length),
         criteria: $c,
         passed: ($c | all(.pass))
       }' > "$record"
-  jq -r '"evals: \(.task), \(.arm): \(if .passed then "passed" else "failed" end) in \(.seconds) s, \(.agent.turns // "?") turns",
+  jq -r '"evals: \(.task), \(.arm): \(if .passed then "passed" else "failed" end) in \(.seconds) s, \(.agent.output_tokens // "?") output tokens",
     (.criteria[] | "  \(if .pass then "pass" else "FAIL" end)  \(.name)  \(.detail)")' "$record"
   echo "evals: the record is $record; the change of the agent is $work/$id.patch"
 
@@ -508,7 +512,7 @@ report() {
     echo "evals: no record in $results/ yet"
     return 0
   fi
-  echo "| Task | Arm | Model | Runs | Passed | Criteria passed | Turns | Minutes | Refused commands |"
+  echo "| Task | Arm | Model | Runs | Passed | Criteria passed | Output tokens | Minutes | Refused commands |"
   echo "|---|---|---|---|---|---|---|---|---|"
   # shellcheck disable=SC2086 # one argument for each file
   jq --slurp --raw-output '
@@ -516,7 +520,7 @@ report() {
     group_by([.task, .arm, .model])[]
     | "| \(.[0].task) | \(.[0].arm) | \(.[0].model) | \(length) | \(map(select(.passed)) | length) | "
       + "\(map(.criteria | map(select(.pass)) | length) | add) of \(map(.criteria | length) | add) | "
-      + "\(map(.agent.turns // empty) | median // "?") | \(map(.seconds / 60 | floor) | median) | "
+      + "\(map(.agent.output_tokens // empty) | median // "?") | \(map(.seconds / 60 | floor) | median) | "
       + "\(map(.agent.refused_commands) | add) |"' $files
 }
 
