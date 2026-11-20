@@ -2,7 +2,7 @@
 openapi: 3.1.0
 info:
   title: Reservation API
-  version: 0.1.0
+  version: 0.2.0
   summary: Bookings of meeting rooms.
   description: |
     The Reservation context books meeting rooms, reschedules the bookings, and
@@ -406,10 +406,12 @@ components:
       examples: [4]
     EmailAddress:
       type: string
-      description: The email address of the person who organizes the meeting.
+      description: |
+        The email address of the person who organizes the meeting. It has no
+        NUL character (U+0000), which the API cannot store.
       minLength: 3
       maxLength: 254
-      pattern: ^[^@\s]+@[^@\s]+$
+      pattern: ^[^@\s\x00]+@[^@\s\x00]+$
       examples: [organizer@example.com]
     Problem:
       type: object

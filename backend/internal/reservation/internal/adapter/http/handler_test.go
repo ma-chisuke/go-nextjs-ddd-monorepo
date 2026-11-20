@@ -198,6 +198,9 @@ func TestBookRoomRejections(t *testing.T) {
 		{"the JSON is broken", []byte(`{"roomId":`), "malformed-request", http.StatusBadRequest, ""},
 		{"nobody attends", with(newReservation("10:00", "11:00"), "attendees", 0), "validation-error", http.StatusUnprocessableEntity, "/attendees"},
 		{"the email address has no @", with(newReservation("10:00", "11:00"), "organizerEmail", "organizer"), "validation-error", http.StatusUnprocessableEntity, "/organizerEmail"},
+		// PostgreSQL stores no U+0000 in text, so the document refuses it
+		// before the store fails with 500.
+		{"the email address holds U+0000", with(newReservation("10:00", "11:00"), "organizerEmail", "organizer\x00@example.com"), "validation-error", http.StatusUnprocessableEntity, "/organizerEmail"},
 		{"the start is not an instant", with(newReservation("10:00", "11:00"), "startsAt", "tomorrow"), "validation-error", http.StatusUnprocessableEntity, "/startsAt"},
 		{"the room is not a UUID", with(newReservation("10:00", "11:00"), "roomId", "Aoba"), "validation-error", http.StatusUnprocessableEntity, "/roomId"},
 		{"a property is unknown", with(newReservation("10:00", "11:00"), "floor", 3), "validation-error", http.StatusUnprocessableEntity, ""},
