@@ -6,6 +6,9 @@
 # What a developer does in a checkout: read, build, test, and commit. Nothing
 # that leaves the checkout: no push, no network tool, no Docker.
 Bash(make *)
+# The scope of a check, as AGENTS.md and the Stop hook write it.
+Bash(CHECK_SCOPE=changed make *)
+Bash(CHECK_FILES=* make *)
 Bash(git status *)
 Bash(git diff *)
 Bash(git log *)

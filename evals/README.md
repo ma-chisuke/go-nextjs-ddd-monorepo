@@ -38,8 +38,8 @@ Every task also has two criteria that hold for every change of this repository: 
 ## Run it
 
 ```sh
-make eval TASK=read-the-logs ARM=harness
-make eval TASK=read-the-logs ARM=bare
+make eval EVAL_TASK=read-the-logs EVAL_ARM=harness
+make eval EVAL_TASK=read-the-logs EVAL_ARM=bare
 make eval-report
 ```
 

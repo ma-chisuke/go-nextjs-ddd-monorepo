@@ -55,6 +55,12 @@
 # the grading, so both arms are graded as the same repository.
 set -euo pipefail
 
+# Nothing of the make that called this script may reach the copies: its
+# variables would override those of the make files there, and its scope
+# would narrow the checks.
+unset MAKEFLAGS MFLAGS MAKELEVEL MAKEOVERRIDES CHECK_SCOPE CHECK_FILES CHECK_BASE CHECK_STATE_DIR VERBOSE
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX
+
 cd "$(git rev-parse --show-toplevel)"
 repo=$PWD
 tasks=evals/tasks

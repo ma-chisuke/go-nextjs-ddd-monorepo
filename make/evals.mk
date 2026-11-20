@@ -19,8 +19,8 @@ test-evals:
 # The targets below start a coding agent, which costs time and money, so no
 # check runs them.
 
-eval: ## Let the agent do a task and grade the result (TASK=read-the-logs ARM=harness, or ARM=bare)
-	@$(EVALS) run "$(TASK)" "$(ARM)"
+eval: ## Let the agent do a task and grade the result (EVAL_TASK=read-the-logs EVAL_ARM=harness, or EVAL_ARM=bare)
+	@$(EVALS) run "$(EVAL_TASK)" "$(EVAL_ARM)"
 
 eval-report: ## A table of the evaluation runs recorded in evals/results/
 	@$(EVALS) report

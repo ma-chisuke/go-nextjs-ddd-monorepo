@@ -38,8 +38,8 @@ TPL-0020 は、ハーネスをあえて小さく保つ。新しい指示を足�
 ## 実行する
 
 ```sh
-make eval TASK=read-the-logs ARM=harness
-make eval TASK=read-the-logs ARM=bare
+make eval EVAL_TASK=read-the-logs EVAL_ARM=harness
+make eval EVAL_TASK=read-the-logs EVAL_ARM=bare
 make eval-report
 ```
 
@@ -77,4 +77,4 @@ make eval-report
 
 `make eval-report` が表を出力する。これまでの実行が示したことと、回数が少なくて示せていないことは、[results/README.ja.md](results/README.ja.md) にある。
 
-<!-- i18n-source: README.md sha256:2b5f6daf595aba2a21ab691bf2a98ee0c1de333d95dcb95f1114890ee56837e4 -->
+<!-- i18n-source: README.md sha256:96cf4872fdbd4bd4ddfb5fb532d8214feed3158232557c488d867dfb122f5e85 -->
