@@ -21,6 +21,7 @@ test("formText gives the text of a field without the spaces around it", () => {
 
 test("wholeNumber accepts decimal digits inside the limits", () => {
   assert.equal(wholeNumber("8", 1, 1000), 8);
+  assert.equal(wholeNumber("1", 1, 1000), 1);
   assert.equal(wholeNumber("1000", 1, 1000), 1000);
   assert.equal(wholeNumber("0", 1, 1000), undefined);
   assert.equal(wholeNumber("1001", 1, 1000), undefined);
@@ -34,6 +35,8 @@ test("isUuid accepts the ids of the APIs only", () => {
   assert.equal(isUuid("01a1eeef-dde4-79b2-b195-89894d81fb14"), true);
   assert.equal(isUuid("01A1EEEF-DDE4-79B2-B195-89894D81FB14"), true);
   assert.equal(isUuid("01a1eeef-dde4-79b2-b195-89894d81fb1"), false);
+  assert.equal(isUuid("../01a1eeef-dde4-79b2-b195-89894d81fb14"), false);
+  assert.equal(isUuid("01a1eeef-dde4-79b2-b195-89894d81fb14/.."), false);
   assert.equal(isUuid("../rooms"), false);
   assert.equal(isUuid(""), false);
 });
@@ -44,6 +47,8 @@ test("isEmailAddress follows the pattern of the API documents", () => {
   assert.equal(isEmailAddress("organizer"), false);
   assert.equal(isEmailAddress("two@at@example.com"), false);
   assert.equal(isEmailAddress("with space@example.com"), false);
+  // At most 254 characters.
+  assert.equal(isEmailAddress(`${"a".repeat(250)}@b.c`), true);
   assert.equal(isEmailAddress(`${"a".repeat(250)}@b.cd`), false);
   assert.equal(isEmailAddress(""), false);
 });
@@ -62,6 +67,10 @@ test("problemFieldErrors names the fields of the form that a problem points at",
   assert.deepEqual(problemFieldErrors(problem, { startsAt: "start", attendees: "attendees" }), {
     start: "must be a date-time",
     attendees: "must be at least 1",
+  });
+  // Two parts that one field stands for show the message of the first.
+  assert.deepEqual(problemFieldErrors(problem, { startsAt: "period", roomId: "period" }), {
+    period: "must be a date-time",
   });
 });
 
