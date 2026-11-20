@@ -223,5 +223,10 @@
 | write-only argument（Terraform の） | 書き込み専用の引数 |
 | mock（provider の、またはユニットの出力の） | モック |
 | rehearsal（`make rehearse-infra`） | リハーサル |
+| mutation testing、mutant | ミューテーションテスト、ミュータント |
+| kill（ミュータントを）、live（ミュータントが） | 殺す、生き残る |
+| equivalent mutant | 等価なミュータント |
+| coverage（テストの） | カバレッジ |
+| allowance（`equivalent-mutants.allow` に書く、等価なミュータントの） | 許可 |
 
-<!-- i18n-source: translation.md sha256:e986d7db1138fe1deffc66fc3b29c543510d3aa54591a44dc5616083c5c94f73 -->
+<!-- i18n-source: translation.md sha256:68c41ad82b0f99f65d8b2501f6ade18e103ca82abdf2a1e1d28d199b77aa2b54 -->
