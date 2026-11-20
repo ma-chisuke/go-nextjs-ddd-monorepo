@@ -29,6 +29,7 @@
    生成された `*.gen.go` のファイルはコピーせず、`make gen` を実行する。API を持つ文脈では、`gen-backend.sh` が、ディレクトリ `adapter/http/` と文脈の名前から API の文書を見つける。`gen-frontend.sh` は、フロントエンドのための API の TypeScript の型 `frontend/src/lib/api/<context>.gen.ts` を書く。文脈に画面を持たせるには、[画面を足す](add-a-screen.ja.md)に従う。
    ほかの文脈の API を呼ぶには、`internal/adapter/<other>/oapi-codegen.yaml` を足す。中身は Reservation の `adapter/facility/` と同じく、`client: true` と `models: true` である。`make gen` は、そのために `contracts/http/<other>.openapi.yaml` を読む。
    ワーカーは、Notification の `internal/app/events.go` のように、自分のモデル変換装置で各イベントのデータを読む。配信は少なくとも1回なので、処理した各イベントの id を、その効果と同じトランザクションの中で、一意制約のもとに記録する（TPL-0013）。
+   中核の文脈では、その `internal/domain` と `internal/app` を `make/go.mk` の `MUTATION_PACKAGES` に加える。そうすれば、それらのテストがコードの変更に気づくことを `test-mutation` が確かめる（[ミューテーションテスト](mutation-tests.ja.md)）。
 
    確認：`make check`。`lint-arch` はすべてのルールをディレクトリから導くので、新しい文脈に設定は要らない。
 
@@ -105,4 +106,4 @@
 | 受け取る側の AsyncAPI 文書、または `infra/local/main.tf` かそのユニットの購読 | まだチェックはなく、レビューで見つける（TPL-0013）。購読がないことに `make smoke` が気づくのは、ワーカーの結果を待つときだけである |
 | 文脈の README | まだチェックはなく、レビューで見つける（TPL-0003） |
 
-<!-- i18n-source: add-a-context.md sha256:835d359b0000af5c52e887b1db3fc93897c84a5e91ced0b7b772a9a69c3cc679 -->
+<!-- i18n-source: add-a-context.md sha256:8ef06e9714b66f0bbb472893f3bfbda72ba25c1eb60a61df0b5e35f77cee528f -->

@@ -228,5 +228,14 @@
 | equivalent mutant | 等価なミュータント |
 | coverage（テストの） | カバレッジ |
 | allowance（`equivalent-mutants.allow` に書く、等価なミュータントの） | 許可 |
+| deterministic mode（Schemathesis の） | 決定的なモード |
+| stateful phase（Schemathesis の） | ステートフルな段階 |
+| arm（評価の。`harness` または `bare`） | 条件 |
+| task（評価の） | 作業 |
+| criterion（評価の作業の） | 基準 |
+| grader、grade（評価の） | 採点、採点する |
+| solution（評価の作業の） | 解答 |
+| record（評価の実行の） | 実行の記録（文脈から明らかなときは「記録」） |
+| usage（エージェントを動かすアカウントの） | 利用枠 |
 
-<!-- i18n-source: translation.md sha256:68c41ad82b0f99f65d8b2501f6ade18e103ca82abdf2a1e1d28d199b77aa2b54 -->
+<!-- i18n-source: translation.md sha256:0e48a91b82b9a24dd0fa223acfa4a99375acc7c26cba9b43bd0a5afda781c873 -->

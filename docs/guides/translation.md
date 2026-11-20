@@ -228,3 +228,12 @@ Use these Japanese terms. The table grows when a new term appears; add the term 
 | equivalent mutant | 等価なミュータント |
 | coverage (of the tests) | カバレッジ |
 | allowance (of an equivalent mutant, in `equivalent-mutants.allow`) | 許可 |
+| deterministic mode (of Schemathesis) | 決定的なモード |
+| stateful phase (of Schemathesis) | ステートフルな段階 |
+| arm (of the evaluation: `harness` or `bare`) | 条件 |
+| task (of the evaluation) | 作業 |
+| criterion (of a task of the evaluation) | 基準 |
+| grader, grade (of the evaluation) | 採点、採点する |
+| solution (of a task of the evaluation) | 解答 |
+| record (of a run of the evaluation) | 実行の記録（文脈から明らかなときは「記録」） |
+| usage (of the account that runs an agent) | 利用枠 |
