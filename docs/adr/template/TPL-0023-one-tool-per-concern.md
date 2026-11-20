@@ -45,7 +45,7 @@ Inside `make`, each concern has one tool. Targets marked "check-all" run only in
 | Go tests | `go test -race -shuffle=on` | `test-go` |
 | The local system end to end: one scenario across the services in Docker Compose, over HTTP, with every response checked against its API document | `go test -tags smoke`, with kin-openapi (`backend/test/smoke`) | `smoke` (check-all) |
 | Test coverage, reported without an external service | `go test -coverprofile` and octocov | `coverage` and `coverage-report` (CI) |
-| Whether the tests of the domain and the use cases of the core context notice a change to their code | gomutants v0.7.3 (`tools/go.mod`), with the reviewed allowances of `equivalent-mutants.allow` | `test-mutation` (check-all) |
+| Whether the unit tests notice a change to the code that they test: the domain and the use cases of the core context, and the pure logic of the frontend | gomutants v0.7.3 (`tools/go.mod`) for Go; StrykerJS 10.1.1 with its tap runner (`frontend/package.json`) for the frontend; with the reviewed allowances of `equivalent-mutants.allow` | `test-mutation`, `test-mutation-frontend` (check-all) |
 | Known vulnerabilities in Go code that is actually called | govulncheck | `vuln-go` (check-all) |
 | Linting of the frontend, including the boundaries between features | ESLint, with eslint-config-next, typescript-eslint, and eslint-plugin-boundaries | `lint-frontend` |
 | Types of the frontend | the TypeScript compiler (`tsc --noEmit`) | `lint-frontend-types` |
@@ -107,11 +107,13 @@ Inside `make`, each concern has one tool. Targets marked "check-all" run only in
 Mutation testing follows these rules.
 
 - Every mutant that lives fails the check, and so does every line that no test runs. There is no percentage to reach: a threshold lets a rule slip through unseen, and a score gives the reader nothing to do, while a finding names the line and the change.
-- The check covers the domain and the use cases of the core context (`MUTATION_PACKAGES` in `make/go.mk`), where the rules of the business live (TPL-0003). The supporting contexts are transaction scripts tested through a database, where a run would be slow and would say little.
-- An equivalent mutant, which no test can tell apart from the code, lives only with a line of `equivalent-mutants.allow` that gives the reason, and adding the line is a decision of review. A line that matches no living mutant fails the check. The file holds no line: the four equivalent mutants that turned up were removed by making the code simpler.
+- The checks cover the domain and the use cases of the core context (`MUTATION_PACKAGES` in `make/go.mk`), where the rules of the business live (TPL-0003), and each module of the frontend that has a unit test next to it (`frontend/stryker.config.mjs` finds them from the tests): the pure logic that reads forms, chooses the words for a problem, and converts times. The supporting contexts are transaction scripts tested through a database, where a run would be slow and would say little; the components and the server modules of the frontend are tested in a browser.
+- An equivalent mutant, which no test can tell apart from the code, lives only with a line of `equivalent-mutants.allow` that gives the reason, and adding the line is a decision of review. A line that matches no living mutant fails the check. A line belongs to the check of the language of the file that its mutant names. The file holds no line: the equivalent mutants that turned up, in Go and in the frontend, were removed by making the code simpler.
 - The first run on the core context made 349 mutants, of which 47 lived and 30 were on lines that no test ran. After the new tests and the simpler code, a run makes 338 mutants: 323 killed, 15 that do not compile, and none alive. No business rule was wrong; the tests did not hold all of them. A run takes about one minute with half of the processors.
 - The tool is gomutants. It was chosen over mutago, gremlins, gomu, avito-tech/go-mutesting, cervo-mutants, and ooze. gomutants, mutago, gremlins, and gomu ran on the domain package. The other three did not: avito-tech/go-mutesting rewrites the source files in place and has no release, the maintainer of cervo-mutants has announced a pause, and ooze has had no release since 2023. gomutants found the most mutants that matter, 167 with 28 kinds of mutation, while gremlins found 27 with 5 kinds and reported covered code as not covered, and mutago missed whole functions. gomutants names each mutant by its function and its kind, so the name survives an edit elsewhere in the file; it reports the lines that no test runs; and it writes nothing to the source files.
-- The frontend has no mutation test. StrykerJS 10.1.1 runs the tests of the pure logic on the test runner of Node, 857 mutants in 73 seconds, and 146 of those mutants live or are not covered. A target that fails from its first day would help nobody, so killing them is open work.
+- The frontend is mutated by StrykerJS 10.1.1, whose tap runner runs the unit tests on the test runner of Node as they are, with no second test framework. The first run made 857 mutants, of which 123 lived and 23 were on lines that no test ran. After the new tests and the simpler code, a run makes 737 mutants: 729 killed, 8 stopped by the count with which Stryker ends an endless loop, and none alive. A run takes about 75 seconds with half of the processors. No rule was wrong: most survivors were conditions that only the type checker needed, and sentences that no test read. StrykerJS ran inside the budget, so no other tool was tried.
+- StrykerJS numbers its mutants in sequence, so `tools/stryker/mutants.jq` names each one by its file, its top-level declaration, its mutator, and its place, as gomutants names a mutant of Go. Stryker stops an endless loop by counting and anything else by time, with a floor of 30 seconds, so that a busy machine does not hide a mutant that lives.
+- The words that a screen shows are mutated too. The unit tests hold each sentence that carries a fact (a number, a rule, or the field that it is about) word for word, and every other sentence by the rule that a message is a sentence. A change of wording that changes no fact therefore changes no test. Leaving the mutation of strings out of the five modules that hold words would have removed 119 of the 737 mutants; nothing is left out.
 
 These overlaps were resolved as follows.
 
@@ -156,13 +158,14 @@ The rules for running the tools are as follows.
 - Bad, because the budget pushes useful checks, such as known vulnerabilities and remote links, out of `make check`, so their findings appear only in CI, after a push.
 - Bad, because the budget is measured on the machine that runs the check, so the same run can be within budget on a fast machine and over it on a slow one. On an idle laptop, `make check` over every file took about 20 seconds in November 2026, the frontend included. On a machine busy with other work, a run in which every check passes can exceed 60 seconds and fail on the budget alone; the same run, repeated, passes.
 - Bad, because gomutants, the tool of `test-mutation`, is a young project, at v0.x.
+- Bad, because StrykerJS brings 124 development packages, and an override of `qs` in `pnpm-workspace.yaml` for its dashboard reporter, which the check does not use.
 
 ### Confirmation
 
 - `tools/scripts/check.sh` fails `make check` when the run takes longer than `CHECK_BUDGET` (60 seconds), and its message names this record.
 - Every target of `make check` and `make check-all` runs through `tools/scripts/task.sh`. A target that takes a list of files gets it from `tools/scripts/files.sh`, which applies `.lintignore`, `CHECK_SCOPE`, and `CHECK_FILES`.
 - `make check-all` runs `selftest`, which fails when a target of `make check` has no case, or when a check no longer fails on its known-bad input.
-- `test-mutation` fails on a line of `equivalent-mutants.allow` that matches no living mutant (`mutation/unused-allowance`) or gives no reason (`mutation/allowance-format`). Review decides whether a new line is right.
+- `test-mutation` and `test-mutation-frontend` fail on a line of `equivalent-mutants.allow` that matches no living mutant (`mutation/unused-allowance`) or gives no reason (`mutation/allowance-format`). Review decides whether a new line is right.
 - Review compares a new tool with the table in this record. A tool for a concern that already has a tool either replaces that tool, through a new record, or is not added.
 
 ## Pros and Cons of the Options
@@ -195,4 +198,4 @@ The rules for running the tools are as follows.
 
 - `make help` lists the main targets, and `make/<area>.mk` holds the targets of each area.
 - The pins of these tools are in TPL-0022, and the choice of Trivy and of the scanners on GitHub's side in TPL-0024.
-- [Mutation tests](../../guides/mutation-tests.md) tells how to read a finding of `test-mutation`, and when a line of `equivalent-mutants.allow` is right.
+- [Mutation tests](../../guides/mutation-tests.md) tells how to read a finding of `test-mutation` and of `test-mutation-frontend`, how the tests treat the words that a screen shows, and when a line of `equivalent-mutants.allow` is right.

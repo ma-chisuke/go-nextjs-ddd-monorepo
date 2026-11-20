@@ -10,8 +10,8 @@ ded8eb8ea620260ace76a524806eb52b299d0aaf4d556f356a280cbc91e14704  TPL-0005-conte
 22fa73a62130f30b828aa0aa269b9da926d3fce158823196206b032ac68391e6  TPL-0005-contexts-integrate-through-apis-and-events.md
 db2e8527cebf059030e4accdb484817c697853c84934c590acf15995a44e9213  TPL-0006-openapi-with-oapi-codegen-strict-server.ja.md
 687f21cf743bf9b319ec386d2228ab58290fe161127b8974985ab72a27122926  TPL-0006-openapi-with-oapi-codegen-strict-server.md
-733b6221d58b69c919cb32ebaca65270862eb897b72c46b4ba695f5aaa9df10e  TPL-0007-layered-checks-for-api-conformance.ja.md
-34876676c64b3349dda070a79089f3611122d9f5634f46eac611c905a4dab310  TPL-0007-layered-checks-for-api-conformance.md
+aadead0f2c82f90b46e3ba8c143206e9b2ab2bbd492313e6e3a656939b25f8b3  TPL-0007-layered-checks-for-api-conformance.ja.md
+a472f8d50d8f4088b29b80430b29fce11f97fdf8be867d056e61c363a6680106  TPL-0007-layered-checks-for-api-conformance.md
 75f27386995a96115112c70743202cfaddd5ed763d6e9611d0a2fe40a14b9aec  TPL-0008-errors-as-rfc-9457-problem-details.ja.md
 7af3099fea9bd5423efa7b7e8b00727f33642c5d0a8c799e696c7bb235d16a61  TPL-0008-errors-as-rfc-9457-problem-details.md
 6cf34127633e1ba56889e7978e627de3d43d0ca2ccecef90a21d1831e86f1017  TPL-0009-one-postgresql-database-with-schema-per-context.ja.md
@@ -42,8 +42,8 @@ f6ebeb4f8f7a8ea54e5782d490151d52bde33f5953ab68cdc173d9973085dbfb  TPL-0020-agent
 36c6d31c25f8ec46c7cb64a25f201678d68c65980386f28d08e37b833e651cfa  TPL-0021-english-source-japanese-translation.md
 d366946983cbfc41529a5632f0d349a6f61fe3d59c6986cc1bed13319c765fe5  TPL-0022-pin-tool-versions-with-mise.ja.md
 255feea9710b1c5f915166566bae2bf4e0f2e78ad0186b15db502a6e7e9dd244  TPL-0022-pin-tool-versions-with-mise.md
-ecdc7d9a7839e97e8376a6ce51c5eef48f4229b382c34e8eb627e9433e1dad71  TPL-0023-one-tool-per-concern.ja.md
-953fcbc4b22c8bd28e0694da63f5029bc45b1f5a145f354dba2a10da7ac8e480  TPL-0023-one-tool-per-concern.md
+208281924c96b786da1b0637b3daf8f4352abdfa103dbc94a57f769cca2663a4  TPL-0023-one-tool-per-concern.ja.md
+bd6228470921a4d9d7d49480db58bc1d380ce41ea050932c14e03884aa1397b6  TPL-0023-one-tool-per-concern.md
 29ecadc1660fbcd428dd0c5d553466f6e9cf6f7b4f2bbbaf6c973f8cd50b7179  TPL-0024-supply-chain-defenses.ja.md
 3f671c7bb7e0b57eaab17b074506d2e7e06d7cb6142d8e6b73478c4cab542403  TPL-0024-supply-chain-defenses.md
 ee11350f6a136ecfb90a644919646e740292a860b20335e524f3e9f30a5e7278  TPL-0025-dependency-updates-with-renovate.ja.md

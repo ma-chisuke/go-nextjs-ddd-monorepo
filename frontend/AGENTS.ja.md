@@ -41,7 +41,7 @@
 - `gen-check-api-ts`：`src/lib/api/*.gen.ts` は `make gen` が書く内容と同じである。手で編集しない。（TPL-0006、TPL-0007）
 - `lint-frontend-types`：API の文書が許さない呼び出しや、存在しないルートへのリンクがあると `tsc` が失敗する。（TPL-0007）
 - `lint-frontend-unused`：どこからも使われていないファイル・export・依存を置かない。
-- `test-frontend` と、`make check-all` の `e2e`：純粋なロジックには単体テストがある。画面の振る舞いはブラウザーでテストする。
+- `test-frontend` と、`make check-all` の `e2e`・`test-mutation-frontend`：純粋なロジックには、そのどの変更にも気づく単体テストがある。画面の振る舞いはブラウザーでテストする。（TPL-0023）
 
 ## レビューが守らせる決まり
 
@@ -50,4 +50,4 @@
 - 予約はフォームの冪等キーを送り、変更はページが表示したバージョンを `If-Match` で送る。`features/reservation/booking.ts` と `changes.ts` の先頭のコメントを読む。
 - CSS は `app/globals.css` の素の CSS で書き、コンポーネントライブラリも日付のライブラリも使わない。既知の制限は、ガイド[画面を足す](../docs/guides/add-a-screen.ja.md#既知の制限)にある。
 
-<!-- i18n-source: AGENTS.md sha256:5d8744f7bd99cb53b2cc63e71ac723ff958c11433573013f206ca9655532d3f9 -->
+<!-- i18n-source: AGENTS.md sha256:3f4b7896b83dde6deef75570a7b469f3aeb2b17f90e227631e29d5e1cca8860d -->
