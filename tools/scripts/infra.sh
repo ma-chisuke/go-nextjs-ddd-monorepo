@@ -96,10 +96,41 @@ pins_root() {
 # whole repository, and skips only directories of that name, so under another
 # name it would take its own copies of the units for units.
 run_all() {
-  local mode="$1" environment="$2"
+  local mode="$1" environment="$2" status=0
   shift 2
+  begin_run "$mode" "$environment"
   TG_DOWNLOAD_DIR="$PWD/.cache/terragrunt/$mode/$environment/.terragrunt-cache" \
-    terragrunt run --all --log-level error --working-dir "$live/$environment" -- "$@"
+    terragrunt run --all --log-level error --working-dir "$live/$environment" -- "$@" || status=$?
+  end_run "$mode" "$environment" "$status"
+}
+
+# Terragrunt initializes a unit once, in its working directory, and trusts a
+# directory that looks initialized. A run that is killed in the middle of an
+# init, as when a time limit ends it, leaves such a directory without its
+# providers, and every later run fails in it: "there is no package for ...
+# cached in .terraform/providers". So a run leaves a mark with its process ID
+# in the working data of its mode and environment, and takes the mark away
+# only when it ends well. A run that finds the mark of a run that is gone
+# starts from clean working data. Nothing is lost with it: the state of an
+# environment is in its backend, and a validate has none.
+begin_run() {
+  local data=".cache/terragrunt/$1/$2" owner
+  if [ -f "$data/unfinished" ]; then
+    owner=$(cat "$data/unfinished" 2> /dev/null || true)
+    if [ -z "$owner" ] || [ "$owner" = "$$" ] || ! kill -0 "$owner" 2> /dev/null; then
+      rm -rf "$data"
+    fi
+  fi
+  mkdir -p "$data"
+  echo "$$" > "$data/unfinished"
+}
+
+# end_run <mode> <environment> <status>: returns the status of the run.
+end_run() {
+  if [ "$3" -eq 0 ]; then
+    rm -f ".cache/terragrunt/$1/$2/unfinished"
+  fi
+  return "$3"
 }
 
 # What Terragrunt and Terraform printed, as findings: without the time and
@@ -224,10 +255,12 @@ require_environment() {
 
 # run_unit <mode> <environment> <unit> <Terraform command and its arguments>...
 run_unit() {
-  local mode="$1" environment="$2" unit="$3"
+  local mode="$1" environment="$2" unit="$3" status=0
   shift 3
+  begin_run "$mode" "$environment"
   TG_DOWNLOAD_DIR="$PWD/.cache/terragrunt/$mode/$environment/.terragrunt-cache" \
-    terragrunt run --log-level error --working-dir "$live/$environment/$unit" -- "$@"
+    terragrunt run --log-level error --working-dir "$live/$environment/$unit" -- "$@" || status=$?
+  end_run "$mode" "$environment" "$status"
 }
 
 # The Region of an environment, for the AWS CLI.
