@@ -45,7 +45,6 @@ until mkdir "$lock" 2> /dev/null; do
   sleep 0.2
 done
 echo "$$" > "$lock/pid"
-# shellcheck disable=SC2064 # the path is fixed now
-trap "rm -rf '$lock'" EXIT
+trap 'rm -rf "$lock"' EXIT
 
 terraform -chdir="$dir" init -no-color "$@"

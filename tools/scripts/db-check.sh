@@ -262,11 +262,10 @@ vet() {
   return "$status"
 }
 
-# The schema documents of each context in the list, written under $1.
+# The schema documents of each context in the list $2, written under $1.
 write_docs() {
-  local out="$1" context
-  shift
-  for context in "$@"; do
+  local out="$1" list="$2" context
+  for context in $list; do
     apply_schema "$context" "$(dir_of "$context")/schema.sql" || return 1
     TBLS_DSN="$(owner_dsn "$context")" TBLS_NAME="$context" TBLS_DOC_PATH="$out/$context" \
       tbls doc --config .tbls.yml > "$tmp/tbls.log" 2>&1 || {
@@ -280,8 +279,7 @@ docs() {
   local context list
   list=$(contexts)
   create_scratch
-  # shellcheck disable=SC2086 # one context per word
-  write_docs "$tmp/docs" $list
+  write_docs "$tmp/docs" "$list"
   rm -rf "$docs_root"
   mkdir -p "$docs_root"
   for context in $list; do

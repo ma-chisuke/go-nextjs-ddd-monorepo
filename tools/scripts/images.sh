@@ -73,8 +73,7 @@ sources() {
 # The names, modes, and contents of the files, as the index of Git has them.
 tag() {
   local image="$1"
-  # shellcheck disable=SC2046 # one argument for each path
-  git ls-files -s -- $(sources "$image") | git hash-object --stdin | cut -c 1-16
+  sources "$image" | xargs git ls-files -s -- | git hash-object --stdin | cut -c 1-16
 }
 
 build() {
@@ -106,8 +105,7 @@ push() {
 
   # A tag describes what Git holds; a file that differs from it would be
   # built into an image under the tag of another content.
-  # shellcheck disable=SC2046 # one argument for each path
-  dirty=$(git status --porcelain -- $(for image in $(list); do sources "$image"; done))
+  dirty=$(for image in $(list); do sources "$image"; done | xargs git status --porcelain --)
   if [ -n "$dirty" ]; then
     echo "images: commit or discard the changes to the sources of the images first:" >&2
     printf '%s\n' "$dirty" >&2

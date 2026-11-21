@@ -60,8 +60,7 @@ start() {
   if ! docker compose up --build --detach --wait --wait-timeout 120 --quiet-pull "$@"; then
     echo "stack: a service did not become healthy; its last log lines:" >&2
     docker compose ps --all >&2
-    # shellcheck disable=SC2046 # one service per word
-    docker compose logs --no-color --tail 30 $(built_services) >&2
+    built_services | xargs docker compose logs --no-color --tail 30 >&2
     exit 1
   fi
 }
@@ -74,7 +73,8 @@ start() {
 # service alone when its own settings did not change, so after the emulator
 # started anew, the services that mount its CA are restarted.
 up() {
-  local before after clients
+  local before after listed client
+  local clients=()
   tools/scripts/db.sh up
   before=$(emulator_start)
   start aws
@@ -82,12 +82,13 @@ up() {
   tools/scripts/aws.sh apply
   start
   if [ "$before" != "$after" ]; then
-    clients=$(emulator_clients)
-    if [ -n "$clients" ]; then
-      # shellcheck disable=SC2086 # one service per word
-      docker compose restart $clients > /dev/null
-      # shellcheck disable=SC2086 # one service per word
-      start --no-deps $clients
+    listed=$(emulator_clients)
+    while IFS= read -r client; do
+      [ -z "$client" ] || clients+=("$client")
+    done <<< "$listed"
+    if [ "${#clients[@]}" -gt 0 ]; then
+      docker compose restart "${clients[@]}" > /dev/null
+      start --no-deps "${clients[@]}"
     fi
   fi
 }
@@ -128,12 +129,17 @@ url_of() {
 # they start at the same time. Each one stops the services that it started, so
 # they take turns: the second one waits for the lock of the first.
 with_system() {
-  local running service services
-  services="$(built_services) mailpit"
+  local running listed service
+  local services=()
+  listed=$(built_services)
+  while IFS= read -r service; do
+    [ -z "$service" ] || services+=("$service")
+  done <<< "$listed"
+  services+=(mailpit)
   lock
   running=$(docker compose ps --status running --services)
   started=()
-  for service in $services; do
+  for service in "${services[@]}"; do
     if ! grep -qxF "$service" <<< "$running"; then
       started+=("$service")
     fi
@@ -141,8 +147,7 @@ with_system() {
   trap finish EXIT
   tools/scripts/db.sh init > /dev/null
   tools/scripts/aws.sh apply
-  # shellcheck disable=SC2086 # one service per word
-  start --no-deps $services
+  start --no-deps "${services[@]}"
   "$@"
 }
 
@@ -212,9 +217,7 @@ case "${1:-}" in
     docker compose down --remove-orphans
     ;;
   build)
-    services=$(built_services)
-    # shellcheck disable=SC2086 # one service per word
-    docker compose build --quiet $services
+    built_services | xargs docker compose build --quiet
     ;;
   images)
     images
