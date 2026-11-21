@@ -4,7 +4,7 @@
 FMT_TARGETS += fmt-prettier fmt-toml fmt-shell
 CHECK_TARGETS += fmt-check-prettier fmt-check-toml fmt-check-shell \
 	lint-yaml lint-toml lint-schema lint-shell lint-dockerfile \
-	lint-typos lint-editorconfig lint-secrets
+	lint-typos lint-editorconfig lint-secrets lint-ignore-comments
 CHECK_ALL_TARGETS += lint-schema-remote
 
 PRETTIER_GLOBS := "*.yaml" "*.yml" "*.json" "*.jsonc" "*.json5" "*.js" "*.jsx" "*.mjs" "*.cjs" "*.ts" "*.tsx" "*.css"
@@ -56,6 +56,12 @@ lint-schema-remote:
 
 lint-shell:
 	@$(TASK) $@ '$(FILES) $(SHELL_GLOBS) | xargs -r shellcheck --format=gcc --external-sources'
+
+# A comment that turns a check off for one place, such as `//nolint`: only
+# those that ignore-comments.allow names, each with its reason (TPL-0020). It
+# reads every file of the repository, whatever the scope of the run.
+lint-ignore-comments:
+	@$(TASK) $@ 'tools/scripts/ignore-comments.sh'
 
 lint-dockerfile:
 	@$(TASK) $@ '$(FILES) $(DOCKERFILE_GLOBS) | xargs -r hadolint --no-color'

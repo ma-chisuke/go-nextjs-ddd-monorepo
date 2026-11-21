@@ -1,0 +1,14 @@
+# Ignore comments: comments that turn a check off for one place, such as
+# `//nolint` or a `disable` directive for ShellCheck. Each line lets one such
+# comment stay:
+#
+#   <file> | <ignore comment> | <reason>
+#
+# with the comment as a finding of lint-ignore-comments names it, and a reason
+# that shows why the check is wrong for that code. Adding a line is a decision
+# of review; prefer code that needs no comment. A line that names no comment
+# any more fails the check. See docs/adr/template/TPL-0020.
+backend/internal/platform/httpserver/validate.go | nolint:errorlint | The assertion must not look inside a wrapped error: a RequestError wraps a list of schema errors, and stays one error. errors.As would unwrap it.
+tools/init/main.go | nolint:gosec | gosec reports every command that takes arguments from variables. The program is always git, and its arguments are flags and paths, never a shell string.
+.claude/hooks/lib.sh | shellcheck disable=SC2034 | The file is sourced: the hooks that source it read the variables that it sets.
+tools/tests/hooks_test.sh | shellcheck disable=SC2016 | The commands under test are literal strings in single quotes: nothing in them may expand.

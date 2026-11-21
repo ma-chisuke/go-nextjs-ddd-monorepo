@@ -91,6 +91,7 @@ Inside `make`, each concern has one tool. Targets marked "check-all" run only in
 | Translations against their English files (TPL-0021) | the docs command of this repository | `lint-i18n` |
 | The boundaries of the Go backend: imports between contexts and layers, a domain without I/O, routes registered by hand, schemas named in SQL, and the glossary of each context (TPL-0003, TPL-0004, TPL-0005, TPL-0007, TPL-0009) | the arch command of this repository (`tools/cmd/arch`) | `lint-arch` |
 | Length of `AGENTS.md` (TPL-0020) | a line count in `make/agents.mk` | `lint-agents-md` |
+| Ignore comments (TPL-0020) | `tools/scripts/ignore-comments.sh`, which compares the comments that turn a check off with `ignore-comments.allow` | `lint-ignore-comments` |
 | Spelling | typos | `lint-typos` |
 | Line endings, final newlines, trailing spaces, and the style of indentation | editorconfig-checker | `lint-editorconfig` |
 | Secrets | gitleaks | `lint-secrets` |

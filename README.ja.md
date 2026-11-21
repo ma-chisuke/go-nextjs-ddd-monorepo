@@ -93,7 +93,7 @@ make check   # 速いチェック。数秒で終わる
 | YAML・JSON・TOML | Prettier、yamllint、taplo、設定ファイルの JSON Schema による検証 |
 | Markdown | markdownlint、リンク、英語の文体（Vale）、日本語の文体（textlint） |
 | 文書 | 決定の記録の形式とその一覧、英語版と一致する対訳 |
-| エージェントのハーネス | 見本のイベントを与えるフックのテスト（`test-hooks`）、`AGENTS.md` の長さ。`make check-all` では、エージェントなしで確かめる評価の採点（`test-evals`） |
+| エージェントのハーネス | 見本のイベントを与えるフックのテスト（`test-hooks`）、`AGENTS.md` の長さ、レビューだけが認める、チェックを止めるコメント（`lint-ignore-comments`）。`make check-all` では、エージェントなしで確かめる評価の採点（`test-evals`） |
 | 依存 | Trivy による脆弱性とライセンスの検査。`make check-all` |
 
 `make check` には60秒の上限があり、ネットワークを使わない。指摘は1件が1行で、ファイル・行・ルールが出る。
@@ -117,4 +117,4 @@ make check   # 速いチェック。数秒で終わる
 
 [MIT No Attribution](LICENSE)。表示を残さずに、テンプレートをコピーして自分のものにできる。
 
-<!-- i18n-source: README.md sha256:1fb5aed1d01132b424e70051f3fdced332d464ffd1fbfc9bfdb4d1cda9f0da59 -->
+<!-- i18n-source: README.md sha256:cab87777a5ed73de90421958a1c5c8a7ccf7cc0a9fe1b749ebfe307684280974 -->

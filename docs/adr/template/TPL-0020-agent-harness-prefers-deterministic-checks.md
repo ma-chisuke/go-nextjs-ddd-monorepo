@@ -63,7 +63,7 @@ The first runs, on November 20, 2026, gave each of six tasks once to each arm, w
 Without the harness, the agent did the work of the task `booking-horizon` and never ran `make check`, which then reported five findings: generated code that was stale in two files, a Go file that was not formatted, and two sentences of a translation. With the harness, the agent ran `make gen` and `make check` before it stopped.
 In the task `read-the-logs`, both arms updated the translation; without the harness, the agent computed the marker of the translation by hand.
 In the four larger tasks, every run with the harness ended with `make check` passing. Three of them failed a criterion all the same, and on the same thing as the run without the harness: an ignore comment like the seven that the code had then, an integration test that only `make check-all` runs, and a scenario in a browser that only a guide asks for. What a fast check holds was kept. What a sentence, a guide, or a slow check holds was not.
-No instruction was added: each of the three failures asks for a check or for a change of the code before it asks for a sentence, and one run is no ground for either. Twelve runs prove nothing: they are a first look, and the records of the evaluation, `evals/results/README.md`, say what they cannot show.
+No instruction was added: each of the three failures asks for a check or for a change of the code before it asks for a sentence, and one run is no ground for either. The first of the three has both since: the code that the agents copied needs no ignore comment any more, and `lint-ignore-comments` fails on a new one. Twelve runs prove nothing: they are a first look, and the records of the evaluation, `evals/results/README.md`, say what they cannot show.
 
 ### Consequences
 
@@ -82,6 +82,7 @@ No instruction was added: each of the three failures asks for a check or for a c
 
 - `make check` is the gate. People, agents, and CI run it, and the hooks run it at the end of a turn.
 - `make check` runs the target `lint-agents-md`, which keeps `AGENTS.md` short.
+- `make check` runs the target `lint-ignore-comments`. A comment that turns a check off for one place, such as `//nolint`, is an exception, and an exception is a decision of review: `ignore-comments.allow` names each comment that review let in, with the reason why the check is wrong for that code, and the target fails on any other. The file starts with four lines, after the code was changed until no other comment was needed, so that the file is no list of examples to copy.
 - The hooks and the permissions are registered in `.claude/settings.json`, and the hooks live in `.claude/hooks/`. `make check` feeds each hook sample events and checks what it blocks and allows (`test-hooks`).
 - `make check-all` runs `test-evals`, which proves the graders of the evaluation without an agent: for each task, the repository as it is fails, and the solution of the task passes every criterion, `make check` included.
 - No check runs `make eval`, so review confirms that a new instruction in `AGENTS.md` comes with the records of the runs that showed its failure, and that no check can replace it.

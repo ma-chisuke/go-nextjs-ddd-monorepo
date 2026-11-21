@@ -46,6 +46,7 @@ The reason for a rule is in the decision record that the rule cites ([docs/adr/]
 - **Generated files and lockfiles.** Do not edit them by hand. Change the source and run `make gen`, or use the package manager. After a change to a `schema.sql`, also run `make gen-db-docs` (needs Docker).
 - **Schemas.** Change only the `schema.sql` of a context; there are no migration files. Never add a line to `schema-changes.allow` on your own: letting a dangerous statement through is a decision of review. (TPL-0010)
 - **Scanner exceptions.** Never add an entry to `.trivyignore.yaml` on your own: accepting a finding of Trivy is a decision of review. Change the code so that the finding goes away, or stop and say so. (TPL-0024)
+- **Ignore comments.** Never add a comment that turns a check off, such as `//nolint` or `# shellcheck disable=`, and never add a line to `ignore-comments.allow` on your own: letting one in is a decision of review. Change the code so that the check passes, or stop and say so. (TPL-0020)
 - **Mutation tests.** Never add a line to `equivalent-mutants.allow` on your own: letting a mutant live is a decision of review. Kill a surviving mutant with a test, or make the code simpler. (TPL-0023, [guide](docs/guides/mutation-tests.md))
 - **Commits.** Conventional Commits, one purpose per commit. Do not skip hooks.
 - **GitHub Actions.** After checkout, the setup of mise, and the sign-in to AWS, a workflow step calls `make` and nothing else. Actions are pinned to a commit SHA. (TPL-0018, TPL-0024)

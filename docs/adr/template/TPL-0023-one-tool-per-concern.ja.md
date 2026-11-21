@@ -91,6 +91,7 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 | 英語版と照らし合わせた対訳（TPL-0021） | このリポジトリの docs コマンド | `lint-i18n` |
 | Go のバックエンドの境界（文脈と層のあいだの import、I/O のないドメイン、手で登録したルート、SQL に書いたスキーマの名前、文脈ごとの用語集。TPL-0003・TPL-0004・TPL-0005・TPL-0007・TPL-0009） | このリポジトリの arch コマンド（`tools/cmd/arch`） | `lint-arch` |
 | `AGENTS.md` の長さ（TPL-0020） | `make/agents.mk` で行数を数える | `lint-agents-md` |
+| 無視のコメント（TPL-0020） | `tools/scripts/ignore-comments.sh`。チェックを止めるコメントを `ignore-comments.allow` と比べる | `lint-ignore-comments` |
 | つづり | typos | `lint-typos` |
 | 改行コード・末尾の改行・行末の空白・インデントの種類 | editorconfig-checker | `lint-editorconfig` |
 | 秘密情報 | gitleaks | `lint-secrets` |
@@ -200,4 +201,4 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 - これらの道具の固定は TPL-0022 に、Trivy と GitHub の側のスキャナーを選んだ理由は TPL-0024 にある。
 - [ミューテーションテスト](../../guides/mutation-tests.ja.md)が、`test-mutation` と `test-mutation-frontend` の指摘の読み方を説明している。画面に出す言葉をテストがどう扱うかと、`equivalent-mutants.allow` の行がふさわしい場合も、同じガイドにある。
 
-<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:bd6228470921a4d9d7d49480db58bc1d380ce41ea050932c14e03884aa1397b6 -->
+<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:8ef7fd9d6750199cf3a4c556f8f736b3d6c3c4e40c41096c0ea2c7339068cc2a -->

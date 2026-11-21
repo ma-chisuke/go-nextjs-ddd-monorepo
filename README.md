@@ -93,7 +93,7 @@ The local system and `make check-all` need Docker. After `make up`, open <http:/
 | YAML, JSON, and TOML | Prettier, yamllint, taplo, JSON Schema validation of configuration files |
 | Markdown | markdownlint, links, English style (Vale), Japanese style (textlint) |
 | Documents | Format of decision records, their index, and translations that match their English source |
-| Agent harness | The hooks, fed sample events (`test-hooks`), and the length of `AGENTS.md`; in `make check-all`, the graders of the evaluation, proven without an agent (`test-evals`) |
+| Agent harness | The hooks, fed sample events (`test-hooks`), the length of `AGENTS.md`, and the comments that turn a check off, which only review lets in (`lint-ignore-comments`); in `make check-all`, the graders of the evaluation, proven without an agent (`test-evals`) |
 | Dependencies | Vulnerabilities and licenses with Trivy, in `make check-all` |
 
 `make check` has a time budget of 60 seconds and uses no network. Every finding is one line with the file, the line, and the rule.
