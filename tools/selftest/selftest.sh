@@ -1775,8 +1775,7 @@ cleanup() {
   local running
   running=$(jobs -p)
   if [ -n "$running" ]; then
-    # shellcheck disable=SC2086 # one process ID per word
-    kill $running 2> /dev/null
+    printf '%s\n' "$running" | xargs kill 2> /dev/null
     wait
   fi
   rm -rf "$work"

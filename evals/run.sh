@@ -179,16 +179,18 @@ link_dependencies() {
 # files: compared with it, the change of the agent is its own work alone. The
 # copy held no trace of the harness while the agent worked.
 restore_harness() {
-  local dir="$1" paths index tree
-  paths=$(harness_paths)
-  # shellcheck disable=SC2086 # one argument for each path
-  git archive --format=tar "$ref" -- $paths | tar -x -C "$dir"
+  local dir="$1" listed path index tree
+  local paths=()
+  listed=$(harness_paths)
+  while IFS= read -r path; do
+    paths+=("$path")
+  done <<< "$listed"
+  git archive --format=tar "$ref" -- "${paths[@]}" | tar -x -C "$dir"
   (
     cd "$dir"
     index="$PWD/.git/graded-index"
     GIT_INDEX_FILE="$index" git read-tree base
-    # shellcheck disable=SC2086 # one argument for each path
-    GIT_INDEX_FILE="$index" git add -- $paths
+    GIT_INDEX_FILE="$index" git add -- "${paths[@]}"
     tree=$(GIT_INDEX_FILE="$index" git write-tree)
     git tag graded "$(git commit-tree "$tree" -p base -m "The repository with its harness")"
     rm -f "$index"
@@ -288,8 +290,10 @@ with_database() {
   local database status=0
   database="evals_$(printf '%s' "$PWD" | cksum | cut -d ' ' -f 1)"
   drop_database "$database" || return 1
-  # shellcheck disable=SC2064 # the name is fixed now
-  trap "drop_database $database" EXIT
+  # The trap runs when the script ends, where the local variable is gone:
+  # it reads the name from a variable of the script.
+  scratch_database=$database
+  trap 'drop_database "$scratch_database"' EXIT
   if PGDATABASE=$database tools/scripts/db.sh init > /dev/null; then
     (
       export PGDATABASE=$database
@@ -553,22 +557,25 @@ verify() {
 # --- The records -----------------------------------------------------------
 
 report() {
-  local files
-  files=$(find "$results" -name '*.json' 2> /dev/null | sort)
-  if [ -z "$files" ]; then
+  local listed file
+  local files=()
+  listed=$(find "$results" -name '*.json' 2> /dev/null | sort)
+  while IFS= read -r file; do
+    [ -z "$file" ] || files+=("$file")
+  done <<< "$listed"
+  if [ "${#files[@]}" -eq 0 ]; then
     echo "evals: no record in $results/ yet"
     return 0
   fi
   echo "| Task | Arm | Model | Runs | Passed | Criteria passed | Output tokens | Minutes | Refused commands |"
   echo "|---|---|---|---|---|---|---|---|---|"
-  # shellcheck disable=SC2086 # one argument for each file
   jq --slurp --raw-output '
     def median: sort | if length == 0 then null else .[(length - 1) / 2 | floor] end;
     group_by([.task, .arm, .model])[]
     | "| \(.[0].task) | \(.[0].arm) | \(.[0].model) | \(length) | \(map(select(.passed)) | length) | "
       + "\(map(.criteria | map(select(.pass)) | length) | add) of \(map(.criteria | length) | add) | "
       + "\(map(.agent.output_tokens // empty) | median // "?") | \(map(.seconds / 60 | floor) | median) | "
-      + "\(map(.agent.refused_commands) | add) |"' $files
+      + "\(map(.agent.refused_commands) | add) |"' "${files[@]}"
 }
 
 case "${1:-}" in

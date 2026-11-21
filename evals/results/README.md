@@ -70,7 +70,7 @@ The runs cannot show how often each arm fails, whether a difference holds for an
 ## What to do next
 
 - Run each arm of each task at least five times before reading a rate out of the table.
-- Make the rule on ignore comments and the code agree. Five of the seven comments are gone since the round. Capacity, the limit of a page, and attendees keep the `int32` of the API document, so the code that an agent copies has no conversion. Two comments are left in Go, each where the linter is wrong about the code, and the shell scripts have seventeen directives for ShellCheck. Record which comments review allows, and let a check hold exactly that.
+- Make the rule on ignore comments and the code agree. Five of the seven comments in Go are gone since the round. Capacity, the limit of a page, and attendees keep the `int32` of the API document, so the code that an agent copies has no conversion. Fifteen of the seventeen directives for ShellCheck in the scripts are gone too: a list reaches its command through `xargs` or as an array. Four ignore comments are left: two in Go, each where the linter is wrong about the code, one in the hooks, and one in their tests. Record them as what review allows, and let a check hold exactly that.
 - Give the agent a slow check that fits into a run. The guide and the skill for events name `make test-integration` since the round, the part of `make check-all` that a change to an event needs. The other guides still name `make check-all`.
 - Prepare the copy so that `make check-all` can pass in it.
 - Decide whether a small change to a screen that exists needs a scenario in a browser. The guide says so, and nothing checks it.

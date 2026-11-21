@@ -58,8 +58,10 @@ lock() {
     sleep 0.2
   done
   echo "$$" > "$dir/pid"
-  # shellcheck disable=SC2064 # the path is fixed now
-  trap "rm -rf '$dir'" EXIT
+  # The trap runs when the script ends, where the local variable is gone:
+  # it reads the path from a variable of the script.
+  lock_dir=$dir
+  trap 'rm -rf "$lock_dir"' EXIT
 }
 
 contexts() {
