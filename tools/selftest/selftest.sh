@@ -928,6 +928,45 @@ EOF
   passes
 }
 
+case_validate_live() {
+  local gone
+  # Stand-ins for Terraform and Terragrunt, which would download the
+  # providers. This Terragrunt fails in working data that an earlier run left
+  # half initialized, as the real one does. The Makefile puts the pinned tools
+  # in front of the PATH of its environment, so the stand-ins come first only
+  # when make takes the PATH from its command line.
+  put bin/terraform '#!/bin/sh'
+  put bin/terragrunt << 'EOF'
+#!/bin/sh
+if [ -e "$TG_DOWNLOAD_DIR/half-initialized" ]; then
+  echo "there is no package cached in .terraform/providers" >&2
+  exit 1
+fi
+EOF
+  run chmod +x bin/terraform bin/terragrunt
+  stood_in() {
+    (cd "$COPY" && "$make_cmd" --no-print-directory "$TARGET" "PATH=$COPY/bin:$PATH") > "$OUT" 2>&1
+    STATUS=$?
+    LAST="make $TARGET with stand-ins for Terraform and Terragrunt"
+  }
+  # A run that a time limit killed: its mark names a process that is gone.
+  true &
+  gone=$!
+  wait "$gone"
+  put .cache/terragrunt/offline/prd/unfinished "$gone"
+  put .cache/terragrunt/offline/prd/.terragrunt-cache/half-initialized ''
+  stood_in
+  [ "$STATUS" -eq 0 ] || report "expected $LAST to start from clean working data and pass, but it failed"
+  # Working data that is broken without a mark fails one run, which leaves
+  # its mark, and the next run starts clean.
+  put .cache/terragrunt/offline/prd/.terragrunt-cache/half-initialized ''
+  stood_in
+  [ "$STATUS" -ne 0 ] || report "expected $LAST to fail in broken working data, but it passed"
+  prints 'there is no package cached in .terraform/providers'
+  stood_in
+  [ "$STATUS" -eq 0 ] || report "expected $LAST to pass after a run that failed, but it failed"
+}
+
 case_fmt_check_terragrunt() {
   put infra/live/stg/sample/terragrunt.hcl << 'EOF'
 terraform {
