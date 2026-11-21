@@ -46,7 +46,7 @@ The rules are as follows.
 
 The harness has the following parts.
 
-- Hooks for Claude Code. They format a file after an agent edits it. They block edits to generated files, reading `.env`, applying changes to prd, and force pushes. At the end of a turn, they run the checks for what changed and hand failures back to the agent, a bounded number of times.
+- Hooks for Claude Code. They format a file after an agent edits it. They block edits to generated files and to the files in which review lets an exception through (the allowance files and `.trivyignore.yaml`), reading `.env`, applying changes to prd, and force pushes. At the end of a turn, they run the checks for what changed and hand failures back to the agent, a bounded number of times.
 - Skills for recurring procedures, in `.claude/skills/`: `write-adr` writes a record, and `sync-translation` brings a translation up to date. The skills of the code, such as `add-endpoint` and `add-screen`, each follow a guide in `docs/guides/`, and arrive with the code that they change.
 - Subagents that bring eyes other than the author's, in `.claude/agents/`: `design-reviewer` reviews a change against the records, and `translation-reviewer` compares a translation with its source.
 - Permissions that let safe commands run without asking and deny dangerous ones.

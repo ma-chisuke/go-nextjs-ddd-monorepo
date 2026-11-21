@@ -36,8 +36,8 @@ bbd7155eee5f672da08a9fa2589f1ea2ae1cf4846a1da636e9917875db821bdb  TPL-0018-githu
 4ee03c77e92e3b7ff59babe06005bd88123fdb31f7642f18483f0238fe163764  TPL-0018-github-actions-with-oidc.md
 43eb0eb050aba6d1771a24ae8cde6faeec2e9f57ed7ab613d400f00a2128ac28  TPL-0019-mit-0-license.ja.md
 7cee9b099324afb799ee4d591811d8056c6d931bff401cdb94e79d8dfd131677  TPL-0019-mit-0-license.md
-abec42618125206860872cd933fcc833155990dbe5230966c0faf68dcd71ecba  TPL-0020-agent-harness-prefers-deterministic-checks.ja.md
-9fe65a1d0004a36b5fd63a871e701be6b92fa9dfd65f95b5edb10acfc10cf1cc  TPL-0020-agent-harness-prefers-deterministic-checks.md
+ae68b79cf6ac7f4e86fd7dac317eaa5c4317b21a1423751127a1c49eda6e2c98  TPL-0020-agent-harness-prefers-deterministic-checks.ja.md
+a56a7b17a469146d97bd0ec4efea28a0851720f6b60e4bc2600e7d3ca4485274  TPL-0020-agent-harness-prefers-deterministic-checks.md
 0e27dc6b1c2008db54f6a2623b10a47c3f84f4c6d9bb43686e00e209cd32ee3a  TPL-0021-english-source-japanese-translation.ja.md
 36c6d31c25f8ec46c7cb64a25f201678d68c65980386f28d08e37b833e651cfa  TPL-0021-english-source-japanese-translation.md
 d366946983cbfc41529a5632f0d349a6f61fe3d59c6986cc1bed13319c765fe5  TPL-0022-pin-tool-versions-with-mise.ja.md
