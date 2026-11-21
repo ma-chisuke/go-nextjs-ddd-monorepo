@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # PreToolUse hook for Edit, Write, and NotebookEdit: stop direct edits to
-# generated, vendored, and lock files, and say what to run instead.
+# generated, vendored, and lock files, and say what to run instead. Stop edits
+# to the files in which review lets an exception through, too.
 #
 # Sources of truth: the linguist-generated and linguist-vendored attributes in
 # .gitattributes, and docs/adr/template/checksums.txt, which `make adr-seal`
@@ -19,6 +20,18 @@ if [ "$REL_PATH" = docs/adr/template/checksums.txt ]; then
     "In a project made from the template, do not change template records at all:" \
     "write a project record that supersedes the template record (skill write-adr)."
 fi
+
+# The files in which review lets an exception through: the allowance files
+# (ignore-comments.allow, equivalent-mutants.allow, a schema-changes.allow)
+# and the exceptions of the scanner. An agent that wrote to one of them would
+# decide on its own exception, so it neither adds a line nor removes one.
+case "${REL_PATH##*/}" in
+  *.allow | .trivyignore.yaml)
+    block "$REL_PATH holds the exceptions that review let in; a person edits it, not an agent." \
+      "Change the code so that the check passes. If the check is wrong for this code," \
+      "or if a line of the file is not used any more, stop and say so."
+    ;;
+esac
 
 attributes=$(git -C "$REPO_ROOT" check-attr linguist-generated linguist-vendored -- "$REL_PATH")
 is_set() {

@@ -46,7 +46,7 @@ ETH Zurich による2026年の「Evaluating AGENTS.md: Are Repository-Level Cont
 
 ハーネスは次の部品からなる。
 
-- Claude Code のフック。エージェントがファイルを編集すると、そのファイルを整形する。生成コードの編集・`.env` の読み取り・prd への変更の適用・force push を止める。ターンの終わりには、変更の及ぶ範囲のチェックを実行し、失敗をエージェントに差し戻す。差し戻す回数には上限がある。
+- Claude Code のフック。エージェントがファイルを編集すると、そのファイルを整形する。生成コードの編集・`.env` の読み取り・prd への変更の適用・force push を止める。レビューが例外を認めるファイル（許可のファイルと `.trivyignore.yaml`）の編集も止める。ターンの終わりには、変更の及ぶ範囲のチェックを実行し、失敗をエージェントに差し戻す。差し戻す回数には上限がある。
 - 繰り返す手順のためのスキル（`.claude/skills/`）。`write-adr` は記録を書き、`sync-translation` は対訳を最新にする。`add-endpoint` や `add-screen` のようなコードのスキルは、それぞれ `docs/guides/` のガイドに従い、それが変えるコードと一緒に加わる。
 - 書いた本人とは別の目で見るサブエージェント（`.claude/agents/`）。`design-reviewer` は変更を記録に照らしてレビューし、`translation-reviewer` は対訳を原文と比べる。
 - 権限の設定。安全なコマンドは確認なしで実行させ、危険なコマンドは拒む。
@@ -119,4 +119,4 @@ ETH Zurich による2026年の「Evaluating AGENTS.md: Are Repository-Level Cont
 - `make check` の背後にある道具の選び方は TPL-0023 にある。
 - `evals/README.ja.md` が、評価の条件・作業・動かし方・結果の読み方を説明している。`evals/` の外の文書は、その中にリンクを張らない。実行は、エージェントが作業するコピーからこのディレクトリを取り除くので、リンクがそこで切れるからである。
 
-<!-- i18n-source: TPL-0020-agent-harness-prefers-deterministic-checks.md sha256:9fe65a1d0004a36b5fd63a871e701be6b92fa9dfd65f95b5edb10acfc10cf1cc -->
+<!-- i18n-source: TPL-0020-agent-harness-prefers-deterministic-checks.md sha256:a56a7b17a469146d97bd0ec4efea28a0851720f6b60e4bc2600e7d3ca4485274 -->
