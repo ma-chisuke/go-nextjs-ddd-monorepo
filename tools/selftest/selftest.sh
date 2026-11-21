@@ -827,6 +827,35 @@ EOF
   passes
 }
 
+case_lint_ignore_comments() {
+  # A comment that turns a check off, in a new file and in one that has such
+  # a comment already.
+  put backend/internal/platform/sample/sample.go << 'EOF'
+// Package sample is a fixture.
+package sample
+
+// Half returns half of n.
+func Half(n int) int32 {
+    return int32(n / 2) //nolint:gosec // The fixture silences the finding.
+}
+EOF
+  # The directive is put together here: written out, it would be a directive
+  # of this file.
+  put tools/scripts/sample.sh "$(printf '#!/usr/bin/env bash\n# %s disable=SC2086\necho ok\n' shellcheck)"
+  fails 'backend/internal/platform/sample/sample.go:6: [ignore-comments/not-allowed] "nolint:gosec"'
+  prints 'tools/scripts/sample.sh:2: [ignore-comments/not-allowed] "shellcheck disable=SC2086"'
+  drop backend/internal/platform/sample
+  drop tools/scripts/sample.sh
+  passes
+  # A line of the file that names no comment any more, and one without a
+  # reason.
+  put ignore-comments.allow "$(cat "$COPY/ignore-comments.allow")
+tools/scripts/files.sh | shellcheck disable=SC2086 | The fixture names a comment that the file does not hold.
+tools/init/main.go | nolint:gosec |"
+  fails '[ignore-comments/unused-allowance] tools/scripts/files.sh holds no "shellcheck disable=SC2086"'
+  prints '[ignore-comments/allowance-format]'
+}
+
 case_scan_config__terraform() {
   put infra/modules/sample/main.tf << 'EOF'
 resource "aws_security_group" "ssh" {

@@ -114,8 +114,16 @@ harness_paths() {
 # the agent did. The line goes in both languages, and the marker of the
 # translation follows its source (tools/internal/i18n). The line does not come
 # back before the grading: no check reads it.
+#
+# ignore-comments.allow names ignore comments in files of the harness, which
+# are gone too: its lines for those files go, and the file comes back with
+# the harness (restore_harness).
 unlist_harness() {
   local dir="$1" file hash
+  if [ -f "$dir/ignore-comments.allow" ]; then
+    grep -v -F -f <(harness_paths | sed 's/$/ | /') "$dir/ignore-comments.allow" > "$dir/ignore-comments.allow.new"
+    mv "$dir/ignore-comments.allow.new" "$dir/ignore-comments.allow"
+  fi
   for file in README.md README.ja.md; do
     grep -v -E '^- \[AGENTS(\.ja)?\.md\]\(AGENTS(\.ja)?\.md\)' "$dir/$file" > "$dir/$file.new"
     mv "$dir/$file.new" "$dir/$file"
@@ -127,7 +135,7 @@ unlist_harness() {
 
 # What a change may not touch: the files through which a check is weakened
 # instead of satisfied.
-protected='^(\.claude/|(.*/)?(AGENTS(\.ja)?|CLAUDE)\.md$|docs/adr/template/|schema-changes\.allow$|\.trivyignore\.yaml$|\.i18nignore$|\.lintignore$|lefthook\.yml$|\.github/|Makefile$|make/|tools/|evals/|\.golangci\.yml$|\.vale\.ini$|\.textlintrc\.json$|\.squawk.*\.toml$|trivy\.yaml$|redocly\.yaml$|_typos\.toml$)'
+protected='^(\.claude/|(.*/)?(AGENTS(\.ja)?|CLAUDE)\.md$|docs/adr/template/|schema-changes\.allow$|equivalent-mutants\.allow$|ignore-comments\.allow$|\.trivyignore\.yaml$|\.i18nignore$|\.lintignore$|lefthook\.yml$|\.github/|Makefile$|make/|tools/|evals/|\.golangci\.yml$|\.vale\.ini$|\.textlintrc\.json$|\.squawk.*\.toml$|trivy\.yaml$|redocly\.yaml$|_typos\.toml$)'
 ignore_comment='nolint|eslint-disable|@ts-ignore|@ts-expect-error|@ts-nocheck|trivy:ignore|shellcheck disable=|vale off|textlint-disable|markdownlint-disable|squawk-ignore|tflint-ignore|#nosec|prettier-ignore'
 
 # prepare <directory> <arm>: the files of the commit in a repository of their
@@ -185,6 +193,9 @@ restore_harness() {
   while IFS= read -r path; do
     paths+=("$path")
   done <<< "$listed"
+  if git cat-file -e "$ref:ignore-comments.allow" 2> /dev/null; then
+    paths+=(ignore-comments.allow)
+  fi
   git archive --format=tar "$ref" -- "${paths[@]}" | tar -x -C "$dir"
   (
     cd "$dir"

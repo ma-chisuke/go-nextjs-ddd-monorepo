@@ -46,10 +46,11 @@
 - **生成物とロックファイル。** 手で書き換えない。元を直して `make gen` を実行するか、パッケージマネージャーを使う。`schema.sql` を変えたときは、`make gen-db-docs` も実行する（Docker が要る）。
 - **スキーマ。** 変えるのは文脈の `schema.sql` だけであり、マイグレーションのファイルはない。`schema-changes.allow` に自分の判断で行を足さない。危険な SQL 文を通すかどうかは、レビューで決めることである。（TPL-0010）
 - **スキャナーの例外。** `.trivyignore.yaml` に自分の判断で項目を足さない。Trivy の指摘を認めるかどうかは、レビューで決めることである。指摘がなくなるようにコードを変えるか、作業を止めて報告する。（TPL-0024）
+- **無視のコメント。** `//nolint` や `# shellcheck disable=` のような、チェックを止めるコメントを足さない。`ignore-comments.allow` にも、自分の判断で行を足さない。無視のコメントを認めるかどうかは、レビューで決めることである。チェックが通るようにコードを変えるか、作業を止めて報告する。（TPL-0020）
 - **ミューテーションテスト。** `equivalent-mutants.allow` に自分の判断で行を足さない。ミュータントを生き残らせるかどうかは、レビューで決めることである。生き残ったミュータントは、テストで殺すか、コードを単純にして消す。（TPL-0023、[ガイド](docs/guides/mutation-tests.ja.md)）
 - **コミット。** Conventional Commits に従い、1つのコミットの目的は1つにする。フックを飛ばさない。
 - **GitHub Actions。** ワークフローのステップは、チェックアウト、mise の準備、AWS へのサインインのあとは `make` だけを呼ぶ。Action はコミット SHA で固定する。（TPL-0018、TPL-0024）
 - **環境。** `infra/live/stg/` と `infra/live/prd/` の違いは `env.hcl` だけである。ユニットは `infra/live/_units/` で、両方の環境について変える。（TPL-0015）
 - **禁止。** `.env` を読まない。force push をしない。`main` に push しない。prd にインフラを適用しない。
 
-<!-- i18n-source: AGENTS.md sha256:9e6097c3679e44a09b5375ea78821434edd55ca6af121f7ace100614727816ad -->
+<!-- i18n-source: AGENTS.md sha256:4e5cc067dbca77db7317fe5226fe7d2ab82e71482a2e8ff912b9bd16e8b6054d -->
