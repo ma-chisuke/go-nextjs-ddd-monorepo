@@ -1,0 +1,45 @@
+{
+  "task": "reservation-length",
+  "arm": "harness",
+  "model": "sonnet",
+  "commit": "f5a66edbc13e23fd8344cbe6a993f1263f3bf254",
+  "started": "20261122T082733Z",
+  "cli": "2.1.330 (Claude Code)",
+  "seconds": 215,
+  "agent": {
+    "outcome": "success",
+    "turns": 23,
+    "cost_usd": 0.27656430000000004,
+    "output_tokens": 7603,
+    "refused_commands": 5
+  },
+  "changed_lines": 42,
+  "criteria": [
+    {
+      "name": "page-shows-the-lengths",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "unit-test-of-the-logic",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "scenario-in-a-browser",
+      "pass": false,
+      "detail": "no scenario in frontend/e2e/ is new or changed"
+    },
+    {
+      "name": "rules-kept",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "checks-pass",
+      "pass": true,
+      "detail": ""
+    }
+  ],
+  "passed": false
+}
