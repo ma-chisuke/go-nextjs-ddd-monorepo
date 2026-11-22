@@ -1,0 +1,50 @@
+{
+  "task": "room-floor",
+  "arm": "bare",
+  "model": "sonnet",
+  "commit": "f5a66edbc13e23fd8344cbe6a993f1263f3bf254",
+  "started": "20261122T070401Z",
+  "cli": "2.1.330 (Claude Code)",
+  "seconds": 2791,
+  "agent": {
+    "outcome": "error_during_execution",
+    "turns": 2,
+    "cost_usd": 0.9402495000000001,
+    "output_tokens": 22088,
+    "refused_commands": 0
+  },
+  "changed_lines": 272,
+  "criteria": [
+    {
+      "name": "floor-in-the-api",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "real-store-keeps-the-floor",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "schema-change-is-safe",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "property-in-the-document",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "rules-kept",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "checks-pass",
+      "pass": false,
+      "detail": "failed: lint-i18n  check: 48 passed, 1 failed in 282s check: fix the findings above and run the same command again. `make fmt` fixes formatting. make: *** [check] Error 1"
+    }
+  ],
+  "passed": false
+}

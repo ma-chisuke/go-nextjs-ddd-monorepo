@@ -1,0 +1,45 @@
+{
+  "task": "reservation-length",
+  "arm": "bare",
+  "model": "sonnet",
+  "commit": "f5a66edbc13e23fd8344cbe6a993f1263f3bf254",
+  "started": "20261122T083231Z",
+  "cli": "2.1.330 (Claude Code)",
+  "seconds": 111,
+  "agent": {
+    "outcome": "success",
+    "turns": 24,
+    "cost_usd": 0.2333983,
+    "output_tokens": 6352,
+    "refused_commands": 4
+  },
+  "changed_lines": 38,
+  "criteria": [
+    {
+      "name": "page-shows-the-lengths",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "unit-test-of-the-logic",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "scenario-in-a-browser",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "rules-kept",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "checks-pass",
+      "pass": true,
+      "detail": ""
+    }
+  ],
+  "passed": true
+}
