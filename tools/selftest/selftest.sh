@@ -1026,6 +1026,23 @@ EOF
   passes
 }
 
+# A run that was killed left the lock file that `terraform init` had made,
+# with the mark of the run. A lock file without the mark is the module's own.
+case_validate_terraform__lock() {
+  put infra/modules/plain/main.tf '# A module without providers.'
+  put infra/modules/plain/.terraform.lock.hcl '# Left by a run that was killed.'
+  put .cache/terraform/data/infra/modules/plain.made-lock ''
+  passes
+  [ ! -e "$COPY/infra/modules/plain/.terraform.lock.hcl" ] \
+    || report "expected $LAST to remove the lock file that a killed run left, but the file is there"
+  [ ! -e "$COPY/.cache/terraform/data/infra/modules/plain.made-lock" ] \
+    || report "expected $LAST to remove its mark, but the mark is there"
+  put infra/modules/plain/.terraform.lock.hcl '# Kept by the module.'
+  passes
+  [ -e "$COPY/infra/modules/plain/.terraform.lock.hcl" ] \
+    || report "expected $LAST to keep the lock file of the module, but the file is gone"
+}
+
 case_lint_infra_live() {
   run mkdir -p infra/live/stg/cache
   run cp infra/live/stg/network/terragrunt.hcl infra/live/stg/cache/terragrunt.hcl
