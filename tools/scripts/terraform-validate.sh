@@ -11,7 +11,8 @@
 # Run from the root of the repository. Provider plugins and the working data of
 # Terraform live in .cache/terraform. A dependency lock file that
 # `terraform init` creates in a module is removed again: a module that other
-# configurations call does not keep one.
+# configurations call does not keep one. A run that was killed could not
+# remove it, so the next run does.
 set -uo pipefail
 
 root=$(pwd)
@@ -24,6 +25,13 @@ mkdir -p "$TF_PLUGIN_CACHE_DIR"
 status=0
 for dir in "$@"; do
   lock="$dir/.terraform.lock.hcl"
+  # While this script holds a lock file that it will remove, a mark says so.
+  # A run that was killed in between left both, and with the mark the next
+  # run tells its lock file from one that the module keeps.
+  made_lock="$cache/data/$dir.made-lock"
+  if [ -f "$made_lock" ]; then
+    rm -f "$lock"
+  fi
   had_lock=false
   # A module has no lock file, and without one Terraform does not trust the
   # provider cache: it downloads the provider again and writes it over the
@@ -36,6 +44,8 @@ for dir in "$@"; do
     had_lock=true
   else
     export TF_PLUGIN_CACHE_MAY_BREAK_DEPENDENCY_LOCK_FILE=1
+    mkdir -p "$cache/data/$(dirname "$dir")"
+    : > "$made_lock"
   fi
   export TF_DATA_DIR="$cache/data/$dir"
   # One init at a time: the smoke test runs one too (terraform-init.sh).
@@ -51,7 +61,7 @@ for dir in "$@"; do
     status=1
   fi
   if [ "$had_lock" = false ]; then
-    rm -f "$lock"
+    rm -f "$lock" "$made_lock"
   fi
 done
 exit "$status"
