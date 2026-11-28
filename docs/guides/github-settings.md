@@ -131,7 +131,8 @@ Install the [Renovate GitHub App](https://github.com/apps/renovate) on the repos
 Renovate reads `renovate.json` and opens one pull request per update, or per group of updates, every Monday:
 
 - It waits three days after a release, as pnpm and uv do.
-- Patch, digest, and pin updates merge by themselves once `check` passes. People review minor and major updates.
+- Patch, digest, and pin updates merge by themselves once `check` passes. People review minor updates.
+- A major update waits on the Dependency Dashboard. Tick its checkbox there to get its pull request.
 - Security fixes arrive at once, outside the schedule.
 - The lockfiles are refreshed on the first day of each month.
 - The Dependency Dashboard issue lists every pending update.
@@ -143,6 +144,10 @@ Check out the branch of that pull request, run `make tools-lock`, and push the r
 Renovate also updates the Terraform providers of `infra/live/providers.hcl`, with those of `infra/local/`, in one pull request (the group `Terraform providers`).
 It does not write `infra/live/providers.lock.hcl`, so every Terragrunt run of that branch fails, `validate-live` in CI among them.
 Check out the branch, run `make infra-lock`, and push the result.
+
+When Renovate renames an option, the Dependency Dashboard offers a pull request that migrates `renovate.json`.
+That pull request fails `lint-schema` while the schema that check-jsonschema bundles does not know the new form.
+Renovate reads the old form in the meantime, so close the pull request, and migrate in the pull request that updates check-jsonschema.
 
 pnpm and uv refuse a release younger than three days, which includes a security fix released today.
 To take such a fix at once, exclude the package from that rule in `pnpm-workspace.yaml` (`minimumReleaseAgeExclude`) or in `pyproject.toml` (`exclude-newer-package`), and remove the exception once the release is three days old.

@@ -132,7 +132,8 @@ gh variable set AWS_DEPLOY_ROLE_ARN_STG --body '<ARN of github-deploy in stg>'
 Renovate は `renovate.json` を読み、毎週月曜日に、更新ごと、または更新のグループごとに1つのプルリクエストを開く。
 
 - リリースから3日待つ。pnpm と uv も同じだけ待つ。
-- パッチ、ダイジェスト、固定の更新は、`check` が通ればそのままマージされる。マイナーとメジャーの更新は人がレビューする。
+- パッチ、ダイジェスト、固定の更新は、`check` が通ればそのままマージされる。マイナーの更新は人がレビューする。
+- メジャーの更新は、Dependency Dashboard で待つ。プルリクエストにするには、そこでチェックボックスを入れる。
 - セキュリティの修正は、予定を待たずにすぐ届く。
 - ロックファイルは毎月1日に更新する。
 - Dependency Dashboard の issue に、保留中の更新がすべて並ぶ。
@@ -145,8 +146,12 @@ Renovate は、`infra/live/providers.hcl` の Terraform の provider も更新�
 Renovate は `infra/live/providers.lock.hcl` を書かない。そのため、そのブランチでは Terragrunt の実行がどれも失敗し、CI の `validate-live` も失敗する。
 そのブランチをチェックアウトし、`make infra-lock` を実行して、結果をプッシュする。
 
+Renovate がオプションの名前や形を変えると、Dependency Dashboard は `renovate.json` を移行するプルリクエストを提案する。
+check-jsonschema に同梱されたスキーマが新しい形を知らないあいだ、そのプルリクエストは `lint-schema` で失敗する。
+その間も Renovate は古い形を読めるので、プルリクエストは閉じる。移行は、check-jsonschema を更新するプルリクエストで行う。
+
 pnpm と uv は、リリースから3日たっていないバージョンを拒む。今日リリースされたセキュリティの修正も例外ではない。
 そうした修正をすぐ取り込むには、そのパッケージを `pnpm-workspace.yaml`（`minimumReleaseAgeExclude`）か `pyproject.toml`（`exclude-newer-package`）で決まりから外す。
 リリースから3日たったら、その例外を消す。
 
-<!-- i18n-source: github-settings.md sha256:96d5c29c7676ddb2d7b5d5bee1544dd931cdd6b66ed667d9c76d59e1706a1afc -->
+<!-- i18n-source: github-settings.md sha256:c082173bfa4b431bedf23686c80e589e0aefd33cb8dc328a575b85e0f712fb6b -->

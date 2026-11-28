@@ -42,7 +42,7 @@ date: 2026-11-19
 - リリースから3日待ってから、そのリリースを提案する。
 - 関連する更新は1つのプルリクエストにまとめる。
 - プルリクエストは週1回の予定に沿って開く。セキュリティの修正は、この予定を待たない。
-- patch・ダイジェスト・固定の更新は、必須チェックが通れば自分でマージする。minor と major の更新は人を待つ。
+- patch・ダイジェスト・固定の更新は、必須チェックが通れば自分でマージする。minor の更新は人を待つ。major の更新は、人が Dependency Dashboard でそのチェックボックスを入れるまで、プルリクエストにならない。major の更新は、次の PostgreSQL のように、上げるかどうかを決めるものである。何か月も開いたままのプルリクエストがあると、見るべきプルリクエストが埋もれる。
 - 更新は固定やロックファイルを変えるので、そのプルリクエストのチェックは、変更のあったファイルだけでなく、すべてのファイルを対象にする（TPL-0023）。道具の新しいバージョンは、更新がマージされる前にリポジトリ全体で動く。
 - Dependabot は警告のためだけに有効にしておき、プルリクエストは開かせない。
 - 設定は `renovate.json` に書く。
@@ -57,6 +57,7 @@ date: 2026-11-19
 - 悪い点：Renovate のアプリは、ブランチをプッシュしてプルリクエストを開くために、リポジトリへの書き込みの権限を必要とする。信頼する相手が1つ増える。
 - 悪い点：設定を誤ると、ある種類の固定の更新が知らないうちに止まることがある。スキーマではそれを見分けられない。
 - 悪い点：Renovate のどのマネージャーも読まない固定は、更新されない。`infra/local/aws-emulator/Dockerfile` のビルド引数にある、AWS Emulator のバージョンとそのパッケージのチェックサムがそれにあたり、人が手で更新する（TPL-0017）。`frontend/Dockerfile` の `ADD` にある、pnpm のバージョンとそのパッケージのチェックサムもそうである。`renovate.json` のグループ `pnpm` は `mise.toml`・`package.json`・`pnpm-lock.yaml` を動かし、人が同じプルリクエストで Dockerfile を変える（TPL-0024）。`db/Dockerfile` にある、pgschema のバージョンとそのバイナリのチェックサムが3つ目である。Renovate が `mise.toml` の pgschema を動かしたら、人が Dockerfile を変える。両者がそろうまで、`make test-db-image` は失敗する。
+- 悪い点：check-jsonschema に同梱されたスキーマは、アプリが動かす Renovate より古い。Renovate がオプションの名前や形を変えると、設定を移行するプルリクエストは `lint-schema` で失敗する。check-jsonschema のリリースが新しいスキーマを同梱するまで、この状態が続く。2026年11月28日から残っているものが1つある。`dependencyDashboard` は `true` のままで、Renovate はいまこれをオブジェクトとして書く。
 - 悪い点：provider の更新には、人が `make infra-lock` を実行する必要がある。そのため、この更新がひとりでにマージされることはない。
 
 ### 確認の方法
@@ -94,4 +95,4 @@ date: 2026-11-19
 - [Renovate のドキュメント](https://docs.renovatebot.com/)
 - 固定については TPL-0022 に、3日の待ちについては TPL-0024 に書いてある。
 
-<!-- i18n-source: TPL-0025-dependency-updates-with-renovate.md sha256:0ed6a17c10921c6078d450aa04fd07535f26040bce3f7eb50cde139c6336da1a -->
+<!-- i18n-source: TPL-0025-dependency-updates-with-renovate.md sha256:c45e00db1190ec858f6102ffbe9c1dfaeb57438c516b5e01982fdac1fadec98a -->

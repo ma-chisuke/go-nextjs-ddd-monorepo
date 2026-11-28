@@ -46,5 +46,5 @@ d366946983cbfc41529a5632f0d349a6f61fe3d59c6986cc1bed13319c765fe5  TPL-0022-pin-t
 8ef7fd9d6750199cf3a4c556f8f736b3d6c3c4e40c41096c0ea2c7339068cc2a  TPL-0023-one-tool-per-concern.md
 29ecadc1660fbcd428dd0c5d553466f6e9cf6f7b4f2bbbaf6c973f8cd50b7179  TPL-0024-supply-chain-defenses.ja.md
 3f671c7bb7e0b57eaab17b074506d2e7e06d7cb6142d8e6b73478c4cab542403  TPL-0024-supply-chain-defenses.md
-ee11350f6a136ecfb90a644919646e740292a860b20335e524f3e9f30a5e7278  TPL-0025-dependency-updates-with-renovate.ja.md
-0ed6a17c10921c6078d450aa04fd07535f26040bce3f7eb50cde139c6336da1a  TPL-0025-dependency-updates-with-renovate.md
+24af64a322e368aab7b2c3cea8a048053f0c6eb0433aea2b41d35a1b93e44451  TPL-0025-dependency-updates-with-renovate.ja.md
+c45e00db1190ec858f6102ffbe9c1dfaeb57438c516b5e01982fdac1fadec98a  TPL-0025-dependency-updates-with-renovate.md

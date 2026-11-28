@@ -42,7 +42,7 @@ The rules are as follows.
 - It waits three days after a release before it proposes the release.
 - It groups related updates into one pull request.
 - It opens pull requests on a weekly schedule. Security fixes do not wait for the schedule.
-- It merges patch, digest, and pin updates on its own when the required check passes. Minor and major updates wait for a person.
+- It merges patch, digest, and pin updates on its own when the required check passes. A minor update waits for a person. A major update gets no pull request until a person ticks its checkbox on the Dependency Dashboard: it is a decision, such as the next PostgreSQL, and a pull request that stays open for months hides the ones that need a look.
 - An update changes a pin or a lockfile, so the checks of its pull request cover every file, not only the changed ones (TPL-0023). A new version of a tool runs on the whole repository before the update merges.
 - Dependabot stays on for alerts only, and opens no pull requests.
 - The configuration is `renovate.json`.
@@ -57,6 +57,7 @@ The rules are as follows.
 - Bad, because the Renovate app needs write access to the repository to push branches and open pull requests, which makes it one more party to trust.
 - Bad, because a mistake in the configuration can quietly stop the updates for one kind of pin, and the schema cannot tell.
 - Bad, because a pin that no manager of Renovate reads is not updated. The version of AWS Emulator and the checksums of its package, in build arguments of `infra/local/aws-emulator/Dockerfile`, are such a pin: a person updates them by hand (TPL-0017). The version of pnpm and the checksum of its package, in the `ADD` of `frontend/Dockerfile`, are another: the group `pnpm` of `renovate.json` moves `mise.toml`, `package.json`, and `pnpm-lock.yaml`, and a person changes the Dockerfile in the same pull request (TPL-0024). The version of pgschema and the checksums of its binaries, in `db/Dockerfile`, are a third: when Renovate moves pgschema in `mise.toml`, a person changes the Dockerfile, and `make test-db-image` fails until the two agree.
+- Bad, because the schema that check-jsonschema bundles is older than the Renovate that the app runs. When Renovate renames an option, the pull request in which it migrates the configuration fails `lint-schema` until a release of check-jsonschema bundles the new schema. Open since November 28, 2026: `dependencyDashboard` is `true`, and Renovate now writes it as an object.
 - Bad, because an update of the providers needs a person to run `make infra-lock`, so it never merges on its own.
 
 ### Confirmation
