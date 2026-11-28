@@ -375,7 +375,8 @@ failures() {
 # --- A run of the agent ----------------------------------------------------
 
 # run_agent <directory> <task> <output>: Claude Code on the task, without a
-# terminal, stopped after $timeout seconds.
+# terminal, stopped after $timeout seconds. The output is the stream of the
+# run, one JSON object per line. A run that is stopped leaves <output>.stopped.
 run_agent() {
   local dir="$1" task="$2" out="$3" pid waited=0 tool
   local -a allowed=()
@@ -391,7 +392,7 @@ run_agent() {
   (
     cd "$dir"
     CHECK_BUDGET=0 CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 "$claude" -p "Do the task that follows, in this repository." \
-      --output-format json --model "$model" --max-turns "$max_turns" \
+      --output-format stream-json --verbose --model "$model" --max-turns "$max_turns" \
       --setting-sources project,local --permission-mode acceptEdits \
       --no-session-persistence --allowedTools "${allowed[@]}" \
       < "$repo/$tasks/$task/task.txt" > "$out" 2> "$out.err"
@@ -402,6 +403,7 @@ run_agent() {
     waited=$((waited + 5))
     if [ "$waited" -ge "$timeout" ]; then
       echo "evals: the agent ran for $timeout seconds; stopping it" >&2
+      : > "$out.stopped"
       pkill -INT -P "$pid" 2> /dev/null || true
       sleep 15
       pkill -TERM -P "$pid" 2> /dev/null || true
@@ -410,8 +412,32 @@ run_agent() {
   wait "$pid" || true
 }
 
+# results_of <stream>: the results of a run, one JSON object per line. Claude
+# Code ends a stretch of work with a result, and a run has one stretch more
+# for each time that a command in the background wakes the agent. A line that
+# a stopped run did not finish is left out.
+results_of() {
+  jq --raw-input --compact-output 'fromjson? | select(type == "object" and .type == "result")' "$1"
+}
+
+# summary_of <results> <stopped>: what the record says about the agent. The
+# turns and the refused commands of a result are those of its stretch, so the
+# record adds them up. The cost and the usage of each model are those of the
+# whole run in every result, so the record takes them from the last one.
+summary_of() {
+  jq --slurp --compact-output --arg stopped "$2" '
+    (last // {}) as $a
+    | {
+        outcome: (if $stopped == "true" then "stopped at the limit of time" else ($a.subtype // "no result") end),
+        turns: (if length == 0 then null else (map(.num_turns // 0) | add) end),
+        cost_usd: ($a.total_cost_usd // null),
+        output_tokens: ([$a.modelUsage[]?.outputTokens] | add),
+        refused_commands: (if length == 0 then null else (map((.permission_denials // []) | length) | add) end)
+      }' "$1"
+}
+
 run() {
-  local task="$1" arm="$2" id dir out record started seconds
+  local task="$1" arm="$2" id dir stream out record started seconds stopped=false
   known "$task"
   case "$arm" in
     harness | bare) ;;
@@ -421,6 +447,7 @@ run() {
 
   id="$(date -u +%Y%m%dT%H%M%SZ)-$task-$arm"
   dir="$work/$id"
+  stream="$work/$id.agent.jsonl"
   out="$work/$id.agent.json"
   criteria="$work/$id.criteria"
   mkdir -p "$work" "$results"
@@ -431,16 +458,20 @@ run() {
 
   echo "evals: $task, $arm: the agent works (model $model, at most $max_turns turns and $timeout seconds)"
   started=$(date +%s)
-  run_agent "$dir" "$task" "$out"
+  run_agent "$dir" "$task" "$stream"
   seconds=$(($(date +%s) - started))
+  results_of "$stream" > "$out"
+  if [ -e "$stream.stopped" ]; then
+    stopped=true
+  fi
 
   # A run that something outside the run ended measures nothing about the
   # agent: the usage limit of the account, or an error of the API. Claude Code
   # then reports an error that is none of the limits of a run (the turns), and
   # no record is written. A run that the watchdog stopped has no result, and
   # is recorded as it is.
-  if jq -e '.terminal_reason == "api_error" or (.is_error == true and .subtype == "success")' "$out" > /dev/null 2>&1; then
-    fail "the agent was stopped from outside, and no record is written: $(jq -r '.result | tostring | .[0:200]' "$out")"
+  if tail -n 1 "$out" | jq -e '.terminal_reason == "api_error" or (.is_error == true and .subtype == "success")' > /dev/null 2>&1; then
+    fail "the agent was stopped from outside, and no record is written: $(tail -n 1 "$out" | jq -r '.result | tostring | .[0:200]')"
   fi
 
   (cd "$dir" && git add --all > /dev/null 2>&1 && git diff --cached base) > "$work/$id.patch"
@@ -456,33 +487,22 @@ run() {
     --arg commit "$(git rev-parse "$ref")" --arg started "${id%%-*}" \
     --arg cli "$("$claude" --version 2> /dev/null | head -n 1)" \
     --argjson seconds "$seconds" \
-    --slurpfile agent <(jq -c . "$out" 2> /dev/null || echo null) \
+    --argjson agent "$(summary_of "$out" "$stopped")" \
     --rawfile criteria "$criteria" \
     --rawfile patch "$work/$id.patch" '
-    # Claude Code counts the turns and the usage from zero again each time a
-    # command in the background wakes the agent, so `num_turns` and `usage`
-    # are those of the last stretch of a run. The cost and the usage of each
-    # model are those of the whole run.
-    ($agent[0] // {}) as $a
-    | ($criteria | split("\n") | map(select(length > 0) | split("\t")
+    ($criteria | split("\n") | map(select(length > 0) | split("\t")
         | {name: .[1], pass: (.[0] == "pass"), detail: (.[2] // "")})) as $c
     | {
         task: $task, arm: $arm, model: $model, commit: $commit, started: $started, cli: $cli,
         seconds: $seconds,
-        agent: {
-          outcome: ($a.subtype // "no result"),
-          turns: ($a.num_turns // null),
-          cost_usd: ($a.total_cost_usd // null),
-          output_tokens: ([$a.modelUsage[]?.outputTokens] | add),
-          refused_commands: (($a.permission_denials // []) | length)
-        },
+        agent: $agent,
         changed_lines: ($patch | split("\n") | map(select(test("^[+-][^+-]"))) | length),
         criteria: $c,
         passed: ($c | all(.pass))
       }' > "$record"
   jq -r '"evals: \(.task), \(.arm): \(if .passed then "passed" else "failed" end) in \(.seconds) s, \(.agent.output_tokens // "?") output tokens",
     (.criteria[] | "  \(if .pass then "pass" else "FAIL" end)  \(.name)  \(.detail)")' "$record"
-  echo "evals: the record is $record; the change of the agent is $work/$id.patch"
+  echo "evals: the record is $record; the change of the agent is $work/$id.patch, and its results are $out"
 
   if [ "${EVAL_KEEP:-}" != 1 ]; then
     rm -rf "${dir:?}"
@@ -514,6 +534,26 @@ verify_bare() {
   return "$status"
 }
 
+# The summary of a run adds up its stretches: proven on a stream of two
+# stretches, with a line that is no result and a line that was cut off.
+verify_summary() {
+  local stream="$work/verify-summary-$$.jsonl" got want
+  {
+    echo '{"type":"system","subtype":"init"}'
+    echo '{"type":"result","subtype":"success","num_turns":3,"permission_denials":[{"tool_name":"Bash"}],"total_cost_usd":0.1,"modelUsage":{"a":{"outputTokens":10},"b":{"outputTokens":200}}}'
+    echo '{"type":"result","subtype":"success","num_turns":2,"permission_denials":[],"total_cost_usd":0.2,"modelUsage":{"a":{"outputTokens":10},"b":{"outputTokens":350}}}'
+    printf '%s' '{"type":"result","subtype":"succ'
+  } > "$stream"
+  results_of "$stream" > "$stream.results"
+  got=$(summary_of "$stream.results" false)
+  want='{"outcome":"success","turns":5,"cost_usd":0.2,"output_tokens":360,"refused_commands":1}'
+  rm -f "$stream" "$stream.results"
+  if [ "$got" != "$want" ]; then
+    echo "evals/run.sh:1: [evals] the summary of a run of two stretches is $got, and must be $want"
+    return 1
+  fi
+}
+
 verify() {
   local task dir status=0 selected
   selected="$*"
@@ -522,6 +562,7 @@ verify() {
   if [ -z "$selected" ]; then
     selected=$(list)
     verify_bare || status=1
+    verify_summary || status=1
   fi
   for task in $selected; do
     known "$task"
@@ -586,7 +627,9 @@ report() {
     | "| \(.[0].task) | \(.[0].arm) | \(.[0].model) | \(length) | \(map(select(.passed)) | length) | "
       + "\(map(.criteria | map(select(.pass)) | length) | add) of \(map(.criteria | length) | add) | "
       + "\(map(.agent.output_tokens // empty) | median // "?") | \(map(.seconds / 60 | floor) | median) | "
-      + "\(map(.agent.refused_commands) | add) |"' "${files[@]}"
+      + "\(map(.agent.refused_commands // empty) | add // "?")"
+      + (map(select(.agent.refused_commands == null)) | length
+          | if . > 0 then ", and \(.) not counted |" else " |" end)' "${files[@]}"
 }
 
 case "${1:-}" in

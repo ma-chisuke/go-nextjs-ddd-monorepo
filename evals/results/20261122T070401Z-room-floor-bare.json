@@ -8,10 +8,10 @@
   "seconds": 2791,
   "agent": {
     "outcome": "error_during_execution",
-    "turns": 2,
+    "turns": null,
     "cost_usd": 0.9402495000000001,
     "output_tokens": 22088,
-    "refused_commands": 0
+    "refused_commands": null
   },
   "changed_lines": 272,
   "criteria": [
