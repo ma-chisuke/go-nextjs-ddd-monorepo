@@ -131,6 +131,7 @@ Install the [Renovate GitHub App](https://github.com/apps/renovate) on the repos
 Renovate reads `renovate.json` and opens one pull request per update, or per group of updates, every Monday:
 
 - It waits three days after a release, as pnpm and uv do.
+- A new digest of a base image under the same tag comes at once, on any day: `scan-images` fails until the pin moves.
 - Patch, digest, and pin updates merge by themselves once `check` passes. People review minor updates.
 - A major update waits on the Dependency Dashboard. Tick its checkbox there to get its pull request.
 - Security fixes arrive at once, outside the schedule.
