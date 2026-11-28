@@ -237,6 +237,6 @@ AWS Emulator のバージョンを更新する Renovate のルールはまだな
 
 1. Dockerfile の先頭のコメントが示す一覧で、新しいバージョンを探す。
 2. `EMULATOR_VERSION` と、2つのチェックサム `EMULATOR_SHA256_ARM64` と `EMULATOR_SHA256_AMD64` を変える。各パッケージ（`aarch64` 用と `x86_64` 用）のチェックサムは、`curl --location <パッケージの URL> | shasum -a 256` で得る。パッケージの URL は、Dockerfile の `RUN` 命令にある。
-3. `make up` でイメージをビルドしてエミュレーターのコンテナを作り直し、`CHECK_SCOPE=changed make check-all` を実行する。新しいバージョンがテンプレートの頼る動きを続けているかは、次のものでわかる。`platform/awsevents` と `notification/internal/adapter/ses` の結合テスト、`make smoke`、`make rehearse-infra` である。パッケージがチェックサムや AWS の署名に合わなければ、ビルドが失敗する。
+3. `make up` でイメージをビルドしてエミュレーターのコンテナを作り直し、`make test-integration smoke rehearse-infra` を実行する。新しいバージョンがテンプレートの頼る動きを続けているかは、次のものでわかる。`platform/awsevents` と `notification/internal/adapter/ses` の結合テスト、スモークテスト、リハーサルである。パッケージがチェックサムや AWS の署名に合わなければ、ビルドが失敗する。
 
-<!-- i18n-source: run-locally.md sha256:7e9bb8d208550f13ed15740003656ba4fa46f74268b32ebf86cbf1ffea2438a2 -->
+<!-- i18n-source: run-locally.md sha256:874be7bafcaf3e497d99e5b09ceb910505251e200e6ae449c2fed1e977d14133 -->

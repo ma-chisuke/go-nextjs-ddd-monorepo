@@ -100,6 +100,6 @@
 3. ハンドラーとコマンド。`module.go` の `NewHandler` は `event.Handler` を返し、`cmd/<context>` はそれを使って `platform/awsevents` の受け取る側を動かす（[文脈を足す](add-a-context.ja.md)の手順3）。ハンドラーは冪等にする。処理した各イベントの id を、その効果と同じトランザクションの中で、一意制約のもとに記録する。処理しない種類のイベントには nil を返す。
 4. `compose.yaml` のサービス。形は `notification` にならい、`EVENTS_QUEUE_URL` を `https://sqs.us-east-1.amazonaws.com/000000000000/<context>-events` にする。エミュレーターはキューに AWS と同じ形の名前を付け、その URL に自分のエンドポイントで答える。
 
-確認：`make up` がワーカーを起動し、`make check-all` がその結合テストを実行する。`make smoke` が購読まで確かめるのは、Notification のメールを待つように、ワーカーの結果を待つときだけである。
+確認：`make up` がワーカーを起動し、`make test-integration` がその結合テストを実行する。`make smoke` が購読まで確かめるのは、Notification のメールを待つように、ワーカーの結果を待つときだけである。
 
-<!-- i18n-source: event-changes.md sha256:e32847045d38e47803cc0665ad373db0ee8beaa64fb70e73594dd1c621cfc88c -->
+<!-- i18n-source: event-changes.md sha256:805ec2579bc2166998b635f118836099ec1ece7d700b933f0b13b7d66d74190e -->

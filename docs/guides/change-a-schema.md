@@ -42,14 +42,15 @@ There are no migration files: pgschema compares a database with the file and pla
 
    `make gen` does not write them, because it needs no database.
 
-   Check: `lint-db-docs` in `make check-all` fails on a table or a column without a comment, on a foreign key without an index, and on documents that differ from what tbls writes.
+   Check: `make lint-db-docs` (step 5) fails on a table or a column without a comment, on a foreign key without an index, and on documents that differ from what tbls writes.
 
 5. Run the checks that need PostgreSQL:
 
    ```sh
-   CHECK_SCOPE=changed make check-all
+   make lint-sql-plan lint-sqlc lint-db-docs test-integration
    ```
 
+   They need Docker and take about a minute. CI runs them with every other slow check on the pull request (`make check-all`), which takes ten minutes or more.
    `lint-sql-plan` lints the DDL of the change, as the next section describes. `lint-sqlc` prepares every query against the new schema, and `test-integration` runs the integration tests, which also try the privileges of the runtime role.
    The plan stays in `.cache/sql-plan/<context>.sql`. CI does not show it in the pull request yet, so a reviewer runs the check and reads it there.
 

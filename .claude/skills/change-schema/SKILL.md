@@ -15,4 +15,4 @@ Follow `docs/guides/change-a-schema.md`. It has the steps, what `lint-sql-plan` 
    - every new table has a `GRANT SELECT, INSERT, UPDATE, DELETE` to `<context>_runtime`, and a comment on itself and on each column;
    - no statement names a schema;
    - a statement that `lint-sql-plan` refuses is split into safe steps, as the guide describes. Do not write `schema-changes.allow` on your own: an allowance is a decision of the person who reviews, so stop and ask, with the finding and the reason.
-4. Run `make fmt` and `CHECK_SCOPE=changed make check-all`, which needs Docker and runs `lint-sql-plan`, `lint-sqlc`, `lint-db-docs`, and the integration tests. Finish with `make check`.
+4. Run `make fmt` and `make lint-sql-plan lint-sqlc lint-db-docs test-integration`, which need Docker and take about a minute. Finish with `make check`. Do not wait for `make check-all`: it takes ten minutes or more, and CI runs it.

@@ -13,7 +13,7 @@ The reason for a rule is in the decision record that the rule cites ([docs/adr/]
 | `make fmt` | Format files. |
 | `make gen` | Regenerate generated files. |
 | `make check` | Fast checks. A change is not finished until this passes. |
-| `make check-all` | Fast and slow checks. CI runs this. |
+| `make check-all` | Fast and slow checks, ten minutes or more. CI runs this; while you work, run the slow checks that the guide of your change names. |
 
 - Narrow a run while you work: `CHECK_SCOPE=changed make check` or `CHECK_FILES=<path> make check`. Run the full `make check` at the end.
 - A failed check prints `file:line: [rule] message`. Fix the cause. Do not turn the rule off, add an ignore comment, or exclude the file.

@@ -64,8 +64,8 @@ Then decide the kind of subdomain, and whether the context answers requests or o
    - The roles of step 4 are what the task that prepares the database creates in AWS, as the master user of Aurora, which is not a superuser. The block of Facility in `db/bootstrap.sql` makes that user a member of the owner role; keep that part when you copy it.
 
    ```sh
-   make check                           # lint-infra-live
-   CHECK_SCOPE=changed make check-all   # validate-live, rehearse-infra, test-db-image
+   make check                                        # lint-infra-live
+   make validate-live rehearse-infra test-db-image   # Docker, about five minutes
    ```
 
    Check: `lint-infra-live` fails until the command in `backend/cmd/<context>/` is in `contexts`, has `_units/contexts/<context>.hcl`, and has a unit in every environment. [Deploy to AWS](deploy.md#change-an-environment) describes the rest of the tree.
@@ -85,6 +85,8 @@ Then decide the kind of subdomain, and whether the context answers requests or o
    make check
    CHECK_SCOPE=changed make check-all
    ```
+
+   `make check-all` runs every slow check, and takes ten minutes or more. Where one command has a limit of time, as it has for an agent, run it in parts: `make lint-sqlc lint-db-docs test-integration test-api-fuzz`, then `make validate-live rehearse-infra test-db-image`, then `make smoke`.
 
 ## What the checks tell you is missing
 

@@ -17,4 +17,4 @@ Follow `docs/guides/event-changes.md`. It has the rules of `lint-events` and `li
 6. Verify, before you finish:
    - the READMEs of the publisher and of each consumer in `docs/contexts/`, and their translations, list the event;
    - the subscription in `infra/local/main.tf` names the `type` of the event, if a consumer handles it.
-7. Run `make fmt`, then `make check`. Run `make test-integration` too: it needs Docker, takes about a minute, and runs the tests that compare whole events, such as those of the relay. `CHECK_SCOPE=changed make check-all` adds `make smoke` and takes many minutes; start it last.
+7. Run `make fmt`, then `make check`. Run `make test-integration` too: it needs Docker, takes about a minute, and runs the tests that compare whole events, such as those of the relay. `make smoke` sends one booking through the running system. Do not wait for `make check-all`: it takes ten minutes or more, and CI runs it.
