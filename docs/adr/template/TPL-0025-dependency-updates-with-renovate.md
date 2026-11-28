@@ -42,6 +42,7 @@ The rules are as follows.
 - It waits three days after a release before it proposes the release.
 - It groups related updates into one pull request.
 - It opens pull requests on a weekly schedule. Security fixes do not wait for the schedule.
+- A new digest of a base image under the same tag waits for neither the schedule nor the three days. It is a rebuild of the image with fixed packages, and `scan-images` fails every change to a source of an image from the day a package has a fix until the pin moves: in November 2026 that stopped CI twice within a week, and the second time the rebuilt image had been out for three days. The update merges only when the checks pass, the scan, the smoke test, and the scenarios in a browser among them. The wait of three days is given up for these images alone, which come from the publishers that TPL-0024 names.
 - It merges patch, digest, and pin updates on its own when the required check passes. A minor update waits for a person. A major update gets no pull request until a person ticks its checkbox on the Dependency Dashboard: it is a decision, such as the next PostgreSQL, and a pull request that stays open for months hides the ones that need a look.
 - An update changes a pin or a lockfile, so the checks of its pull request cover every file, not only the changed ones (TPL-0023). A new version of a tool runs on the whole repository before the update merges.
 - Dependabot stays on for alerts only, and opens no pull requests.

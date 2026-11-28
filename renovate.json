@@ -3,6 +3,7 @@
   "description": [
     "Dependency updates for every pinned version in the repository; see docs/guides/github-settings.md.",
     "Weekly, three days after a release, with Conventional Commit messages (build(deps): ...).",
+    "A rebuild of a base image under the same tag comes at once, without the schedule and the wait.",
     "Patch, digest, and pin updates merge themselves when the required check passes; people review minor updates.",
     "A major update gets a pull request only after a person ticks its checkbox on the Dependency Dashboard.",
     "Security fixes skip the schedule."
@@ -94,9 +95,10 @@
       "groupName": "Go"
     },
     {
-      "description": "The Go image of backend/Dockerfile moves with the Go version: the build fails when the two differ.",
+      "description": "The Go image of backend/Dockerfile moves with the Go version: the build fails when the two differ. A new digest under the same tag changes no version, and is not part of the group.",
       "matchDatasources": ["docker"],
       "matchPackageNames": ["docker.io/library/golang", "golang"],
+      "matchUpdateTypes": ["major", "minor", "patch"],
       "groupName": "Go"
     },
     {
@@ -119,6 +121,13 @@
       "description": "lefthook in mise.toml and the schema URL in make/repo.mk name the same version.",
       "matchDepNames": ["lefthook"],
       "groupName": "lefthook"
+    },
+    {
+      "description": "A new digest under the same tag is a rebuild of a base image with fixed packages. scan-images fails from the day a package of the image has a fix, so the update comes at once, outside the schedule and without the wait; it merges only when the checks pass.",
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["digest"],
+      "schedule": ["at any time"],
+      "minimumReleaseAge": null
     }
   ]
 }

@@ -119,7 +119,7 @@ Two parts of this decision differ from the first plan, on purpose.
 - Good, because a moved tag, a replaced release, or a tampered download fails at install time instead of running.
 - Good, because a malicious npm or Python release that is found and pulled within three days never reaches this repository.
 - Good, because a compromised step in CI holds only the permissions that its job asked for, and only for as long as the job runs, which its timeout limits.
-- Bad, because updates, security fixes included, arrive three days late unless someone overrides the wait.
+- Bad, because updates, security fixes included, arrive three days late unless someone overrides the wait. A rebuild of a base image under the same tag is the exception: Renovate proposes its digest at once (TPL-0025), so a rebuild that someone tampered with is not held back for three days either.
 - Bad, because adding a tool has friction: an entry in `mise.toml`, a lock for four platforms, and sometimes an entry in `allowBuilds`.
 - Bad, because some tools publish no provenance. For them, `mise.lock` records only a checksum (gitleaks, shellcheck, and Vale among them). A checksum shows that every machine gets the file that was locked, not that the file is what its author built.
 - Bad, because the repository sets no wait for Go modules or for the tools in `mise.toml`. A version that a person adds by hand, with `go get` or in `mise.toml`, arrives at once, and only the updates that Renovate proposes wait (TPL-0025).
