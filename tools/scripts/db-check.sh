@@ -252,7 +252,7 @@ vet() {
     # of the name of the query.
     while IFS= read -r line; do
       if [[ $line =~ $finding ]]; then
-        where=$(grep -rnE --include='*.sql' -- "^-- name: ${BASH_REMATCH[2]}( |$)" "$dir" | head -n 1 | cut -d: -f1,2)
+        where=$(grep -rnE --include='*.sql' -- "^-- name: ${BASH_REMATCH[2]}( |$)" "$dir" | sed -n 1p | cut -d: -f1,2)
         echo "${where:-$config:1}: [${BASH_REMATCH[3]}] ${BASH_REMATCH[2]}: ${BASH_REMATCH[4]}. Fix: $(vet_fix "${BASH_REMATCH[3]}"). See TPL-0011."
       else
         echo "$line"

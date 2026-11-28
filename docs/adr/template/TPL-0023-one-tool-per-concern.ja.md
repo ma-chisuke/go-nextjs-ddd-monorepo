@@ -143,7 +143,7 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 
 道具の動かし方の決まりは次のとおりである。
 
-- `make check` の時間の上限は60秒であり、`tools/scripts/check.sh` がこれを守らせる。
+- `make check` の時間の上限は60秒であり、`tools/scripts/check.sh` がこれを守らせる。CI では90秒まで許す（`.github/workflows/ci.yml` の `CHECK_BUDGET`）。60秒は開発者のマシンのための値であり、そこでは push の前のフックが時間を測る。
 - `make setup` のあとは、`make check` はネットワークを使わない。`make setup` が Go のモジュールをダウンロードして Go のビルドのキャッシュを満たし、tflint のプラグインを入れる。lychee と zizmor はオフラインで動き、pinact は GitHub の API を使わずに固定を検査し、check-jsonschema は同梱のスキーマを使い、Trivy はバイナリに組み込まれたチェックを使う。
 - `make check` はチェックを並列に動かし、チェックごとに1行を出し、指摘は失敗したチェックの分だけを出す。`VERBOSE=1` を付けると、すべてのチェックの出力が出る。
 - 遅いチェックや、ネットワークが要るチェックは `make check-all` に回す。`make check-all` は CI が実行する。
@@ -159,13 +159,13 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 - 悪い点：1つの関心事に道具を1つしか選ばないので、選ばなかった道具にしかないルールは失われる。
 - 悪い点：道具ごとに設定ファイルがあり、yamllint と Prettier の配置のルールのような、道具の間の取り決めは手で保つ必要がある。
 - 悪い点：時間の上限があるので、既知の脆弱性やリポジトリの外へのリンクのような役に立つチェックが `make check` から外れる。それらの指摘は、プッシュしたあとに CI で初めて出る。
-- 悪い点：時間はチェックを動かしたマシンで測るので、速いマシンでは上限に収まる実行が、遅いマシンでは上限を超えることがある。2026年11月の時点で、ほかの作業をしていないノート PC では、すべてのファイルに対する `make check` がフロントエンドを含めて20秒ほどで終わった。ほかの作業で忙しいマシンでは、すべてのチェックが通る実行でも60秒を超え、上限だけで失敗することがある。同じ実行を繰り返せば通る。
+- 悪い点：時間はチェックを動かしたマシンで測るので、速いマシンでは上限に収まる実行が、遅いマシンでは上限を超えることがある。2026年11月の時点で、ほかの作業をしていないノート PC では、すべてのファイルに対する `make check` がフロントエンドを含めて20秒ほどで終わった。ほかの作業で忙しいマシンでは、すべてのチェックが通る実行でも60秒を超え、上限だけで失敗することがある。同じ実行を繰り返せば通る。CI のホストされたランナーも、同じくらい速さが変わる。そこでの `make check` は、ふだんは32秒から40秒で終わる。2026年11月28日には、5回のうち3回が63秒か64秒かかり、どのチェックもふだんの約2倍の時間だった。上限だけで失敗した実行は、自動でマージされるはずの更新も止める。そのため、それ以来 CI は90秒まで許している。CI での実行を60秒近くまで遅くするチェックがあっても、CI はもう報告しない。push の前のフックは、いまも報告する。
 - 悪い点：`test-mutation` の道具である gomutants は、v0.x の若いプロジェクトである。
 - 悪い点：StrykerJS は、開発用のパッケージを124個持ち込む。`pnpm-workspace.yaml` には、その dashboard レポーターのために `qs` の上書きも要る。チェックは、このレポーターを使わない。
 
 ### 確認の方法
 
-- 実行が `CHECK_BUDGET`（60秒）より長くかかると、`tools/scripts/check.sh` が `make check` を失敗させる。そのメッセージには、この記録が書かれている。
+- 実行が `CHECK_BUDGET`（60秒、CI では90秒）より長くかかると、`tools/scripts/check.sh` が `make check` を失敗させる。そのメッセージには、この記録が書かれている。
 - `make check` と `make check-all` のどのターゲットも `tools/scripts/task.sh` を通して動く。ファイルの一覧を受け取るターゲットは、その一覧を `tools/scripts/files.sh` から得る。`files.sh` は `.lintignore`・`CHECK_SCOPE`・`CHECK_FILES` を適用する。
 - `make check-all` は `selftest` を実行する。`selftest` は、`make check` のターゲットにケースがないとき、またはチェックが既知の悪い入力で失敗しなくなったときに失敗する。
 - `test-mutation` と `test-mutation-frontend` は、`equivalent-mutants.allow` の行を確かめる。生き残ったミュータントのどれにも一致しない行があれば、失敗する（`mutation/unused-allowance`）。理由を書いていない行でも失敗する（`mutation/allowance-format`）。新しい行が正しいかどうかは、レビューで決める。
@@ -203,4 +203,4 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 - これらの道具の固定は TPL-0022 に、Trivy と GitHub の側のスキャナーを選んだ理由は TPL-0024 にある。
 - [ミューテーションテスト](../../guides/mutation-tests.ja.md)が、`test-mutation` と `test-mutation-frontend` の指摘の読み方を説明している。画面に出す言葉をテストがどう扱うかと、`equivalent-mutants.allow` の行がふさわしい場合も、同じガイドにある。
 
-<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:abc88f1226c4c54e9318d820029880cced64161dcf2fbe3cb2bca771feb1c438 -->
+<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:d4175085f3ae3a9cc02323ba234943936b79c32ea913a36ef635cfaba161bfbf -->

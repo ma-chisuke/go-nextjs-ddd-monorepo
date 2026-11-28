@@ -96,7 +96,7 @@ make check   # 速いチェック。数秒で終わる
 | エージェントのハーネス | 見本のイベントを与えるフックのテスト（`test-hooks`）、`AGENTS.md` の長さ、レビューだけが認める、チェックを止めるコメント（`lint-ignore-comments`）。`make check-all` では、エージェントなしで確かめる評価の採点（`test-evals`） |
 | 依存 | Trivy による脆弱性とライセンスの検査。`make check-all` |
 
-`make check` には60秒の上限があり、ネットワークを使わない。指摘は1件が1行で、ファイル・行・ルールが出る。
+`make check` には60秒の上限があり（CI では90秒）、ネットワークを使わない。指摘は1件が1行で、ファイル・行・ルールが出る。
 
 ## 文書
 
@@ -117,4 +117,4 @@ make check   # 速いチェック。数秒で終わる
 
 [MIT No Attribution](LICENSE)。表示を残さずに、テンプレートをコピーして自分のものにできる。
 
-<!-- i18n-source: README.md sha256:129df06ada68bee64de7f7349b3e126a44fa5cfd493dfc9d1ea4ed7bd7baff35 -->
+<!-- i18n-source: README.md sha256:b1f7626f51fae858e4c84040746f4253cbaee92488846195777c2ab7ea9c8468 -->

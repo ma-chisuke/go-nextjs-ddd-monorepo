@@ -96,7 +96,7 @@ The local system and `make check-all` need Docker. After `make up`, open <http:/
 | Agent harness | The hooks, fed sample events (`test-hooks`), the length of `AGENTS.md`, and the comments that turn a check off, which only review lets in (`lint-ignore-comments`); in `make check-all`, the graders of the evaluation, proven without an agent (`test-evals`) |
 | Dependencies | Vulnerabilities and licenses with Trivy, in `make check-all` |
 
-`make check` has a time budget of 60 seconds and uses no network. Every finding is one line with the file, the line, and the rule.
+`make check` has a time budget of 60 seconds, 90 in CI, and uses no network. Every finding is one line with the file, the line, and the rule.
 
 ## Documents
 
