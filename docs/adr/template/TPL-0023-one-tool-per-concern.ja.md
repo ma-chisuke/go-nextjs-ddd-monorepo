@@ -92,6 +92,7 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 | Go のバックエンドの境界（文脈と層のあいだの import、I/O のないドメイン、手で登録したルート、SQL に書いたスキーマの名前、文脈ごとの用語集。TPL-0003・TPL-0004・TPL-0005・TPL-0007・TPL-0009） | このリポジトリの arch コマンド（`tools/cmd/arch`） | `lint-arch` |
 | `AGENTS.md` の長さ（TPL-0020） | `make/agents.mk` で行数を数える | `lint-agents-md` |
 | 無視のコメント（TPL-0020） | `tools/scripts/ignore-comments.sh`。チェックを止めるコメントを `ignore-comments.allow` と比べる | `lint-ignore-comments` |
+| 新しいページごとの、ブラウザーのシナリオ | `tools/scripts/new-pages.sh`。`page.tsx` を足す変更の中に、シナリオを探す | `lint-new-pages` |
 | つづり | typos | `lint-typos` |
 | 改行コード・末尾の改行・行末の空白・インデントの種類 | editorconfig-checker | `lint-editorconfig` |
 | 秘密情報 | gitleaks | `lint-secrets` |
@@ -134,6 +135,7 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 - 別の文脈の `internal/` の下のパッケージを import するとコンパイルが通らないので、`lint-go` と `test-go` がそれを報告し、`lint-arch` も報告する（`arch/context-import`）。この重なりは認めている。記録を挙げ、代わりに文脈どうしをどうつなぐかを示すのは、`lint-arch` の指摘だけだからである（TPL-0005）。
 - squawk は、SQL のファイルと、各 plan の DDL を読む。設定はそれぞれに1つある。plan 用の `.squawk.plan.toml` は、列の型のようにテーブルが何を持つかについてのルールを `lint-sql` に任せる。そのため、そうした問題は `schema.sql` の上で1回だけ報告される。
 - フロントエンドの単体テストは、TypeScript をそのまま動かす Node のテストランナーで動かす。Vitest や Jest のようなテストのフレームワークは使わない。使えば、依存のツリーと専用の設定が1つずつ増えるからである。対象は純粋なロジックのモジュールで、これらは Next.js のものを何も import せず、互いを拡張子 `.ts` 付きで import する。画面の振る舞いは、エンドツーエンドテストの唯一の道具である Playwright がブラウザーでテストする。
+- 新しいページと新しいフォームには、ブラウザーのシナリオをつける。コンポーネントとサーバー関数には、ほかにテストがないからである。新しいページについては、`lint-new-pages` がこの決まりを守らせる。変更が `page.tsx` を足したのに、シナリオを足しも変えもしていなければ、このチェックが失敗する。すでにあるページの表示を変えるだけなら、ロジックの単体テストで足り、そのためのシナリオは要らない。この決まりは、以前はもっと広く、ガイドだけが守らせていた。ハーネスの評価では、そういう変更にシナリオを書いた実行は、4回のうち1回だった（TPL-0020）。また、画面のどの変更がシナリオに値するかは、スクリプトでは決められない。
 - `smoke` と `e2e` は、どちらも手元のシステムを端から端まで動かし、どちらも予約のメールを待つ。ただし、それぞれが確かめるのは、もう一方には見えないものである。スモークテストは、HTTP ですべての応答を API の文書と照らし合わせる。エンドツーエンドテストは、画面・サーバー関数・ストリーミングされるページの部分を確かめる。この重なりは認めている。
 - Terraform のモジュールは `terraform test` でテストする。固定した Terraform が、各モジュールの隣の HCL のファイルを `mock_provider "aws"` に対して実行する。Terratest は使わない。使えば、テストのための Go のコードと専用のモジュールが増える。しかも、そのテストは本物のアカウントへ適用する。
 - `validate-live` と `rehearse-infra` は、どちらもすべてのユニットを組み立てる。検証は Docker もエミュレーターも要らず、`env.hcl` の値を読まない。リハーサルは stg の値を適用し、prd の値を plan する。この重なりは認めている。
@@ -201,4 +203,4 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 - これらの道具の固定は TPL-0022 に、Trivy と GitHub の側のスキャナーを選んだ理由は TPL-0024 にある。
 - [ミューテーションテスト](../../guides/mutation-tests.ja.md)が、`test-mutation` と `test-mutation-frontend` の指摘の読み方を説明している。画面に出す言葉をテストがどう扱うかと、`equivalent-mutants.allow` の行がふさわしい場合も、同じガイドにある。
 
-<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:8ef7fd9d6750199cf3a4c556f8f736b3d6c3c4e40c41096c0ea2c7339068cc2a -->
+<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:abc88f1226c4c54e9318d820029880cced64161dcf2fbe3cb2bca771feb1c438 -->

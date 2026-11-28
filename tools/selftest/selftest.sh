@@ -1643,6 +1643,25 @@ case_lint_frontend_unused() {
   passes
 }
 
+# A change is compared with its base, which a copy has only when the case
+# names it.
+case_lint_new_pages() {
+  put frontend/src/app/sample/page.tsx 'export default function Page() { return null; }'
+  fails 'frontend/src/app/sample/page.tsx:1: [e2e/new-page]' CHECK_BASE=HEAD
+  # A component is not a page, and it does not stand in for a scenario.
+  put frontend/src/app/sample/list.tsx 'export const list = 1;'
+  put frontend/e2e/support.ts "$(cat "$COPY/frontend/e2e/support.ts") // changed"
+  fails 'frontend/src/app/sample/page.tsx:1: [e2e/new-page]' CHECK_BASE=HEAD
+  put frontend/e2e/sample.spec.ts '// A scenario that opens the page.'
+  passes CHECK_BASE=HEAD
+  # A page that the base holds is not new: a change to it needs no scenario.
+  drop frontend/e2e/sample.spec.ts
+  run git add frontend/src/app/sample
+  commit 'add a page'
+  put frontend/src/app/sample/page.tsx 'export default function Page() { return 1; }'
+  passes CHECK_BASE=HEAD
+}
+
 case_test_frontend() {
   put frontend/src/lib/sample.test.ts << 'EOF'
 import assert from "node:assert/strict";

@@ -42,10 +42,12 @@ A module with unit tests imports nothing of Next.js, and imports other modules b
 - `lint-frontend-types`: a call that the API document does not allow, or a link to a route that does not exist, fails `tsc`. (TPL-0007)
 - `lint-frontend-unused`: no file, export, or dependency that nothing uses.
 - `test-frontend`, and `e2e` and `test-mutation-frontend` in `make check-all`: pure logic has unit tests that notice each change to it; what a screen does is tested in a browser. (TPL-0023)
+- `lint-new-pages`: a change that adds a `page.tsx` adds or changes a scenario of `e2e/`. (TPL-0023)
 
 ## Rules that review enforces
 
 - A screen tells problems apart by `problemKind` and maps invalid parts to fields with `problemFieldErrors`; it never parses a title or a detail. (TPL-0008)
 - A Server Function narrows each value of its `FormData` with `lib/input.ts`, and returns a state for an expected failure instead of throwing.
 - A booking sends the Idempotency-Key of its form, and a change sends the version that the page showed in `If-Match`: read the comments at the top of `features/reservation/booking.ts` and `changes.ts`.
+- A new form on a page that exists has a scenario in `e2e/`. A change to what a page shows has the unit test of its logic, and needs no scenario of its own.
 - Plain CSS in `app/globals.css`, no component library, no date library. Known limits are in the guide [add a screen](../docs/guides/add-a-screen.md#known-limits).

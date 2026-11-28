@@ -46,9 +46,10 @@ Next.js 16 differs from what you may know. Before you write a part, read its gui
 
    Check: `make check` fails when a feature imports another feature (`lint-frontend`, `boundaries/dependencies`), and on a link to a route that does not exist (`lint-frontend-types`). The build of the image fails when a page reads request data or uncached data outside `<Suspense>`; `make check` does not build it, and `make up` and `make e2e` do.
 
-7. Add a scenario to `frontend/e2e/`: what a person does, from the first screen to what the change causes, with the helpers of `e2e/support.ts`. Each scenario makes its own room and organizer with `unique`, so the scenarios run side by side. Find a field with `field`, which takes the visible one: Next.js keeps the page that a person came from in the document, hidden.
+7. For a new page or a new form, add a scenario to `frontend/e2e/`: what a person does, from the first screen to what the change causes, with the helpers of `e2e/support.ts`. Each scenario makes its own room and organizer with `unique`, so the scenarios run side by side. Find a field with `field`, which takes the visible one: Next.js keeps the page that a person came from in the document, hidden.
+   A change to what a page that exists shows needs no scenario of its own: the unit test of its logic covers it (step 3). Change the expectation of a scenario when the scenario reads what the change touches.
 
-   Check: `make e2e` runs the scenarios against the local system (Docker). A failed scenario leaves a trace and a screenshot in `.cache/playwright/results/`, and a report in `.cache/playwright/report/`.
+   Check: `make check` fails when a change adds a `page.tsx` and adds or changes no scenario (`lint-new-pages`, `e2e/new-page`). `make e2e` runs the scenarios against the local system (Docker). A failed scenario leaves a trace and a screenshot in `.cache/playwright/results/`, and a report in `.cache/playwright/report/`.
 
 8. Update the part on screens in the README of the context, `docs/contexts/<context>/README.md`, and its translation. Then run `make i18n-stamp`.
 
@@ -66,6 +67,7 @@ Next.js 16 differs from what you may know. Before you write a part, read its gui
 - A Server Function that uses a value of the form before it narrows it.
 - A form that sends a booking without the Idempotency-Key of the form, or a change without the version that the page showed. The comments at the top of `features/reservation/booking.ts` and `changes.ts` describe both.
 - A screen that the README of its context does not name.
+- A new form on a page that exists, without a scenario: `lint-new-pages` sees new pages alone.
 
 ## Known limits
 
