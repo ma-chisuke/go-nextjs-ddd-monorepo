@@ -62,6 +62,10 @@ jobs:
       - name: make check
         run: make check
         env:
+          # A hosted runner is twice as slow on some days as on others, and
+          # the budget of 60 seconds is for the machine of a developer
+          # (TPL-0023).
+          CHECK_BUDGET: 90
           # Every file is in scope; the base is what lint-contracts-breaking
           # compares the API documents with (tools/scripts/merge-base.sh).
           CHECK_BASE: HEAD^1

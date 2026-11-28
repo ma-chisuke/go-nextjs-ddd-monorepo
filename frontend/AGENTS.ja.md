@@ -42,12 +42,14 @@
 - `lint-frontend-types`：API の文書が許さない呼び出しや、存在しないルートへのリンクがあると `tsc` が失敗する。（TPL-0007）
 - `lint-frontend-unused`：どこからも使われていないファイル・export・依存を置かない。
 - `test-frontend` と、`make check-all` の `e2e`・`test-mutation-frontend`：純粋なロジックには、そのどの変更にも気づく単体テストがある。画面の振る舞いはブラウザーでテストする。（TPL-0023）
+- `lint-new-pages`：`page.tsx` を足す変更は、`e2e/` のシナリオを足すか変える。（TPL-0023）
 
 ## レビューが守らせる決まり
 
 - 画面は、problem を `problemKind` で見分け、不正な部分を `problemFieldErrors` で項目に対応づける。title や detail を解析しない。（TPL-0008）
 - サーバー関数は、`FormData` の各値を `lib/input.ts` で絞り込み、想定内の失敗では例外を投げずに状態を返す。
 - 予約はフォームの冪等キーを送り、変更はページが表示したバージョンを `If-Match` で送る。`features/reservation/booking.ts` と `changes.ts` の先頭のコメントを読む。
+- すでにあるページに足す新しいフォームには、`e2e/` のシナリオがある。ページの表示を変えるだけなら、ロジックの単体テストがあればよく、そのためのシナリオは要らない。
 - CSS は `app/globals.css` の素の CSS で書き、コンポーネントライブラリも日付のライブラリも使わない。既知の制限は、ガイド[画面を足す](../docs/guides/add-a-screen.ja.md#既知の制限)にある。
 
-<!-- i18n-source: AGENTS.md sha256:3f4b7896b83dde6deef75570a7b469f3aeb2b17f90e227631e29d5e1cca8860d -->
+<!-- i18n-source: AGENTS.md sha256:59b7867318f2e982d3398f408dbc5f40d7e73139d3540c1bf558106743c366d8 -->

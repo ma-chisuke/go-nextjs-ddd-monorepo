@@ -92,6 +92,7 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 | Go のバックエンドの境界（文脈と層のあいだの import、I/O のないドメイン、手で登録したルート、SQL に書いたスキーマの名前、文脈ごとの用語集。TPL-0003・TPL-0004・TPL-0005・TPL-0007・TPL-0009） | このリポジトリの arch コマンド（`tools/cmd/arch`） | `lint-arch` |
 | `AGENTS.md` の長さ（TPL-0020） | `make/agents.mk` で行数を数える | `lint-agents-md` |
 | 無視のコメント（TPL-0020） | `tools/scripts/ignore-comments.sh`。チェックを止めるコメントを `ignore-comments.allow` と比べる | `lint-ignore-comments` |
+| 新しいページごとの、ブラウザーのシナリオ | `tools/scripts/new-pages.sh`。`page.tsx` を足す変更の中に、シナリオを探す | `lint-new-pages` |
 | つづり | typos | `lint-typos` |
 | 改行コード・末尾の改行・行末の空白・インデントの種類 | editorconfig-checker | `lint-editorconfig` |
 | 秘密情報 | gitleaks | `lint-secrets` |
@@ -134,6 +135,7 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 - 別の文脈の `internal/` の下のパッケージを import するとコンパイルが通らないので、`lint-go` と `test-go` がそれを報告し、`lint-arch` も報告する（`arch/context-import`）。この重なりは認めている。記録を挙げ、代わりに文脈どうしをどうつなぐかを示すのは、`lint-arch` の指摘だけだからである（TPL-0005）。
 - squawk は、SQL のファイルと、各 plan の DDL を読む。設定はそれぞれに1つある。plan 用の `.squawk.plan.toml` は、列の型のようにテーブルが何を持つかについてのルールを `lint-sql` に任せる。そのため、そうした問題は `schema.sql` の上で1回だけ報告される。
 - フロントエンドの単体テストは、TypeScript をそのまま動かす Node のテストランナーで動かす。Vitest や Jest のようなテストのフレームワークは使わない。使えば、依存のツリーと専用の設定が1つずつ増えるからである。対象は純粋なロジックのモジュールで、これらは Next.js のものを何も import せず、互いを拡張子 `.ts` 付きで import する。画面の振る舞いは、エンドツーエンドテストの唯一の道具である Playwright がブラウザーでテストする。
+- 新しいページと新しいフォームには、ブラウザーのシナリオをつける。コンポーネントとサーバー関数には、ほかにテストがないからである。新しいページについては、`lint-new-pages` がこの決まりを守らせる。変更が `page.tsx` を足したのに、シナリオを足しも変えもしていなければ、このチェックが失敗する。すでにあるページの表示を変えるだけなら、ロジックの単体テストで足り、そのためのシナリオは要らない。この決まりは、以前はもっと広く、ガイドだけが守らせていた。ハーネスの評価では、そういう変更にシナリオを書いた実行は、4回のうち1回だった（TPL-0020）。また、画面のどの変更がシナリオに値するかは、スクリプトでは決められない。
 - `smoke` と `e2e` は、どちらも手元のシステムを端から端まで動かし、どちらも予約のメールを待つ。ただし、それぞれが確かめるのは、もう一方には見えないものである。スモークテストは、HTTP ですべての応答を API の文書と照らし合わせる。エンドツーエンドテストは、画面・サーバー関数・ストリーミングされるページの部分を確かめる。この重なりは認めている。
 - Terraform のモジュールは `terraform test` でテストする。固定した Terraform が、各モジュールの隣の HCL のファイルを `mock_provider "aws"` に対して実行する。Terratest は使わない。使えば、テストのための Go のコードと専用のモジュールが増える。しかも、そのテストは本物のアカウントへ適用する。
 - `validate-live` と `rehearse-infra` は、どちらもすべてのユニットを組み立てる。検証は Docker もエミュレーターも要らず、`env.hcl` の値を読まない。リハーサルは stg の値を適用し、prd の値を plan する。この重なりは認めている。
@@ -141,7 +143,7 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 
 道具の動かし方の決まりは次のとおりである。
 
-- `make check` の時間の上限は60秒であり、`tools/scripts/check.sh` がこれを守らせる。
+- `make check` の時間の上限は60秒であり、`tools/scripts/check.sh` がこれを守らせる。CI では90秒まで許す（`.github/workflows/ci.yml` の `CHECK_BUDGET`）。60秒は開発者のマシンのための値であり、そこでは push の前のフックが時間を測る。
 - `make setup` のあとは、`make check` はネットワークを使わない。`make setup` が Go のモジュールをダウンロードして Go のビルドのキャッシュを満たし、tflint のプラグインを入れる。lychee と zizmor はオフラインで動き、pinact は GitHub の API を使わずに固定を検査し、check-jsonschema は同梱のスキーマを使い、Trivy はバイナリに組み込まれたチェックを使う。
 - `make check` はチェックを並列に動かし、チェックごとに1行を出し、指摘は失敗したチェックの分だけを出す。`VERBOSE=1` を付けると、すべてのチェックの出力が出る。
 - 遅いチェックや、ネットワークが要るチェックは `make check-all` に回す。`make check-all` は CI が実行する。
@@ -157,13 +159,13 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 - 悪い点：1つの関心事に道具を1つしか選ばないので、選ばなかった道具にしかないルールは失われる。
 - 悪い点：道具ごとに設定ファイルがあり、yamllint と Prettier の配置のルールのような、道具の間の取り決めは手で保つ必要がある。
 - 悪い点：時間の上限があるので、既知の脆弱性やリポジトリの外へのリンクのような役に立つチェックが `make check` から外れる。それらの指摘は、プッシュしたあとに CI で初めて出る。
-- 悪い点：時間はチェックを動かしたマシンで測るので、速いマシンでは上限に収まる実行が、遅いマシンでは上限を超えることがある。2026年11月の時点で、ほかの作業をしていないノート PC では、すべてのファイルに対する `make check` がフロントエンドを含めて20秒ほどで終わった。ほかの作業で忙しいマシンでは、すべてのチェックが通る実行でも60秒を超え、上限だけで失敗することがある。同じ実行を繰り返せば通る。
+- 悪い点：時間はチェックを動かしたマシンで測るので、速いマシンでは上限に収まる実行が、遅いマシンでは上限を超えることがある。2026年11月の時点で、ほかの作業をしていないノート PC では、すべてのファイルに対する `make check` がフロントエンドを含めて20秒ほどで終わった。ほかの作業で忙しいマシンでは、すべてのチェックが通る実行でも60秒を超え、上限だけで失敗することがある。同じ実行を繰り返せば通る。CI のホストされたランナーも、同じくらい速さが変わる。そこでの `make check` は、ふだんは32秒から40秒で終わる。2026年11月28日には、5回のうち3回が63秒か64秒かかり、どのチェックもふだんの約2倍の時間だった。上限だけで失敗した実行は、自動でマージされるはずの更新も止める。そのため、それ以来 CI は90秒まで許している。CI での実行を60秒近くまで遅くするチェックがあっても、CI はもう報告しない。push の前のフックは、いまも報告する。
 - 悪い点：`test-mutation` の道具である gomutants は、v0.x の若いプロジェクトである。
 - 悪い点：StrykerJS は、開発用のパッケージを124個持ち込む。`pnpm-workspace.yaml` には、その dashboard レポーターのために `qs` の上書きも要る。チェックは、このレポーターを使わない。
 
 ### 確認の方法
 
-- 実行が `CHECK_BUDGET`（60秒）より長くかかると、`tools/scripts/check.sh` が `make check` を失敗させる。そのメッセージには、この記録が書かれている。
+- 実行が `CHECK_BUDGET`（60秒、CI では90秒）より長くかかると、`tools/scripts/check.sh` が `make check` を失敗させる。そのメッセージには、この記録が書かれている。
 - `make check` と `make check-all` のどのターゲットも `tools/scripts/task.sh` を通して動く。ファイルの一覧を受け取るターゲットは、その一覧を `tools/scripts/files.sh` から得る。`files.sh` は `.lintignore`・`CHECK_SCOPE`・`CHECK_FILES` を適用する。
 - `make check-all` は `selftest` を実行する。`selftest` は、`make check` のターゲットにケースがないとき、またはチェックが既知の悪い入力で失敗しなくなったときに失敗する。
 - `test-mutation` と `test-mutation-frontend` は、`equivalent-mutants.allow` の行を確かめる。生き残ったミュータントのどれにも一致しない行があれば、失敗する（`mutation/unused-allowance`）。理由を書いていない行でも失敗する（`mutation/allowance-format`）。新しい行が正しいかどうかは、レビューで決める。
@@ -201,4 +203,4 @@ Go・TypeScript・Terraform・シェルスクリプト・YAML・2つの言語の
 - これらの道具の固定は TPL-0022 に、Trivy と GitHub の側のスキャナーを選んだ理由は TPL-0024 にある。
 - [ミューテーションテスト](../../guides/mutation-tests.ja.md)が、`test-mutation` と `test-mutation-frontend` の指摘の読み方を説明している。画面に出す言葉をテストがどう扱うかと、`equivalent-mutants.allow` の行がふさわしい場合も、同じガイドにある。
 
-<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:8ef7fd9d6750199cf3a4c556f8f736b3d6c3c4e40c41096c0ea2c7339068cc2a -->
+<!-- i18n-source: TPL-0023-one-tool-per-concern.md sha256:d4175085f3ae3a9cc02323ba234943936b79c32ea913a36ef635cfaba161bfbf -->

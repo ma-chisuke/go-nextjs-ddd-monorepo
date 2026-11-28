@@ -50,7 +50,7 @@ RUN node_modules/.bin/next build \
 
 # distroless Node: the runtime, CA certificates, time zone data, and a user
 # "nonroot"; no shell and no package manager.
-FROM gcr.io/distroless/nodejs26-debian13:nonroot@sha256:ffa8a7545403036c94ec76674b5dbac2d425af2d679147cdf3e30180071487b7
+FROM gcr.io/distroless/nodejs26-debian13:nonroot@sha256:a84242e747fbb5aaaa0180c273b6f7130ca34b3300082192ef58eea96089eb3c
 
 LABEL org.opencontainers.image.title="web" \
       org.opencontainers.image.description="The Next.js frontend" \

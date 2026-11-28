@@ -83,7 +83,7 @@ The local system and `make check-all` need Docker. After `make up`, open <http:/
 | Go | Formatting, golangci-lint (including go vet), tests with the race detector; in `make check-all`, known vulnerabilities, the integration tests against PostgreSQL and AWS Emulator, a smoke test of the whole local system, and mutation tests of the domain and the use cases of the core context (`test-mutation`) |
 | Architecture of the backend | `lint-arch`: imports between contexts and layers, a domain without I/O, routes only from the API documents, schemas named in SQL, and the glossary of each context |
 | Generated code | The Go code generated from the API documents and from the SQL of each context, and the TypeScript types generated from the API documents (`gen-check-api-ts`), are what the generators write now |
-| TypeScript and Next.js | Prettier, ESLint with import boundaries, type check, unused code, unit tests on the test runner of Node (`test-frontend`); in `make check-all`, the end-to-end test in a browser with Playwright (`e2e`) and mutation tests of the pure logic (`test-mutation-frontend`) |
+| TypeScript and Next.js | Prettier, ESLint with import boundaries, type check, unused code, unit tests on the test runner of Node (`test-frontend`), a scenario in a browser with each new page (`lint-new-pages`); in `make check-all`, the end-to-end test in a browser with Playwright (`e2e`) and mutation tests of the pure logic (`test-mutation-frontend`) |
 | Shell and Dockerfiles | shfmt, shellcheck, hadolint |
 | GitHub Actions | actionlint, zizmor, ghalint, pinact |
 | Terraform and Terragrunt | Formatting, tflint, Trivy, the module READMEs (terraform-docs), and the same units in stg and prd (`lint-infra-live`); in `make check-all`, the validation and the tests of each module (`validate-terraform`), the validation of every unit (`validate-live`), and the rehearsal of stg on AWS Emulator (`rehearse-infra`) |
@@ -96,7 +96,7 @@ The local system and `make check-all` need Docker. After `make up`, open <http:/
 | Agent harness | The hooks, fed sample events (`test-hooks`), the length of `AGENTS.md`, and the comments that turn a check off, which only review lets in (`lint-ignore-comments`); in `make check-all`, the graders of the evaluation, proven without an agent (`test-evals`) |
 | Dependencies | Vulnerabilities and licenses with Trivy, in `make check-all` |
 
-`make check` has a time budget of 60 seconds and uses no network. Every finding is one line with the file, the line, and the rule.
+`make check` has a time budget of 60 seconds, 90 in CI, and uses no network. Every finding is one line with the file, the line, and the rule.
 
 ## Documents
 

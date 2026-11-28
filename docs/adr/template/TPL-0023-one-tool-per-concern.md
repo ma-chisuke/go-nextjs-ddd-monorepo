@@ -92,6 +92,7 @@ Inside `make`, each concern has one tool. Targets marked "check-all" run only in
 | The boundaries of the Go backend: imports between contexts and layers, a domain without I/O, routes registered by hand, schemas named in SQL, and the glossary of each context (TPL-0003, TPL-0004, TPL-0005, TPL-0007, TPL-0009) | the arch command of this repository (`tools/cmd/arch`) | `lint-arch` |
 | Length of `AGENTS.md` (TPL-0020) | a line count in `make/agents.mk` | `lint-agents-md` |
 | Ignore comments (TPL-0020) | `tools/scripts/ignore-comments.sh`, which compares the comments that turn a check off with `ignore-comments.allow` | `lint-ignore-comments` |
+| A scenario in a browser for each new page | `tools/scripts/new-pages.sh`, which looks for a scenario in a change that adds a `page.tsx` | `lint-new-pages` |
 | Spelling | typos | `lint-typos` |
 | Line endings, final newlines, trailing spaces, and the style of indentation | editorconfig-checker | `lint-editorconfig` |
 | Secrets | gitleaks | `lint-secrets` |
@@ -134,6 +135,7 @@ These overlaps were resolved as follows.
 - An import of a package under `internal/` of another context does not compile, so `lint-go` and `test-go` report it, and `lint-arch` reports it as well (`arch/context-import`). This overlap is accepted: only the finding of `lint-arch` names the record and says how contexts integrate instead (TPL-0005).
 - squawk reads the SQL files and the DDL of each plan, with a configuration for each. The one for plans, `.squawk.plan.toml`, leaves the rules about what a table holds, such as the type of a column, to `lint-sql`, so such a problem is reported once, on `schema.sql`.
 - The unit tests of the frontend run on the test runner of Node, which runs TypeScript as it is, and not on a test framework such as Vitest or Jest, which would bring one more dependency tree and a configuration of its own. They cover the modules of pure logic, which import nothing of Next.js and import each other with the extension `.ts`. What a screen does is tested in a browser, by Playwright, the one tool of the end-to-end test.
+- A new page and a new form come with a scenario in a browser, because the components and the Server Functions have no other test. `lint-new-pages` holds the rule for a new page: it fails a change that adds a `page.tsx` and adds or changes no scenario. A change to what a page that exists shows needs the unit test of its logic, and no scenario of its own. The rule was wider, and a guide alone held it: in the evaluation of the harness, one of four runs wrote a scenario for such a change (TPL-0020), and no script can tell which change to a screen is worth one.
 - `smoke` and `e2e` both run the local system end to end, and both wait for the mail of a booking, but each checks what the other cannot see. The smoke test checks every response against the API documents over HTTP; the end-to-end test checks the screens, the Server Functions, and the parts of a page that stream in. This overlap is accepted.
 - The modules of Terraform are tested with `terraform test`, which the pinned Terraform runs on HCL files next to each module, against `mock_provider "aws"`. Terratest is not used: it would bring Go code and a module of its own for the tests, and it applies to a real account.
 - `validate-live` and `rehearse-infra` both build every unit. The validation needs neither Docker nor the emulator and reads no value of an `env.hcl`; the rehearsal applies the values of stg and plans those of prd. This overlap is accepted.
@@ -141,7 +143,7 @@ These overlaps were resolved as follows.
 
 The rules for running the tools are as follows.
 
-- `make check` has a budget of 60 seconds, which `tools/scripts/check.sh` enforces.
+- `make check` has a budget of 60 seconds, which `tools/scripts/check.sh` enforces. CI allows 90 seconds (`CHECK_BUDGET` in `.github/workflows/ci.yml`): the 60 seconds are for the machine of a developer, where the hook before a push measures them.
 - After `make setup`, `make check` uses no network. `make setup` downloads the Go modules, fills the Go build cache, and installs the tflint plugin; lychee and zizmor run offline; pinact checks the pins without the GitHub API; check-jsonschema uses the schemas bundled with it; and Trivy uses the checks built into its binary.
 - `make check` runs the checks in parallel, prints one line per check, and prints the findings of failed checks only. `VERBOSE=1` prints the output of every check.
 - A check that is slow or needs the network goes to `make check-all`, which CI runs.
@@ -157,13 +159,13 @@ The rules for running the tools are as follows.
 - Bad, because choosing one tool per concern gives up the extra rules of the tools that were left out.
 - Bad, because every tool has its own configuration file, and agreements between tools, such as the layout rules of yamllint and Prettier, must be kept by hand.
 - Bad, because the budget pushes useful checks, such as known vulnerabilities and remote links, out of `make check`, so their findings appear only in CI, after a push.
-- Bad, because the budget is measured on the machine that runs the check, so the same run can be within budget on a fast machine and over it on a slow one. On an idle laptop, `make check` over every file took about 20 seconds in November 2026, the frontend included. On a machine busy with other work, a run in which every check passes can exceed 60 seconds and fail on the budget alone; the same run, repeated, passes.
+- Bad, because the budget is measured on the machine that runs the check, so the same run can be within budget on a fast machine and over it on a slow one. On an idle laptop, `make check` over every file took about 20 seconds in November 2026, the frontend included. On a machine busy with other work, a run in which every check passes can exceed 60 seconds and fail on the budget alone; the same run, repeated, passes. A hosted runner of CI varies as much: `make check` took 32 to 40 seconds there on most days, and 63 or 64 seconds in three of five runs on November 28, 2026, with every check about twice as slow. A run that fails on the budget alone also stops an update that would merge by itself, so CI allows 90 seconds since then. A check that brings the run close to 60 seconds there is no longer reported by CI; the hook before a push still reports it.
 - Bad, because gomutants, the tool of `test-mutation`, is a young project, at v0.x.
 - Bad, because StrykerJS brings 124 development packages, and an override of `qs` in `pnpm-workspace.yaml` for its dashboard reporter, which the check does not use.
 
 ### Confirmation
 
-- `tools/scripts/check.sh` fails `make check` when the run takes longer than `CHECK_BUDGET` (60 seconds), and its message names this record.
+- `tools/scripts/check.sh` fails `make check` when the run takes longer than `CHECK_BUDGET` (60 seconds, and 90 in CI), and its message names this record.
 - Every target of `make check` and `make check-all` runs through `tools/scripts/task.sh`. A target that takes a list of files gets it from `tools/scripts/files.sh`, which applies `.lintignore`, `CHECK_SCOPE`, and `CHECK_FILES`.
 - `make check-all` runs `selftest`, which fails when a target of `make check` has no case, or when a check no longer fails on its known-bad input.
 - `test-mutation` and `test-mutation-frontend` fail on a line of `equivalent-mutants.allow` that matches no living mutant (`mutation/unused-allowance`) or gives no reason (`mutation/allowance-format`). Review decides whether a new line is right.
