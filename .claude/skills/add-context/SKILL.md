@@ -26,4 +26,4 @@ Follow `docs/guides/add-a-context.md`. It has the steps and a table of the check
    - the integration tests of the context connect as its runtime role;
    - for a worker, its AsyncAPI document exists, its tests turn every example of the schemas that it reads into what it does, and both `infra/local/main.tf` and its unit subscribe it. No check reports a missing subscription;
    - `make check` passes `lint-infra-live`, which fails until the context is in `contexts` and has a unit in every environment.
-7. Run `make fmt` and `CHECK_SCOPE=changed make check-all`, which needs Docker; its `validate-live`, `rehearse-infra`, and `test-db-image` cover the units and the database. Finish with `make check`.
+7. Run `make fmt`, then the slow checks in parts, because `make check-all` takes ten minutes or more and one command has a limit of time: `make lint-sqlc lint-db-docs test-integration test-api-fuzz`, then `make validate-live rehearse-infra test-db-image`, which cover the units and the database, then `make smoke`. They need Docker. Finish with `make check`.

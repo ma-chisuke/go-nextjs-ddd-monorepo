@@ -18,5 +18,5 @@ Follow `docs/guides/add-an-endpoint.md`. It has the steps, the files, and the ch
    - each new kind of business error has a case in `problems.go` and a page `docs/problems/<slug>.md` with its translation;
    - each newly exported type of `domain` (or of `app` in a supporting context) has a row in both glossaries;
    - the table of operations in the README of the context, and its translation, name the operation.
-6. Run `make fmt`, then `make check`.
+6. Run `make fmt`, then `make check`. Run `make lint-sqlc test-integration test-api-fuzz` too: they need Docker, take about a minute, and try the queries, the integration tests, and requests generated from the API document. Do not wait for `make check-all`: it takes ten minutes or more, and CI runs it.
 7. If a screen is to show the operation, continue with the skill `add-screen`.

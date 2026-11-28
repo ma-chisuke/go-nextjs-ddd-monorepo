@@ -64,8 +64,8 @@
    - 手順4のロールは、AWS では、データベースを準備するタスクが Aurora のマスターユーザーとして作る。このユーザーはスーパーユーザーではない。`db/bootstrap.sql` の Facility の部分は、このユーザーを所有者のロールのメンバーにする。コピーするときは、その部分も残す。
 
    ```sh
-   make check                           # lint-infra-live
-   CHECK_SCOPE=changed make check-all   # validate-live, rehearse-infra, test-db-image
+   make check                                        # lint-infra-live
+   make validate-live rehearse-infra test-db-image   # Docker。約5分
    ```
 
    確認：`backend/cmd/<context>/` のコマンドが `contexts` にあり、`_units/contexts/<context>.hcl` を持ち、すべての環境にユニットを持つまで、`lint-infra-live` が失敗する。ツリーのほかの部分は、[AWS にデプロイする](deploy.ja.md#環境を変える)が説明している。
@@ -85,6 +85,8 @@
    make check
    CHECK_SCOPE=changed make check-all
    ```
+
+   `make check-all` は遅いチェックをすべて実行し、10分以上かかる。エージェントのように、1つのコマンドに時間の上限があるときは、分けて実行する。最初は `make lint-sqlc lint-db-docs test-integration test-api-fuzz` である。次は `make validate-live rehearse-infra test-db-image` である。最後は `make smoke` である。
 
 ## 欠けているものと、それを教えるチェック
 
@@ -106,4 +108,4 @@
 | 受け取る側の AsyncAPI 文書、または `infra/local/main.tf` かそのユニットの購読 | まだチェックはなく、レビューで見つける（TPL-0013）。購読がないことに `make smoke` が気づくのは、ワーカーの結果を待つときだけである |
 | 文脈の README | まだチェックはなく、レビューで見つける（TPL-0003） |
 
-<!-- i18n-source: add-a-context.md sha256:8ef06e9714b66f0bbb472893f3bfbda72ba25c1eb60a61df0b5e35f77cee528f -->
+<!-- i18n-source: add-a-context.md sha256:b4ba6321cfef467f78ce5f0d4d92926c212fa816d9576d8200ae1093eac249b8 -->

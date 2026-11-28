@@ -42,14 +42,15 @@
 
    `make gen` はデータベースを使わないので、これらの文書を書かない。
 
-   確認：`make check-all` の `lint-db-docs` は、コメントのないテーブルや列、インデックスのない外部キー、tbls が書く内容と違う文書で失敗する。
+   確認：`make lint-db-docs`（手順 5）は、コメントのないテーブルや列、インデックスのない外部キー、tbls が書く内容と違う文書で失敗する。
 
 5. PostgreSQL を要するチェックを実行する。
 
    ```sh
-   CHECK_SCOPE=changed make check-all
+   make lint-sql-plan lint-sqlc lint-db-docs test-integration
    ```
 
+   これらは Docker を必要とし、約1分かかる。CI は、ほかの遅いチェックとあわせて、これらをプルリクエストで実行する（`make check-all`）。そちらは10分以上かかる。
    `lint-sql-plan` は、次の節で説明するとおり、変更の DDL を検査する。`lint-sqlc` は、すべてのクエリを新しいスキーマに対して prepare する。`test-integration` は結合テストを実行し、実行時のロールの権限も試す。
    plan は `.cache/sql-plan/<context>.sql` に残る。CI はまだ plan をプルリクエストに示さないので、レビュアーはチェックを実行してから、そこで plan を読む。
 
@@ -106,4 +107,4 @@ ban-drop-column | ALTER TABLE rooms DROP COLUMN name | since release 0.4.0 the c
 
 タスクは、確認を求めずに plan を適用する。レビューで読むのは `lint-sql-plan` の plan であり、これはベースのコミットのスキーマに対するものである。このスキーマが環境のスキーマと一致するのは、その環境がそのコミットを動かしているときだけである。
 
-<!-- i18n-source: change-a-schema.md sha256:e33e10db29623242f08ed397412a62e22671cf83b35d1b7dd2696f42b0dd35f5 -->
+<!-- i18n-source: change-a-schema.md sha256:1ea55d498e46f176b33ac3cb5908acac7d867fbdf634e252a997d85ca34bb92a -->

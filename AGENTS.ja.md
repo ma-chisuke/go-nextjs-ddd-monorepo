@@ -13,7 +13,7 @@
 | `make fmt` | ファイルを整形する。 |
 | `make gen` | 生成物を作り直す。 |
 | `make check` | 速いチェック。これが通るまで、変更は終わっていない。 |
-| `make check-all` | 速いチェックと遅いチェック。CI が実行する。 |
+| `make check-all` | 速いチェックと遅いチェック。10分以上かかる。CI が実行する。作業の途中では、変更のガイドが挙げる遅いチェックを実行する。 |
 
 - 作業中は範囲を絞れる。`CHECK_SCOPE=changed make check` か `CHECK_FILES=<path> make check` を使う。最後は絞らずに `make check` を実行する。
 - チェックが失敗すると `file:line: [rule] message` の形で出る。原因を直す。ルールを無効にしない。無視するコメントを足さない。ファイルを対象から外さない。
@@ -53,4 +53,4 @@
 - **環境。** `infra/live/stg/` と `infra/live/prd/` の違いは `env.hcl` だけである。ユニットは `infra/live/_units/` で、両方の環境について変える。（TPL-0015）
 - **禁止。** `.env` を読まない。force push をしない。`main` に push しない。prd にインフラを適用しない。
 
-<!-- i18n-source: AGENTS.md sha256:4e5cc067dbca77db7317fe5226fe7d2ab82e71482a2e8ff912b9bd16e8b6054d -->
+<!-- i18n-source: AGENTS.md sha256:6253414678792634d51a738272a6b5c0a473a1c4b2e5f8bdc6d093f803d78998 -->

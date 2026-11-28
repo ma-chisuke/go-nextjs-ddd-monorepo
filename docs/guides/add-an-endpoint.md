@@ -34,7 +34,7 @@ In a supporting context such as Facility, which has no domain layer, skip step 3
    Add the method to the in-memory fakes that implement the same interface: `internal/app/apptest/` in Reservation, `internal/adapter/postgres/postgrestest/` in Facility.
    If a table must change, follow [Change a schema](change-a-schema.md) first.
 
-   Check: `make check` runs `gen-check-sqlc`, and the compiler names each fake that lacks the method. `make check-all` also prepares the query against the schema (`lint-sqlc`) and runs the integration tests.
+   Check: `make check` runs `gen-check-sqlc`, and the compiler names each fake that lacks the method. `make lint-sqlc` also prepares the query against the schema, and `make test-integration` runs the integration tests (step 10).
 
 6. Implement the operation in `internal/adapter/http/handler.go`. The method that the compiler asks for maps the generated request to the input of the use case, calls it, and maps the result to the generated response. It returns a business error the way the other operations of the file do, and `problems.go` turns that error into its problem.
 
@@ -59,7 +59,9 @@ In a supporting context such as Facility, which has no domain layer, skip step 3
     ```sh
     make fmt
     make check
-    CHECK_SCOPE=changed make check-all   # adds the checks that need PostgreSQL (Docker)
+    make lint-sqlc test-integration test-api-fuzz   # the slow checks of an endpoint (Docker), about a minute
     ```
 
-    Check: `make check-all` runs `test-api-fuzz`, which sends requests that Schemathesis generates from the document to the API, built from the checkout: the examples of the document, requests that test each constraint from both sides, generated requests, and sequences of them. A finding is an answer that the document does not allow, or a 5xx. [Change an API](api-changes.md#check-the-api-against-requests-generated-from-its-document) tells how to read a finding, send its request again, and decide which side to fix.
+    CI runs every slow check on the pull request (`make check-all`). That takes ten minutes or more, so these three are the part to run while you work.
+
+    Check: `test-api-fuzz` sends requests that Schemathesis generates from the document to the API, built from the checkout: the examples of the document, requests that test each constraint from both sides, generated requests, and sequences of them. A finding is an answer that the document does not allow, or a 5xx. [Change an API](api-changes.md#check-the-api-against-requests-generated-from-its-document) tells how to read a finding, send its request again, and decide which side to fix.

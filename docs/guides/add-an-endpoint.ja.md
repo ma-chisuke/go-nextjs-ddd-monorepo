@@ -34,7 +34,7 @@ Facility のようにドメイン層のない補完の文脈では、手順3を�
    同じインターフェースを実装するメモリ上の偽物にも、そのメソッドを足す。Reservation では `internal/app/apptest/`、Facility では `internal/adapter/postgres/postgrestest/` である。
    テーブルを変える必要があれば、先に[スキーマを変える](change-a-schema.ja.md)に従う。
 
-   確認：`make check` が `gen-check-sqlc` を実行し、コンパイラーはメソッドの欠けた偽物をそれぞれ挙げる。`make check-all` は、さらにクエリをスキーマに対して prepare し（`lint-sqlc`）、結合テストを実行する。
+   確認：`make check` が `gen-check-sqlc` を実行し、コンパイラーはメソッドの欠けた偽物をそれぞれ挙げる。さらに、`make lint-sqlc` がクエリをスキーマに対して prepare し、`make test-integration` が結合テストを実行する（手順 10）。
 
 6. `internal/adapter/http/handler.go` に操作を実装する。コンパイラーが求めるメソッドは、生成されたリクエストをユースケースの入力に詰め替え、ユースケースを呼び、結果を生成された応答に詰め替える。業務エラーは、同じファイルのほかの操作と同じやり方で返す。`problems.go` が、そのエラーを対応する problem に変える。
 
@@ -59,9 +59,11 @@ Facility のようにドメイン層のない補完の文脈では、手順3を�
     ```sh
     make fmt
     make check
-    CHECK_SCOPE=changed make check-all   # PostgreSQL（Docker）を要するチェックを加える
+    make lint-sqlc test-integration test-api-fuzz   # エンドポイントの遅いチェック（Docker）。約1分
     ```
 
-    確認：`make check-all` は `test-api-fuzz` を実行する。このチェックは、Schemathesis が文書から生成したリクエストを、チェックアウトからビルドした API に送る。送るのは、文書の例、各制約を両側から試すリクエスト、生成したリクエスト、それらを続けて送る一連のリクエストである。指摘は、文書が許さない答えか 5xx である。指摘の読み方、そのリクエストの送り直し方、どちらの側を直すかの決め方は、[API を変更する](api-changes.ja.md#文書から生成したリクエストで-api-を確かめる)にある。
+    遅いチェックのすべては、CI がプルリクエストで実行する（`make check-all`）。これには10分以上かかるので、作業の途中で実行するのは、この3つである。
 
-<!-- i18n-source: add-an-endpoint.md sha256:ca682f6f435ae82f40f6fa1c448c6a10968b5df165bc692a93c2081c244bf02e -->
+    確認：`test-api-fuzz` は、Schemathesis が文書から生成したリクエストを、チェックアウトからビルドした API に送る。送るのは、文書の例、各制約を両側から試すリクエスト、生成したリクエスト、それらを続けて送る一連のリクエストである。指摘は、文書が許さない答えか 5xx である。指摘の読み方、そのリクエストの送り直し方、どちらの側を直すかの決め方は、[API を変更する](api-changes.ja.md#文書から生成したリクエストで-api-を確かめる)にある。
+
+<!-- i18n-source: add-an-endpoint.md sha256:27872a6dbe02444b9d20a25b5c411c7d907b4c9b5051ab2aab42966d9177fd14 -->

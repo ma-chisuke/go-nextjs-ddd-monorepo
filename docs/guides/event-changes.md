@@ -100,4 +100,4 @@ A new consumer subscribes without a change to the publisher (TPL-0013). It needs
 3. Its handler and its command: `NewHandler` in `module.go` returns an `event.Handler`, and `cmd/<context>` runs the consumer of `platform/awsevents` with it ([Add a context](add-a-context.md), step 3). The handler is idempotent: it records the id of each event that it handled under a unique constraint, in the transaction of its effect, and returns nil for an event of a type that it does not handle.
 4. Its service in `compose.yaml`, in the form of `notification`, with `EVENTS_QUEUE_URL` set to `https://sqs.us-east-1.amazonaws.com/000000000000/<context>-events`: the emulator names its queues as AWS does, and answers for that URL on its own endpoint.
 
-Check: `make up` starts the worker, and `make check-all` runs its integration tests. `make smoke` covers the subscription only if it waits for what the worker does, as it waits for the mail of Notification.
+Check: `make up` starts the worker, and `make test-integration` runs its integration tests. `make smoke` covers the subscription only if it waits for what the worker does, as it waits for the mail of Notification.
