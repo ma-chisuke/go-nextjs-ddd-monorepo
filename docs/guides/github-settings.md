@@ -145,5 +145,9 @@ Renovate also updates the Terraform providers of `infra/live/providers.hcl`, wit
 It does not write `infra/live/providers.lock.hcl`, so every Terragrunt run of that branch fails, `validate-live` in CI among them.
 Check out the branch, run `make infra-lock`, and push the result.
 
+When Renovate renames an option, the Dependency Dashboard offers a pull request that migrates `renovate.json`.
+That pull request fails `lint-schema` while the schema that check-jsonschema bundles does not know the new form.
+Renovate reads the old form in the meantime, so close the pull request, and migrate in the pull request that updates check-jsonschema.
+
 pnpm and uv refuse a release younger than three days, which includes a security fix released today.
 To take such a fix at once, exclude the package from that rule in `pnpm-workspace.yaml` (`minimumReleaseAgeExclude`) or in `pyproject.toml` (`exclude-newer-package`), and remove the exception once the release is three days old.

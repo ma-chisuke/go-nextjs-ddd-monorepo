@@ -146,8 +146,12 @@ Renovate は、`infra/live/providers.hcl` の Terraform の provider も更新�
 Renovate は `infra/live/providers.lock.hcl` を書かない。そのため、そのブランチでは Terragrunt の実行がどれも失敗し、CI の `validate-live` も失敗する。
 そのブランチをチェックアウトし、`make infra-lock` を実行して、結果をプッシュする。
 
+Renovate がオプションの名前や形を変えると、Dependency Dashboard は `renovate.json` を移行するプルリクエストを提案する。
+check-jsonschema に同梱されたスキーマが新しい形を知らないあいだ、そのプルリクエストは `lint-schema` で失敗する。
+その間も Renovate は古い形を読めるので、プルリクエストは閉じる。移行は、check-jsonschema を更新するプルリクエストで行う。
+
 pnpm と uv は、リリースから3日たっていないバージョンを拒む。今日リリースされたセキュリティの修正も例外ではない。
 そうした修正をすぐ取り込むには、そのパッケージを `pnpm-workspace.yaml`（`minimumReleaseAgeExclude`）か `pyproject.toml`（`exclude-newer-package`）で決まりから外す。
 リリースから3日たったら、その例外を消す。
 
-<!-- i18n-source: github-settings.md sha256:ae3d231d85e94def37edc63b3492c1747a78fd66c1c1deb8244e954140d71387 -->
+<!-- i18n-source: github-settings.md sha256:c082173bfa4b431bedf23686c80e589e0aefd33cb8dc328a575b85e0f712fb6b -->

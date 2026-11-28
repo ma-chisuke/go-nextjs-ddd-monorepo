@@ -57,6 +57,7 @@ The rules are as follows.
 - Bad, because the Renovate app needs write access to the repository to push branches and open pull requests, which makes it one more party to trust.
 - Bad, because a mistake in the configuration can quietly stop the updates for one kind of pin, and the schema cannot tell.
 - Bad, because a pin that no manager of Renovate reads is not updated. The version of AWS Emulator and the checksums of its package, in build arguments of `infra/local/aws-emulator/Dockerfile`, are such a pin: a person updates them by hand (TPL-0017). The version of pnpm and the checksum of its package, in the `ADD` of `frontend/Dockerfile`, are another: the group `pnpm` of `renovate.json` moves `mise.toml`, `package.json`, and `pnpm-lock.yaml`, and a person changes the Dockerfile in the same pull request (TPL-0024). The version of pgschema and the checksums of its binaries, in `db/Dockerfile`, are a third: when Renovate moves pgschema in `mise.toml`, a person changes the Dockerfile, and `make test-db-image` fails until the two agree.
+- Bad, because the schema that check-jsonschema bundles is older than the Renovate that the app runs. When Renovate renames an option, the pull request in which it migrates the configuration fails `lint-schema` until a release of check-jsonschema bundles the new schema. Open since November 28, 2026: `dependencyDashboard` is `true`, and Renovate now writes it as an object.
 - Bad, because an update of the providers needs a person to run `make infra-lock`, so it never merges on its own.
 
 ### Confirmation
