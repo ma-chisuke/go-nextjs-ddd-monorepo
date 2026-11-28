@@ -57,6 +57,10 @@ export TF_PLUGIN_CACHE_DIR="$PWD/.cache/terraform/plugins"
 export TF_IN_AUTOMATION=1
 export TF_INPUT=0
 
+# Whoever wants the first line of a list reads the whole list (`sed -n 1p`).
+# `head -n 1` closes the pipe after one line, and on a slow machine the list
+# is then still being written: the writer fails ("Broken pipe"), and under
+# pipefail the script with it.
 environments() {
   local file
   for file in "$live"/*/env.hcl; do
@@ -149,7 +153,7 @@ findings() {
 # checked by the rehearsal, which applies or plans every environment.
 validate() {
   local environment log status=0
-  environment=$(environments | head -n 1)
+  environment=$(environments | sed -n 1p)
   fill_provider_cache
   log=$(mktemp)
   if ! INFRA_OFFLINE=1 run_all offline "$environment" validate -no-color > "$log" 2>&1; then
@@ -188,7 +192,7 @@ lint() {
   for environment in $(environments); do
     if [ -z "$first" ]; then
       first=$environment
-      reference=$(units_of "$first" | head -n 1)
+      reference=$(units_of "$first" | sed -n 1p)
       reference="$live/$first/$reference/terragrunt.hcl"
     fi
     for unit in $(units_of "$environment"); do
