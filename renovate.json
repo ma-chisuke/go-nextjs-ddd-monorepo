@@ -3,7 +3,8 @@
   "description": [
     "Dependency updates for every pinned version in the repository; see docs/guides/github-settings.md.",
     "Weekly, three days after a release, with Conventional Commit messages (build(deps): ...).",
-    "Patch, digest, and pin updates merge themselves when the required check passes; people review minor and major updates.",
+    "Patch, digest, and pin updates merge themselves when the required check passes; people review minor updates.",
+    "A major update gets a pull request only after a person ticks its checkbox on the Dependency Dashboard.",
     "Security fixes skip the schedule."
   ],
   "extends": [
@@ -52,6 +53,11 @@
       "automerge": true
     },
     {
+      "description": "A major update is a decision, such as the next PostgreSQL: it waits on the Dependency Dashboard until a person asks for its pull request.",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
       "description": "One pull request a week for the patch updates of each ecosystem.",
       "matchManagers": ["mise"],
       "matchUpdateTypes": ["patch"],
@@ -92,6 +98,12 @@
       "matchDatasources": ["docker"],
       "matchPackageNames": ["docker.io/library/golang", "golang"],
       "groupName": "Go"
+    },
+    {
+      "description": "compose.yaml and db/Dockerfile name the same PostgreSQL image: the database of the local system and the image that prepares the database of an environment move together.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["docker.io/library/postgres", "postgres"],
+      "groupName": "PostgreSQL image"
     },
     {
       "description": "pnpm in mise.toml, packageManager in package.json, and pnpm-lock.yaml name the same version.",

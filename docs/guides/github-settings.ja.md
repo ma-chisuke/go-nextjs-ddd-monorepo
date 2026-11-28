@@ -132,7 +132,8 @@ gh variable set AWS_DEPLOY_ROLE_ARN_STG --body '<ARN of github-deploy in stg>'
 Renovate は `renovate.json` を読み、毎週月曜日に、更新ごと、または更新のグループごとに1つのプルリクエストを開く。
 
 - リリースから3日待つ。pnpm と uv も同じだけ待つ。
-- パッチ、ダイジェスト、固定の更新は、`check` が通ればそのままマージされる。マイナーとメジャーの更新は人がレビューする。
+- パッチ、ダイジェスト、固定の更新は、`check` が通ればそのままマージされる。マイナーの更新は人がレビューする。
+- メジャーの更新は、Dependency Dashboard で待つ。プルリクエストにするには、そこでチェックボックスを入れる。
 - セキュリティの修正は、予定を待たずにすぐ届く。
 - ロックファイルは毎月1日に更新する。
 - Dependency Dashboard の issue に、保留中の更新がすべて並ぶ。
@@ -149,4 +150,4 @@ pnpm と uv は、リリースから3日たっていないバージョンを拒�
 そうした修正をすぐ取り込むには、そのパッケージを `pnpm-workspace.yaml`（`minimumReleaseAgeExclude`）か `pyproject.toml`（`exclude-newer-package`）で決まりから外す。
 リリースから3日たったら、その例外を消す。
 
-<!-- i18n-source: github-settings.md sha256:96d5c29c7676ddb2d7b5d5bee1544dd931cdd6b66ed667d9c76d59e1706a1afc -->
+<!-- i18n-source: github-settings.md sha256:ae3d231d85e94def37edc63b3492c1747a78fd66c1c1deb8244e954140d71387 -->

@@ -42,7 +42,7 @@ The rules are as follows.
 - It waits three days after a release before it proposes the release.
 - It groups related updates into one pull request.
 - It opens pull requests on a weekly schedule. Security fixes do not wait for the schedule.
-- It merges patch, digest, and pin updates on its own when the required check passes. Minor and major updates wait for a person.
+- It merges patch, digest, and pin updates on its own when the required check passes. A minor update waits for a person. A major update gets no pull request until a person ticks its checkbox on the Dependency Dashboard: it is a decision, such as the next PostgreSQL, and a pull request that stays open for months hides the ones that need a look.
 - An update changes a pin or a lockfile, so the checks of its pull request cover every file, not only the changed ones (TPL-0023). A new version of a tool runs on the whole repository before the update merges.
 - Dependabot stays on for alerts only, and opens no pull requests.
 - The configuration is `renovate.json`.
