@@ -124,7 +124,7 @@ run_image() {
     environment+=(-e "DB_OWNER_PASSWORD_$(upper "$context")" -e "DB_RUNTIME_PASSWORD_$(upper "$context")")
   done
   network=$(docker inspect --format '{{range $network, $_ := .NetworkSettings.Networks}}{{println $network}}{{end}}' \
-    "$(docker compose ps --quiet postgres)" | head -n 1)
+    "$(docker compose ps --quiet postgres)" | sed -n 1p)
   PGPASSWORD="$master_password" docker run --rm --name "$name" --network "$network" \
     --read-only --cap-drop ALL --security-opt no-new-privileges \
     "${environment[@]}" "$image" > "$out" 2>&1

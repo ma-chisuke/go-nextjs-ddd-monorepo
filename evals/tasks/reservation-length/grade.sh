@@ -4,11 +4,10 @@
 #
 # The task adds something to a screen. What it measures: where the parts of a
 # screen go (the guide "Add a screen"). The logic is pure, in a module with a
-# unit test next to it; the component only shows what it returns; and what a
-# person sees is a scenario in a browser. `make check` runs the unit tests,
-# but neither `next build` nor the scenarios: the grader builds the frontend
-# and reads the page, and can only look for a changed scenario, because it
-# runs no browser.
+# unit test next to it, and the component only shows what it returns. `make
+# check` runs the unit tests, but not `next build`: the grader builds the
+# frontend and reads the page. The task changes what a page that exists
+# shows, so it asks for no scenario in a browser (the guide, step 7).
 #
 # The page reads a room from the Facility API and its reservations from the
 # Reservation API. fake-apis.mjs answers both with fixed JSON: one room in
@@ -104,17 +103,7 @@ unit_test_of_the_logic() {
   fi
 }
 
-# What a person sees is a scenario in a browser (the guide, step 7): a file
-# of frontend/e2e/ is new or changed.
-scenario_in_a_browser() {
-  if ! changed_paths | grep -q '^frontend/e2e/'; then
-    echo "no scenario in frontend/e2e/ is new or changed"
-    return 1
-  fi
-}
-
 grade_task() {
   criterion page-shows-the-lengths page_shows_the_lengths
   criterion unit-test-of-the-logic unit_test_of_the_logic
-  criterion scenario-in-a-browser scenario_in_a_browser
 }

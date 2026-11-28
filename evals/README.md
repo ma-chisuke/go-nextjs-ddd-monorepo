@@ -36,7 +36,7 @@ A task is a directory `tasks/<task>/`:
 | `rename-room` | An operation of the API of a supporting context: rename a room | The operation starts in the API document, and the generated code, the queries, both stores (the real one and the fake of the API tests), the API tests, and the README of the context follow it (TPL-0006, TPL-0007) |
 | `room-floor` | An optional property of a room, kept in the database | The schema, the queries, the generated code, and the API document move together, and the change of the schema is one that a database with data can take (TPL-0010, TPL-0011) |
 | `time-zone-in-mail` | A new property of an integration event, which its consumer reads | The contract between two contexts changes compatibly, on both sides, without a new version and without one context importing the other (TPL-0005, TPL-0013) |
-| `reservation-length` | One more fact on a screen: the length of each reservation | The logic is pure and has a unit test, the page that the server renders shows it, and a scenario in a browser covers it |
+| `reservation-length` | One more fact on a screen: the length of each reservation | The logic is pure and has a unit test, and the page that the server renders shows it |
 
 Every task also has two criteria that hold for every change of this repository: `make check` passes, and the change weakens no check. It touches no allowance or ignore file, no hook, and no check, and it adds no ignore comment.
 
