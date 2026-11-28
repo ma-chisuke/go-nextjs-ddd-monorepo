@@ -7,7 +7,7 @@
 # frontend/stryker.config.mjs.
 
 GEN_TARGETS += gen-api-ts
-CHECK_TARGETS += gen-check-api-ts lint-frontend lint-frontend-types lint-frontend-unused test-frontend
+CHECK_TARGETS += gen-check-api-ts lint-frontend lint-frontend-types lint-frontend-unused lint-new-pages test-frontend
 CHECK_ALL_TARGETS += test-mutation-frontend
 
 FRONTEND_BIN := $(CURDIR)/frontend/node_modules/.bin
@@ -59,6 +59,11 @@ lint-frontend-unused:
 	@$(TASK) $@ 'if [ -n "$$($(FILES) frontend/)" ]; then \
 		cd frontend && $(FRONTEND_BIN)/knip --no-progress --reporter json \
 		| jq -r --arg dir frontend/ -f ../tools/knip/findings.jq; fi'
+
+# A change that adds a page comes with a scenario in a browser: `make e2e` is
+# the only test of what a page does, and no fast check runs it.
+lint-new-pages:
+	@$(TASK) $@ 'tools/scripts/new-pages.sh'
 
 # The unit tests, with the test runner of Node, which runs TypeScript as it
 # is: the modules that hold logic and import nothing of Next.js, such as
