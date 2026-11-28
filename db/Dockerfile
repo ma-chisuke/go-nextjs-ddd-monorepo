@@ -31,7 +31,7 @@ ADD --chmod=0755 --checksum=sha256:6a1617a21ba786a60c763e764437498e58d22f779e5e1
 
 FROM ${TARGETARCH} AS pgschema
 
-FROM docker.io/library/postgres:18.7@sha256:2ea8630df176ad090ec92136dee850397c5af8781e4bcf2e4162593691c61bbc
+FROM docker.io/library/postgres:18.7@sha256:64c8b0d31e4ab6ea665e8426ea406a94bf52de3c05b3a4a8bf713704eefa9328
 
 LABEL org.opencontainers.image.title="db" \
       org.opencontainers.image.description="Prepares the database: roles, schemas, and the schema of every context" \
