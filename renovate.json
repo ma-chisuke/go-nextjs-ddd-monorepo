@@ -15,7 +15,9 @@
     "docker:pinDigests",
     "customManagers:githubActionsVersions"
   ],
-  "dependencyDashboard": true,
+  "dependencyDashboard": {
+    "enabled": true
+  },
   "semanticCommits": "enabled",
   "labels": ["dependencies"],
   "minimumReleaseAge": "3 days",
@@ -74,7 +76,11 @@
     },
     {
       "description": "The textlint packages are released together.",
-      "matchPackageNames": ["textlint", "/^textlint-/", "/^@textlint(-ja)?\\//"],
+      "matchPackageNames": [
+        "textlint",
+        "/^textlint-/",
+        "/^@textlint(-ja)?\\//"
+      ],
       "groupName": "textlint"
     },
     {
