@@ -141,7 +141,7 @@ These overlaps were resolved as follows.
 
 The rules for running the tools are as follows.
 
-- `make check` has a budget of 60 seconds, which `tools/scripts/check.sh` enforces.
+- `make check` has a budget of 60 seconds, which `tools/scripts/check.sh` enforces. CI allows 90 seconds (`CHECK_BUDGET` in `.github/workflows/ci.yml`): the 60 seconds are for the machine of a developer, where the hook before a push measures them.
 - After `make setup`, `make check` uses no network. `make setup` downloads the Go modules, fills the Go build cache, and installs the tflint plugin; lychee and zizmor run offline; pinact checks the pins without the GitHub API; check-jsonschema uses the schemas bundled with it; and Trivy uses the checks built into its binary.
 - `make check` runs the checks in parallel, prints one line per check, and prints the findings of failed checks only. `VERBOSE=1` prints the output of every check.
 - A check that is slow or needs the network goes to `make check-all`, which CI runs.
@@ -157,13 +157,13 @@ The rules for running the tools are as follows.
 - Bad, because choosing one tool per concern gives up the extra rules of the tools that were left out.
 - Bad, because every tool has its own configuration file, and agreements between tools, such as the layout rules of yamllint and Prettier, must be kept by hand.
 - Bad, because the budget pushes useful checks, such as known vulnerabilities and remote links, out of `make check`, so their findings appear only in CI, after a push.
-- Bad, because the budget is measured on the machine that runs the check, so the same run can be within budget on a fast machine and over it on a slow one. On an idle laptop, `make check` over every file took about 20 seconds in November 2026, the frontend included. On a machine busy with other work, a run in which every check passes can exceed 60 seconds and fail on the budget alone; the same run, repeated, passes.
+- Bad, because the budget is measured on the machine that runs the check, so the same run can be within budget on a fast machine and over it on a slow one. On an idle laptop, `make check` over every file took about 20 seconds in November 2026, the frontend included. On a machine busy with other work, a run in which every check passes can exceed 60 seconds and fail on the budget alone; the same run, repeated, passes. A hosted runner of CI varies as much: `make check` took 32 to 40 seconds there on most days, and 63 or 64 seconds in three of five runs on November 28, 2026, with every check about twice as slow. A run that fails on the budget alone also stops an update that would merge by itself, so CI allows 90 seconds since then. A check that brings the run close to 60 seconds there is no longer reported by CI; the hook before a push still reports it.
 - Bad, because gomutants, the tool of `test-mutation`, is a young project, at v0.x.
 - Bad, because StrykerJS brings 124 development packages, and an override of `qs` in `pnpm-workspace.yaml` for its dashboard reporter, which the check does not use.
 
 ### Confirmation
 
-- `tools/scripts/check.sh` fails `make check` when the run takes longer than `CHECK_BUDGET` (60 seconds), and its message names this record.
+- `tools/scripts/check.sh` fails `make check` when the run takes longer than `CHECK_BUDGET` (60 seconds, and 90 in CI), and its message names this record.
 - Every target of `make check` and `make check-all` runs through `tools/scripts/task.sh`. A target that takes a list of files gets it from `tools/scripts/files.sh`, which applies `.lintignore`, `CHECK_SCOPE`, and `CHECK_FILES`.
 - `make check-all` runs `selftest`, which fails when a target of `make check` has no case, or when a check no longer fails on its known-bad input.
 - `test-mutation` and `test-mutation-frontend` fail on a line of `equivalent-mutants.allow` that matches no living mutant (`mutation/unused-allowance`) or gives no reason (`mutation/allowance-format`). Review decides whether a new line is right.
