@@ -11,7 +11,7 @@
 
 # buildpack-deps has git, curl, make, and a C compiler for `go test -race`, so
 # the image installs no packages of its own.
-FROM docker.io/library/buildpack-deps:trixie@sha256:188a9dfa5e813c917be00c3f474bc75488b62914305e13fa21dff1cfef2eb354
+FROM docker.io/library/buildpack-deps:trixie@sha256:086433f3c4cca3435eba355f585f55d593751a35c865745d88ce97e7258e3fc9
 
 # mise, pinned by version and by the checksums in SHASUMS256.txt of its release.
 ARG MISE_VERSION=2026.11.9
