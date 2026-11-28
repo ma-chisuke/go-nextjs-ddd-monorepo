@@ -168,6 +168,11 @@ prepare() {
     if [ "$arm" = harness ]; then
       git tag graded
     fi
+    # A clone has the branch that the checks compare a change with
+    # (tools/scripts/merge-base.sh, CHECK_SCOPE=changed). Without it, the
+    # checks that compare with a base tell the agent nothing, and tell the
+    # grader, which names the base, what the agent could not see.
+    git update-ref refs/remotes/origin/main HEAD
   )
 }
 
@@ -521,6 +526,10 @@ verify_bare() {
   local dir="$work/verify-bare-$$" out status=0
   prepare "$dir" bare
   link_dependencies "$dir"
+  if [ "$(cd "$dir" && tools/scripts/merge-base.sh)" != "$(git -C "$dir" rev-parse base)" ]; then
+    echo "evals/run.sh:1: [evals] a copy has no base branch, so the checks that compare a change with its base tell the agent nothing"
+    status=1
+  fi
   if ! out=$(cd "$dir" && checks_pass base); then
     echo "evals/run.sh:1: [evals] make check fails in the bare arm before an agent worked: $(printf '%s' "$out" | tr '\n' ' ' | cut -c 1-300)"
     status=1

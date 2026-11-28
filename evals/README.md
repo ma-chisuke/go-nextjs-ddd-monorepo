@@ -14,7 +14,7 @@ This directory is that evaluation: an agent does a task of this repository twice
 Everything else is the same in both arms: the code, the guides, the checks, the Git hooks, the model, the limits, and the tools that the agent may use without asking (`allowed-tools.txt`).
 `make check` exists in both arms. Only the harness tells the agent to run it, and only the harness stops a turn that ends with a failing check.
 
-A run copies the files of one commit into a directory outside the checkout and makes a Git repository of its own there, so the agent cannot change this repository, and no instruction file of a parent directory reaches it. The copy has no `evals/`: an agent that found a solution there would not have to do the task.
+A run copies the files of one commit into a directory outside the checkout and makes a Git repository of its own there, so the agent cannot change this repository, and no instruction file of a parent directory reaches it. The copy has a branch `origin/main` at that commit, as a clone has, so the checks that compare a change with its base work there. The copy has no `evals/`: an agent that found a solution there would not have to do the task.
 Settings and memory of the user are left out, so a run does not depend on whose machine it is.
 `make check` passes in both arms before the agent works, so a check that fails after a run is the work of the agent.
 After a run of the bare arm, the files of the harness come back before the grading, so both arms are graded with the same checks.
